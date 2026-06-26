@@ -85,10 +85,25 @@ apt-get install -y -qq build-essential cmake python3-venv >/dev/null
 if [ "$USE_VENV" = "1" ]; then
   if [ ! -x "$VENV_DIR/bin/python" ]; then
     echo "[Setup] Creating virtual environment at $VENV_DIR"
-    "$PYTHON_BIN" -m venv "$VENV_DIR"
+    if "$PYTHON_BIN" -m venv "$VENV_DIR" 2>/dev/null; then
+      :
+    elif command -v virtualenv >/dev/null 2>&1; then
+      virtualenv "$VENV_DIR"
+    else
+      "$PYTHON_BIN" -m venv --without-pip "$VENV_DIR"
+      if [ -x "$VENV_DIR/bin/python" ]; then
+        "$VENV_DIR/bin/python" -m ensurepip --upgrade --default-pip || true
+      fi
+    fi
   fi
-  PYTHON_BIN="$VENV_DIR/bin/python"
-  echo "[Setup] Using virtual environment Python: $PYTHON_BIN"
+  if [ -x "$VENV_DIR/bin/python" ]; then
+    PYTHON_BIN="$VENV_DIR/bin/python"
+    echo "[Setup] Using virtual environment Python: $PYTHON_BIN"
+  else
+    echo "[Setup] Virtual environment creation failed; falling back to system Python" >&2
+    USE_VENV="0"
+    PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
+  fi
 fi
 
 "$PYTHON_BIN" -m pip install -q --upgrade pip setuptools wheel
