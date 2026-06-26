@@ -213,7 +213,7 @@ print(f'  pandas=={pandas.__version__}')
 print(f'  matplotlib=={matplotlib.__version__}')
 "
 mkdir -p "$WORKDIR"
-if [ ! -d "$WORKDIR/libtorch/share/cmake/Torch/TorchConfig.cmake" ]; then
+if [ ! -f "$WORKDIR/libtorch/share/cmake/Torch/TorchConfig.cmake" ]; then
   rm -rf "$WORKDIR/libtorch" "$WORKDIR/libtorch.zip"
   wget -q "$LIBTORCH_URL" -O "$WORKDIR/libtorch.zip"
   unzip -q "$WORKDIR/libtorch.zip" -d "$WORKDIR"
