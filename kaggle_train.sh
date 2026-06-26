@@ -91,9 +91,6 @@ if [ "$USE_VENV" = "1" ]; then
       virtualenv "$VENV_DIR"
     else
       "$PYTHON_BIN" -m venv --without-pip "$VENV_DIR"
-      if [ -x "$VENV_DIR/bin/python" ]; then
-        "$VENV_DIR/bin/python" -m ensurepip --upgrade --default-pip || true
-      fi
     fi
   fi
   if [ -x "$VENV_DIR/bin/python" ]; then
@@ -104,6 +101,13 @@ if [ "$USE_VENV" = "1" ]; then
     USE_VENV="0"
     PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
   fi
+fi
+
+if [ "$USE_VENV" = "1" ] && [ ! -x "$VENV_DIR/bin/pip" ] && [ -x "$VENV_DIR/bin/python" ]; then
+  echo "[Setup] Installing pip into virtual environment"
+  curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+  "$VENV_DIR/bin/python" /tmp/get-pip.py --break-system-packages || \
+  "$VENV_DIR/bin/python" /tmp/get-pip.py
 fi
 
 "$PYTHON_BIN" -m pip install -q --upgrade pip setuptools wheel
