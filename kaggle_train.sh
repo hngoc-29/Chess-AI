@@ -69,13 +69,9 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 VENV_DIR="${VENV_DIR:-/kaggle/working/chess_venv}"
-USE_VENV="${USE_VENV:-}"
-if [ -z "$USE_VENV" ]; then
-  if [ -d /kaggle ] || [ -n "${KAGGLE_KERNEL_RUN_TYPE:-}" ] || [ -n "${KAGGLE_URL_BASE:-}" ]; then
-    USE_VENV="1"
-  else
-    USE_VENV="0"
-  fi
+USE_VENV="${USE_VENV:-0}"
+if [ -z "${USE_VENV}" ]; then
+  USE_VENV="0"
 fi
 
 "$PYTHON_BIN" -V
