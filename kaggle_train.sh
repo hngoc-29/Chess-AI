@@ -4,6 +4,7 @@ set -euo pipefail
 PROJECT_ROOT="${PROJECT_ROOT:-/kaggle/working/ChessAI}"
 WORKDIR="${WORKDIR:-/kaggle/working/chess_selfplay}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/kaggle/working/chess_outputs}"
+REPO_URL="${REPO_URL:-https://github.com/hngoc-29/Chess-AI.git}"
 SIMULATIONS="${SIMULATIONS:-400}"
 GAMES="${GAMES:-40}"
 EPOCHS="${EPOCHS:-2}"
@@ -13,7 +14,16 @@ MAX_GENERATIONS="${MAX_GENERATIONS:-3}"
 HEARTBEAT="${HEARTBEAT:-30}"
 LOG_EVERY="${LOG_EVERY:-10}"
 
-mkdir -p "$PROJECT_ROOT" "$WORKDIR" "$OUTPUT_ROOT"
+mkdir -p "$(dirname "$PROJECT_ROOT")" "$WORKDIR" "$OUTPUT_ROOT"
+if [ ! -d "$PROJECT_ROOT/.git" ]; then
+  echo "[Setup] Repository not found at $PROJECT_ROOT; cloning from $REPO_URL"
+  rm -rf "$PROJECT_ROOT"
+  if ! command -v git >/dev/null 2>&1; then
+    echo "git is required to fetch the repository" >&2
+    exit 1
+  fi
+  git clone --depth 1 "$REPO_URL" "$PROJECT_ROOT"
+fi
 cd "$PROJECT_ROOT"
 
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
