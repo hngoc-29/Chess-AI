@@ -170,14 +170,25 @@ def ensure_drive_mount() -> None:
 
 def detect_runtime_defaults() -> Tuple[Path, Path, Path]:
     cwd = Path.cwd().resolve()
+    candidates = []
+    if (cwd / 'AI' / 'src' / 'colab_selfplay_pipeline.py').exists():
+        candidates.append(cwd)
     if (cwd / 'src' / 'colab_selfplay_pipeline.py').exists():
-        project_root = cwd
-    elif (Path('/kaggle/working/ChessAI') / 'src' / 'colab_selfplay_pipeline.py').exists():
-        project_root = Path('/kaggle/working/ChessAI')
-    elif (Path('/content/ChessAI') / 'src' / 'colab_selfplay_pipeline.py').exists():
-        project_root = Path('/content/ChessAI')
-    else:
-        project_root = cwd
+        candidates.append(cwd)
+    if (Path('/kaggle/working/ChessAI') / 'AI' / 'src' / 'colab_selfplay_pipeline.py').exists():
+        candidates.append(Path('/kaggle/working/ChessAI'))
+    if (Path('/kaggle/working/ChessAI') / 'src' / 'colab_selfplay_pipeline.py').exists():
+        candidates.append(Path('/kaggle/working/ChessAI'))
+    if (Path('/content/ChessAI') / 'AI' / 'src' / 'colab_selfplay_pipeline.py').exists():
+        candidates.append(Path('/content/ChessAI'))
+    if (Path('/content/ChessAI') / 'src' / 'colab_selfplay_pipeline.py').exists():
+        candidates.append(Path('/content/ChessAI'))
+
+    project_root = cwd
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_dir():
+            project_root = candidate
+            break
 
     if os.path.exists('/kaggle/working'):
         workdir = Path('/kaggle/working/chess_selfplay')

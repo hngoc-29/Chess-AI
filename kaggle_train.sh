@@ -36,11 +36,11 @@ fi
 apt-get update -qq
 apt-get install -y -qq build-essential cmake >/dev/null
 "$PYTHON_BIN" -m pip install -q --upgrade pip
-"$PYTHON_BIN" -m pip install -q --upgrade --force-reinstall \
+"$PYTHON_BIN" -m pip install -q --disable-pip-version-check --no-input \
   "numpy<2.0" \
   "torch==2.2.2" \
   "torchvision==0.17.2" \
-  "torchaudio==2.2.2"
+  "torchaudio==2.2.2" || true
 
 PIPELINE_SCRIPT=""
 if [ -f "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" ]; then
