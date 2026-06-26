@@ -228,28 +228,37 @@ def prepare_project_root(project_root: Path, archive_path: Optional[Path] = None
 
 
 def select_libtorch_url() -> str:
-    """Pick a LibTorch archive compatible with the installed PyTorch runtime."""
+    """Pick a LibTorch archive that is robust for the C++ engine on Kaggle/Colab."""
     cuda_ver = torch.version.cuda or ""
     torch_ver = torch.__version__.split("+", 1)[0]
     print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}")
-    if cuda_ver.startswith("12.4") or torch_ver.startswith("2.5"):
-        return "https://download.pytorch.org/libtorch/cu124/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcu124.zip"
-    if cuda_ver.startswith("12.1") or torch_ver.startswith("2.3"):
-        return "https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu121.zip"
-    if cuda_ver.startswith("11.8"):
-        return "https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu118.zip"
-    return "https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu121.zip"
+
+    if torch_ver.startswith("2.5"):
+        base_version = "2.5.1"
+    elif torch_ver.startswith("2.4"):
+        base_version = "2.4.1"
+    elif torch_ver.startswith("2.3"):
+        base_version = "2.3.1"
+    else:
+        base_version = "2.3.1"
+
+    # The engine only needs TorchScript inference, so a CPU-only LibTorch build is
+    # more portable and avoids CUDA-specific linker issues on Kaggle/Colab.
+    return f"https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-{base_version}%2Bcpu.zip"
 
 
 def setup_libtorch(project_root: Path, workdir: Path) -> Path:
     libtorch_dir = workdir / "libtorch"
-    if not libtorch_dir.exists():
+    torch_config = libtorch_dir / "share" / "cmake" / "Torch" / "TorchConfig.cmake"
+    if not torch_config.exists():
+        if libtorch_dir.exists():
+            shutil.rmtree(libtorch_dir, ignore_errors=True)
         url = select_libtorch_url()
         archive = workdir / "libtorch.zip"
         print(f"[LibTorch] Downloading {url}")
         run(["wget", "-q", url, "-O", str(archive)])
         run(["unzip", "-q", str(archive), "-d", str(workdir)])
-        if not libtorch_dir.exists():
+        if not torch_config.exists():
             raise RuntimeError("LibTorch unzip did not create the expected directory.")
     else:
         print(f"[LibTorch] Reusing {libtorch_dir}")

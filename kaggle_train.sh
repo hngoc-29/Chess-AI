@@ -134,29 +134,28 @@ if echo "$CUDA_VER" | grep -q "^12\.4"; then
   TORCH_VER="2.5.1"
   TORCHVISION_VER="0.20.1"
   TORCHAUDIO_VER="2.5.1"
-  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu124/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcu124.zip"
 elif echo "$CUDA_VER" | grep -q "^12\.1"; then
   CU="cu121"
   TORCH_VER="2.3.1"
   TORCHVISION_VER="0.18.1"
   TORCHAUDIO_VER="2.3.1"
-  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu121.zip"
 elif echo "$CUDA_VER" | grep -q "^11\.8"; then
   CU="cu118"
   TORCH_VER="2.3.1"
   TORCHVISION_VER="0.18.1"
   TORCHAUDIO_VER="2.3.1"
-  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu118.zip"
 else
-  # Unknown CUDA — fall back to cu121 set
+  # Unknown CUDA — fall back to a generic PyTorch wheel set
   CU="cu121"
   TORCH_VER="2.3.1"
   TORCHVISION_VER="0.18.1"
   TORCHAUDIO_VER="2.3.1"
-  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu121.zip"
 fi
 
+LIBTORCH_URL="https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-${TORCH_VER}%2Bcpu.zip"
+
 echo "[Setup] CUDA=${CUDA_VER} → pinning torch==${TORCH_VER}+${CU}"
+echo "[Setup] Using CPU-only LibTorch for the C++ engine: ${LIBTORCH_URL}"
 
 # Force-overwrite all Python packages with exact pinned versions.
 # --force-reinstall ensures we never silently run a different version.
@@ -195,8 +194,8 @@ print(f'  pandas=={pandas.__version__}')
 print(f'  matplotlib=={matplotlib.__version__}')
 "
 mkdir -p "$WORKDIR"
-if [ ! -d "$WORKDIR/libtorch" ]; then
-  rm -f "$WORKDIR/libtorch.zip"
+if [ ! -d "$WORKDIR/libtorch/share/cmake/Torch/TorchConfig.cmake" ]; then
+  rm -rf "$WORKDIR/libtorch" "$WORKDIR/libtorch.zip"
   wget -q "$LIBTORCH_URL" -O "$WORKDIR/libtorch.zip"
   unzip -q "$WORKDIR/libtorch.zip" -d "$WORKDIR"
 fi

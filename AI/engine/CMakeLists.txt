@@ -19,6 +19,7 @@ foreach(_prefix IN LISTS _torch_search_prefixes)
 endforeach()
 
 find_package(Torch REQUIRED)
+find_package(Threads REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
@@ -34,5 +35,5 @@ add_executable(selfplay
     ChessEnv.cpp
 )
 
-target_link_libraries(chess_mcts PRIVATE "${TORCH_LIBRARIES}")
-target_link_libraries(selfplay PRIVATE "${TORCH_LIBRARIES}")
+target_link_libraries(chess_mcts PRIVATE "${TORCH_LIBRARIES}" Threads::Threads ${CMAKE_DL_LIBS})
+target_link_libraries(selfplay PRIVATE "${TORCH_LIBRARIES}" Threads::Threads ${CMAKE_DL_LIBS})
