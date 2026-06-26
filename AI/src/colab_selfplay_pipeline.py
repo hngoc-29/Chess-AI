@@ -37,6 +37,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
+from model_artifacts import validate_training_inputs, write_model_output_summary
+
 try:
     import pandas as pd
 except Exception:  # pragma: no cover
@@ -570,17 +572,22 @@ def publish_latest_model(gen_model_path: Path, best_model_path: Path, project_ro
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(gen_model_path, best_model_path)
 
-    project_model_path = project_root / "data" / "best_model_traced.pt"
+    project_model_path = project_root / "AI" / "data" / "best_model_traced.pt"
     project_model_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(gen_model_path, project_model_path)
 
-    legacy_project_model_path = project_root / "best_model_traced.pt"
+    legacy_project_model_path = project_root / "data" / "best_model_traced.pt"
     legacy_project_model_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(gen_model_path, legacy_project_model_path)
+
+    root_legacy_model_path = project_root / "best_model_traced.pt"
+    root_legacy_model_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(gen_model_path, root_legacy_model_path)
 
     print(f"[Model] published new model to {best_model_path}")
     print(f"[Model] synced project model to {project_model_path}")
     print(f"[Model] synced legacy project model to {legacy_project_model_path}")
+    print(f"[Model] synced root legacy model to {root_legacy_model_path}")
 
 
 def run_generation(
@@ -627,6 +634,7 @@ def resolve_best_model_path(project_root: Path, drive_root: Path, explicit_path:
 
     candidates = [
         drive_root / "best_model_traced.pt",
+        project_root / "AI" / "data" / "best_model_traced.pt",
         project_root / "data" / "best_model_traced.pt",
         project_root / "best_model_traced.pt",
         project_root / "models" / "best_model_traced.pt",
@@ -721,6 +729,7 @@ def run_pipeline(
         validate_torchscript_model(best_model_path, device)
         replay_files = select_replay_files(drive_root, generation_file)
         states, moves = load_replay_buffer(replay_files)
+        validate_training_inputs(states.tolist(), moves.tolist())
         print(f"[Progress] Generation {generation}: training with {states.shape[0]} samples")
         checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
         metrics_output_dir = drive_root / f"metrics_gen_{generation}"
@@ -743,6 +752,21 @@ def run_pipeline(
         save_training_summary(history, drive_root / f"training_summary_gen_{generation}.json")
         export_training_metrics(history, metrics_output_dir)
         publish_latest_model(gen_model_path, best_model_path, project_root)
+
+        output_summary_path = write_model_output_summary(
+            output_dir=drive_root,
+            generation=generation,
+            artifacts={
+                "generation_model": gen_model_path,
+                "best_model": best_model_path,
+                "project_model": project_root / "AI" / "data" / "best_model_traced.pt",
+                "legacy_project_model": project_root / "data" / "best_model_traced.pt",
+                "root_legacy_model": project_root / "best_model_traced.pt",
+            },
+            replay_path=generation_file,
+            checkpoint_path=checkpoint_path,
+        )
+        print(f"[Model] output summary -> {output_summary_path}")
 
         generation_summary = {
             "generation": generation,
