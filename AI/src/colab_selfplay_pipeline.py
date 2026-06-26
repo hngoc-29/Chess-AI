@@ -109,6 +109,28 @@ def should_log_output(line: str) -> bool:
     return any(token in lowered for token in ("error", "failed", "exception", "traceback", "warning"))
 
 
+def _summarize_progress(output_chunks: List[str]) -> str:
+    for line in reversed(output_chunks):
+        text = line.strip()
+        if not text:
+            continue
+        match = re.search(r"game=(\d+)\s*/\s*(\d+)", text)
+        if match:
+            completed = int(match.group(1))
+            total = int(match.group(2))
+            if total > 0:
+                percent = completed * 100.0 / total
+                return f"game {completed}/{total} ({percent:.1f}%)"
+        match = re.search(r"(\d+)\s*/\s*(\d+)\s*games?", text, re.IGNORECASE)
+        if match:
+            completed = int(match.group(1))
+            total = int(match.group(2))
+            if total > 0:
+                percent = completed * 100.0 / total
+                return f"game {completed}/{total} ({percent:.1f}%)"
+    return "starting"
+
+
 def run(
     cmd: List[str],
     cwd: Optional[str] = None,
@@ -128,13 +150,15 @@ def run(
     )
 
     output_chunks: List[str] = []
+    output_lock = threading.Lock()
     stop_event = threading.Event()
     start_time = time.time()
 
     def stream_output() -> None:
         assert process.stdout is not None
         for line in process.stdout:
-            output_chunks.append(line)
+            with output_lock:
+                output_chunks.append(line)
             if should_log_output(line):
                 print(line, end="")
         process.stdout.close()
@@ -142,7 +166,10 @@ def run(
     def heartbeat() -> None:
         while not stop_event.is_set():
             if heartbeat_seconds is not None and heartbeat_seconds > 0:
-                print(f"[Heartbeat] still running after {time.time() - start_time:.1f}s")
+                with output_lock:
+                    progress = _summarize_progress(output_chunks)
+                elapsed = time.time() - start_time
+                print(f"[Heartbeat] elapsed={elapsed:.1f}s | {progress}")
             if stop_event.wait(heartbeat_seconds or 1.0):
                 break
 
@@ -159,7 +186,8 @@ def run(
     if heartbeat_thread is not None:
         heartbeat_thread.join(timeout=1)
 
-    output = "".join(output_chunks)
+    with output_lock:
+        output = "".join(output_chunks)
     if check and returncode != 0:
         raise subprocess.CalledProcessError(returncode, cmd, output=output, stderr="")
     return subprocess.CompletedProcess(cmd, returncode, output, "")
@@ -235,10 +263,23 @@ def prepare_project_root(project_root: Path, archive_path: Optional[Path] = None
 
 
 def select_libtorch_url() -> str:
-    """Pick a LibTorch archive that is robust for the C++ engine on Kaggle/Colab."""
+    """Pick a LibTorch archive that matches the current PyTorch runtime and GPU availability."""
     cuda_ver = torch.version.cuda or ""
     torch_ver = torch.__version__.split("+", 1)[0]
-    print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}")
+    print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}, cuda_available={torch.cuda.is_available()}")
+
+    if torch.cuda.is_available() and cuda_ver:
+        if cuda_ver.startswith("12.8"):
+            flavor = "cu128"
+        elif cuda_ver.startswith("12.4"):
+            flavor = "cu124"
+        elif cuda_ver.startswith("12.1"):
+            flavor = "cu121"
+        elif cuda_ver.startswith("11.8"):
+            flavor = "cu118"
+        else:
+            flavor = f"cu{cuda_ver.replace('.', '')}"
+        return f"https://download.pytorch.org/libtorch/{flavor}/libtorch-cxx11-abi-shared-with-deps-{torch_ver}%2B{flavor}.zip"
 
     if torch_ver.startswith("2.5"):
         base_version = "2.5.1"
@@ -249,21 +290,22 @@ def select_libtorch_url() -> str:
     else:
         base_version = "2.3.1"
 
-    # The engine only needs TorchScript inference, so a CPU-only LibTorch build is
-    # more portable and avoids CUDA-specific linker issues on Kaggle/Colab.
     return f"https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-{base_version}%2Bcpu.zip"
 
 
 def setup_libtorch(project_root: Path, workdir: Path) -> Path:
     libtorch_dir = workdir / "libtorch"
     torch_config = libtorch_dir / "share" / "cmake" / "Torch" / "TorchConfig.cmake"
-    if not torch_config.exists():
+    expected_url = select_libtorch_url()
+    expected_cuda = "/libtorch/cpu/" not in expected_url
+    current_cuda = (libtorch_dir / "lib" / "libtorch_cuda.so").exists()
+
+    if not torch_config.exists() or current_cuda != expected_cuda:
         if libtorch_dir.exists():
             shutil.rmtree(libtorch_dir, ignore_errors=True)
-        url = select_libtorch_url()
         archive = workdir / "libtorch.zip"
-        print(f"[LibTorch] Downloading {url}")
-        run(["wget", "-q", url, "-O", str(archive)])
+        print(f"[LibTorch] Downloading {expected_url}")
+        run(["wget", "-q", expected_url, "-O", str(archive)])
         run(["unzip", "-q", str(archive), "-d", str(workdir)])
         if not torch_config.exists():
             raise RuntimeError("LibTorch unzip did not create the expected directory.")

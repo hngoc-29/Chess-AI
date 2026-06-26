@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <torch/cuda.h>
+
 #include "mcts.hpp"
 #include "ChessEnv.cpp"
 
@@ -157,6 +159,7 @@ int main(int argc, char** argv) {
     // ── Banner ──────────────────────────────────────────────────────────────
     std::cout << "[SelfPlay] ============================================================\n";
     std::cout << "[SelfPlay] Starting self-play session\n";
+    std::cout << "[SelfPlay]   backend     = " << (torch::cuda::is_available() ? "CUDA" : "CPU") << "\n";
     std::cout << "[SelfPlay]   model       = " << model_path  << "\n";
     std::cout << "[SelfPlay]   simulations = " << simulations << " per move\n";
     std::cout << "[SelfPlay]   games       = " << games       << "\n";

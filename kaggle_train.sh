@@ -146,35 +146,44 @@ fi
 # ---------------------------------------------------------------------------
 CUDA_VER=$("$PYTHON_BIN" -c "import torch; print(torch.version.cuda or '')" 2>/dev/null \
            || nvcc --version 2>/dev/null | grep -oP 'release \K[0-9.]+' | head -1 \
-           || echo "12.1")
+           || echo "")
+CUDA_AVAILABLE=$("$PYTHON_BIN" -c "import torch; print('1' if torch.cuda.is_available() else '0')" 2>/dev/null || true)
 
-if echo "$CUDA_VER" | grep -q "^12\.4"; then
+if [ "$CUDA_AVAILABLE" = "1" ] && echo "$CUDA_VER" | grep -q "^12\.8"; then
+  CU="cu128"
+  TORCH_VER="2.10.0"
+  TORCHVISION_VER="0.25.0"
+  TORCHAUDIO_VER="2.10.0"
+elif [ "$CUDA_AVAILABLE" = "1" ] && echo "$CUDA_VER" | grep -q "^12\.4"; then
   CU="cu124"
   TORCH_VER="2.5.1"
   TORCHVISION_VER="0.20.1"
   TORCHAUDIO_VER="2.5.1"
-elif echo "$CUDA_VER" | grep -q "^12\.1"; then
+elif [ "$CUDA_AVAILABLE" = "1" ] && echo "$CUDA_VER" | grep -q "^12\.1"; then
   CU="cu121"
   TORCH_VER="2.3.1"
   TORCHVISION_VER="0.18.1"
   TORCHAUDIO_VER="2.3.1"
-elif echo "$CUDA_VER" | grep -q "^11\.8"; then
+elif [ "$CUDA_AVAILABLE" = "1" ] && echo "$CUDA_VER" | grep -q "^11\.8"; then
   CU="cu118"
   TORCH_VER="2.3.1"
   TORCHVISION_VER="0.18.1"
   TORCHAUDIO_VER="2.3.1"
 else
-  # Unknown CUDA — fall back to a generic PyTorch wheel set
-  CU="cu121"
-  TORCH_VER="2.3.1"
-  TORCHVISION_VER="0.18.1"
-  TORCHAUDIO_VER="2.3.1"
+  CU="cpu"
+  TORCH_VER="2.10.0"
+  TORCHVISION_VER="0.25.0"
+  TORCHAUDIO_VER="2.10.0"
 fi
 
-LIBTORCH_URL="https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-${TORCH_VER}%2Bcpu.zip"
+if [ "$CU" = "cpu" ]; then
+  LIBTORCH_URL="https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-${TORCH_VER}%2Bcpu.zip"
+else
+  LIBTORCH_URL="https://download.pytorch.org/libtorch/${CU}/libtorch-cxx11-abi-shared-with-deps-${TORCH_VER}%2B${CU}.zip"
+fi
 
 echo "[Setup] CUDA=${CUDA_VER} → pinning torch==${TORCH_VER}+${CU}"
-echo "[Setup] Using CPU-only LibTorch for the C++ engine: ${LIBTORCH_URL}"
+echo "[Setup] Using LibTorch for the C++ engine: ${LIBTORCH_URL}"
 
 # Force-overwrite all Python packages with exact pinned versions.
 # --force-reinstall ensures we never silently run a different version.

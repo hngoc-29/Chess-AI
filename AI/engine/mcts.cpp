@@ -14,6 +14,8 @@
 #include <tuple>
 #include <utility>
 
+#include <torch/cuda.h>
+
 namespace {
 
 constexpr std::size_t kBatchSize = 16;
@@ -145,6 +147,9 @@ void backpropagate_path(const std::vector<std::shared_ptr<MCTSNode>>& path, floa
 
 MCTS::MCTS(const std::string& m_path, int sims, float c)
     : model_path(m_path), num_simulations(sims), c_puct(c) {
+    const bool cuda_available = torch::cuda::is_available();
+    std::cout << "[MCTS] backend=" << (cuda_available ? "CUDA" : "CPU") << "\n";
+    std::cout.flush();
     try {
         module = torch::jit::load(model_path);
         module.eval();
