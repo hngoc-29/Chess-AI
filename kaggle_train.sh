@@ -13,6 +13,7 @@ MAX_GENERATIONS="${MAX_GENERATIONS:-3}"
 HEARTBEAT="${HEARTBEAT:-30}"
 LOG_EVERY="${LOG_EVERY:-10}"
 
+mkdir -p "$PROJECT_ROOT" "$WORKDIR" "$OUTPUT_ROOT"
 cd "$PROJECT_ROOT"
 
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
@@ -26,10 +27,22 @@ apt-get update -qq
 apt-get install -y -qq build-essential cmake >/dev/null
 "$PYTHON_BIN" -m pip install -q --upgrade pip
 "$PYTHON_BIN" -m pip install -q --upgrade --force-reinstall \
-  numpy \
-  torch==2.2.2 \
-  torchvision==0.17.2 \
-  torchaudio==2.2.2
+  "numpy<2.0" \
+  "torch==2.2.2" \
+  "torchvision==0.17.2" \
+  "torchaudio==2.2.2"
+
+PIPELINE_SCRIPT=""
+if [ -f "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" ]; then
+  PIPELINE_SCRIPT="$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py"
+elif [ -f "$PROJECT_ROOT/src/colab_selfplay_pipeline.py" ]; then
+  PIPELINE_SCRIPT="$PROJECT_ROOT/src/colab_selfplay_pipeline.py"
+elif [ -f "$(pwd)/AI/src/colab_selfplay_pipeline.py" ]; then
+  PIPELINE_SCRIPT="$(pwd)/AI/src/colab_selfplay_pipeline.py"
+else
+  echo "Could not find colab_selfplay_pipeline.py under $PROJECT_ROOT" >&2
+  exit 1
+fi
 
 if [ ! -d /kaggle/working/libtorch ]; then
   rm -f /kaggle/working/libtorch.zip
@@ -37,7 +50,7 @@ if [ ! -d /kaggle/working/libtorch ]; then
   unzip -q /kaggle/working/libtorch.zip -d /kaggle/working
 fi
 
-"$PYTHON_BIN" src/colab_selfplay_pipeline.py \
+"$PYTHON_BIN" "$PIPELINE_SCRIPT" \
   --project_root "$PROJECT_ROOT" \
   --drive_root "$OUTPUT_ROOT" \
   --workdir "$WORKDIR" \
