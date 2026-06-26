@@ -68,10 +68,30 @@ if [ -z "$PYTHON_BIN" ]; then
   exit 1
 fi
 
+VENV_DIR="${VENV_DIR:-/kaggle/working/chess_venv}"
+USE_VENV="${USE_VENV:-}"
+if [ -z "$USE_VENV" ]; then
+  if [ -d /kaggle ] || [ -n "${KAGGLE_KERNEL_RUN_TYPE:-}" ] || [ -n "${KAGGLE_URL_BASE:-}" ]; then
+    USE_VENV="1"
+  else
+    USE_VENV="0"
+  fi
+fi
+
 "$PYTHON_BIN" -V
 apt-get update -qq
-apt-get install -y -qq build-essential cmake >/dev/null
-"$PYTHON_BIN" -m pip install -q --upgrade pip
+apt-get install -y -qq build-essential cmake python3-venv >/dev/null
+
+if [ "$USE_VENV" = "1" ]; then
+  if [ ! -x "$VENV_DIR/bin/python" ]; then
+    echo "[Setup] Creating virtual environment at $VENV_DIR"
+    "$PYTHON_BIN" -m venv "$VENV_DIR"
+  fi
+  PYTHON_BIN="$VENV_DIR/bin/python"
+  echo "[Setup] Using virtual environment Python: $PYTHON_BIN"
+fi
+
+"$PYTHON_BIN" -m pip install -q --upgrade pip setuptools wheel
 
 # ---------------------------------------------------------------------------
 # Detect CUDA version → pick pinned library versions
