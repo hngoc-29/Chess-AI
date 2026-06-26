@@ -1,15 +1,49 @@
+#include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "mcts.hpp"
 #include "ChessEnv.cpp"
 
-int main() {
+namespace {
+
+std::filesystem::path resolve_model_path(int argc, char** argv) {
+    if (argc > 1 && argv[1] != nullptr && std::string(argv[1]) != "") {
+        return std::filesystem::path(argv[1]);
+    }
+
+    const std::filesystem::path cwd = std::filesystem::current_path();
+    std::vector<std::filesystem::path> candidates = {
+        cwd / "data" / "best_model_traced.pt",
+        cwd / "AI" / "data" / "best_model_traced.pt",
+    };
+
+    if (argv[0] != nullptr) {
+        const std::filesystem::path exe_path = argv[0];
+        const std::filesystem::path exe_dir = exe_path.parent_path().empty() ? cwd : exe_path.parent_path();
+        candidates.push_back(exe_dir / ".." / ".." / "data" / "best_model_traced.pt");
+        candidates.push_back(exe_dir / ".." / ".." / "AI" / "data" / "best_model_traced.pt");
+        candidates.push_back(exe_dir / ".." / "data" / "best_model_traced.pt");
+    }
+
+    for (const auto& candidate : candidates) {
+        if (std::filesystem::exists(candidate)) {
+            return candidate;
+        }
+    }
+
+    return candidates.empty() ? std::filesystem::path("data/best_model_traced.pt") : candidates.front();
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
     std::cout << "========================================================\n";
     std::cout << "          CHESS ENGINE AI - MONTE CARLO TREE SEARCH     \n";
     std::cout << "========================================================\n";
 
-    const std::string model_path = "/home/hn/Code/Python/ChessAI/AI/data/best_model_traced.pt";
+    const std::string model_path = resolve_model_path(argc, argv).string();
 
     constexpr int simulations = 1600;
     constexpr float c_puct = 1.5f;

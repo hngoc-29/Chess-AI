@@ -262,6 +262,8 @@ def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
     if not (engine_dir / "CMakeLists.txt").exists():
         engine_dir = project_root / "engine"
     build_dir = engine_dir / "build"
+    if build_dir.exists():
+        shutil.rmtree(build_dir, ignore_errors=True)
     build_dir.mkdir(parents=True, exist_ok=True)
 
     cmake_cmd = [
