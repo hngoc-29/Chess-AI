@@ -187,6 +187,11 @@ if [ ! -d /kaggle/working/libtorch ]; then
   unzip -q /kaggle/working/libtorch.zip -d /kaggle/working
 fi
 
+if [ -d "$PROJECT_ROOT/AI/engine" ] && [ ! -e "$PROJECT_ROOT/engine" ]; then
+  ln -s "$PROJECT_ROOT/AI/engine" "$PROJECT_ROOT/engine"
+  echo "[Setup] Created engine compatibility link: $PROJECT_ROOT/engine"
+fi
+
 "$PYTHON_BIN" "$PIPELINE_SCRIPT" \
   --project_root "$PROJECT_ROOT" \
   --drive_root "$OUTPUT_ROOT" \
