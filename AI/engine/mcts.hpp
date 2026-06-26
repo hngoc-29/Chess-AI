@@ -49,6 +49,7 @@ public:
     MCTS(const std::string& m_path, int sims = 800, float c = 1.5f);
 
     std::string search(const ChessEnv& current_env);
+    std::vector<std::pair<int, int>> search_with_counts(const ChessEnv& current_env);
 };
 
 #endif

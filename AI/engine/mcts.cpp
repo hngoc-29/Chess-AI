@@ -6,8 +6,11 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <numeric>
+#include <random>
 #include <tuple>
 #include <utility>
 
@@ -82,6 +85,52 @@ float evaluate_terminal_result(const ChessEnv& env) {
     return 0.0f;
 }
 
+std::vector<float> normalize_policy(const std::vector<float>& values) {
+    if (values.empty()) {
+        return make_uniform_prior(kPolicySize);
+    }
+    float sum = 0.0f;
+    std::vector<float> normalized(values.size(), 0.0f);
+    for (float value : values) {
+        sum += std::max(0.0f, value);
+    }
+    if (sum <= 0.0f) {
+        return make_uniform_prior(values.size());
+    }
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        normalized[i] = std::max(0.0f, values[i]) / sum;
+    }
+    return normalized;
+}
+
+void apply_dirichlet_noise_to_root(std::shared_ptr<MCTSNode> root) {
+    if (root == nullptr || root->children.empty()) {
+        return;
+    }
+    const std::size_t child_count = root->children.size();
+    if (child_count == 0) {
+        return;
+    }
+    std::mt19937 rng(static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::gamma_distribution<float> gamma(0.3f, 1.0f);
+    std::vector<float> noise(child_count, 0.0f);
+    for (float& sample : noise) {
+        sample = gamma(rng);
+    }
+    const float noise_sum = std::accumulate(noise.begin(), noise.end(), 0.0f);
+    for (std::size_t i = 0; i < noise.size(); ++i) {
+        noise[i] /= noise_sum > 0.0f ? noise_sum : 1.0f;
+    }
+    std::size_t index = 0;
+    for (auto& [action_idx, child] : root->children) {
+        (void)action_idx;
+        if (index < noise.size()) {
+            child->prior_prob = 0.75f * child->prior_prob + 0.25f * noise[index];
+        }
+        ++index;
+    }
+}
+
 void backpropagate_path(const std::vector<std::shared_ptr<MCTSNode>>& path, float value) {
     float current_value = value;
     for (auto it = path.rbegin(); it != path.rend(); ++it) {
@@ -133,19 +182,26 @@ std::vector<std::vector<float>> MCTS::run_nn_inference_batch(const std::vector<s
     inputs.emplace_back(input_tensor);
 
     try {
-        torch::Tensor output = module.forward(inputs).toTensor();
-        if (output.dim() == 1) {
-            output = output.unsqueeze(0);
-        }
-        if (output.dim() == 2 && output.size(0) == 1 && batch_planes.size() > 1) {
-            output = output.expand({static_cast<int64_t>(batch_planes.size()), output.size(1)});
-        }
-        if (output.dim() != 2 || output.size(0) != static_cast<int64_t>(batch_planes.size())) {
+        auto output_tuple = module.forward(inputs).toTuple();
+        if (output_tuple->elements().size() != 2) {
             std::vector<std::vector<float>> fallback(batch_planes.size(), make_uniform_prior(kPolicySize));
             return fallback;
         }
 
-        torch::Tensor probs = torch::softmax(output, 1);
+        torch::Tensor policy_logits = output_tuple->elements()[0].toTensor();
+        torch::Tensor value_logits = output_tuple->elements()[1].toTensor();
+        if (policy_logits.dim() == 1) {
+            policy_logits = policy_logits.unsqueeze(0);
+        }
+        if (value_logits.dim() == 1) {
+            value_logits = value_logits.unsqueeze(0);
+        }
+        if (policy_logits.dim() != 2 || policy_logits.size(0) != static_cast<int64_t>(batch_planes.size())) {
+            std::vector<std::vector<float>> fallback(batch_planes.size(), make_uniform_prior(kPolicySize));
+            return fallback;
+        }
+
+        torch::Tensor probs = torch::softmax(policy_logits, 1);
         std::vector<std::vector<float>> policies;
         policies.reserve(batch_planes.size());
         for (std::size_t i = 0; i < batch_planes.size(); ++i) {
@@ -161,8 +217,37 @@ std::vector<std::vector<float>> MCTS::run_nn_inference_batch(const std::vector<s
 }
 
 std::string MCTS::search(const ChessEnv& current_env) {
-    if (current_env.is_terminal()) {
+    const auto counts = search_with_counts(current_env);
+    if (counts.empty()) {
         return "none";
+    }
+
+    int best_action = -1;
+    int best_visits = -1;
+    for (const auto& [action_idx, visits] : counts) {
+        if (visits > best_visits) {
+            best_visits = visits;
+            best_action = action_idx;
+        }
+    }
+
+    if (best_action < 0) {
+        return "none";
+    }
+
+    chess::Movelist legal_moves;
+    current_env.get_legal_moves(legal_moves);
+    for (const auto& move : legal_moves) {
+        if (make_action_index(move) == best_action) {
+            return chess::uci::moveToUci(move);
+        }
+    }
+    return "none";
+}
+
+std::vector<std::pair<int, int>> MCTS::search_with_counts(const ChessEnv& current_env) {
+    if (current_env.is_terminal()) {
+        return {};
     }
 
     auto root = std::make_shared<MCTSNode>(-1, nullptr, 1.0f);
@@ -227,6 +312,9 @@ std::string MCTS::search(const ChessEnv& current_env) {
 
             auto child = std::make_shared<MCTSNode>(action_idx, node, prior, chosen_move);
             node->children[action_idx] = child;
+            if (node->move_idx == -1) {
+                apply_dirichlet_noise_to_root(node);
+            }
             node->virtual_loss += 1;
 
             ChessEnv child_env = env;
@@ -311,7 +399,10 @@ std::string MCTS::search(const ChessEnv& current_env) {
     const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count();
     const double elapsed_s = elapsed_ms / 1000.0;
     const double nps = elapsed_s > 0.0 ? (static_cast<double>(total_node_visits) / elapsed_s) : 0.0;
+    (void)nps;
 
+    std::vector<std::pair<int, int>> counts;
+    counts.reserve(root->children.size());
     int best_final_action = -1;
     int max_visits = -1;
     for (const auto& [action_idx, child] : root->children) {
@@ -319,20 +410,23 @@ std::string MCTS::search(const ChessEnv& current_env) {
             max_visits = child->visit_count;
             best_final_action = action_idx;
         }
+        counts.emplace_back(action_idx, child->visit_count);
     }
+
+    std::sort(counts.begin(), counts.end(), [](const auto& lhs, const auto& rhs) {
+        return lhs.second > rhs.second;
+    });
 
     if (best_final_action != -1) {
         const auto selected = root->children[best_final_action];
         if (selected != nullptr) {
-            return chess::uci::moveToUci(selected->move);
+            (void)selected;
         }
     }
 
-    chess::Movelist legal_moves;
-    current_env.get_legal_moves(legal_moves);
-    if (!legal_moves.empty()) {
-        return chess::uci::moveToUci(legal_moves[0]);
+    if (counts.empty()) {
+        return {};
     }
 
-    return "none";
+    return counts;
 }

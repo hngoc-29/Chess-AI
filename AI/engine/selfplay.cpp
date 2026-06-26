@@ -1,9 +1,11 @@
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -18,6 +20,7 @@ constexpr int kDefaultSimulations    = 800;
 constexpr int kDefaultGames          = 500;
 constexpr int kDefaultMaxMoves       = 512;
 constexpr int kDefaultLogEvery       = 10;
+constexpr int kDefaultTemperatureMoves = 30;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -45,6 +48,42 @@ std::string fmt_speed(double moves_per_s) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(2) << moves_per_s << " moves/s";
     return oss.str();
+}
+
+int sample_action_from_counts(const std::vector<std::pair<int, int>>& counts, int temperature_moves, int ply, std::mt19937& rng) {
+    if (counts.empty()) {
+        return -1;
+    }
+    if (ply >= temperature_moves) {
+        return counts.front().first;
+    }
+    std::vector<float> weights;
+    weights.reserve(counts.size());
+    for (const auto& [action_idx, visit_count] : counts) {
+        (void)action_idx;
+        if (visit_count <= 0) {
+            weights.push_back(1.0f);
+        } else {
+            weights.push_back(std::pow(static_cast<float>(visit_count), 1.0f));
+        }
+    }
+    float total = 0.0f;
+    for (float weight : weights) {
+        total += weight;
+    }
+    if (total <= 0.0f) {
+        return counts.front().first;
+    }
+    std::uniform_real_distribution<float> dist(0.0f, total);
+    const float target = dist(rng);
+    float running = 0.0f;
+    for (std::size_t i = 0; i < counts.size(); ++i) {
+        running += weights[i];
+        if (target <= running) {
+            return counts[i].first;
+        }
+    }
+    return counts.back().first;
 }
 
 // ── Data structures ──────────────────────────────────────────────────────────
@@ -87,7 +126,7 @@ void print_usage(const char* argv0) {
     std::cerr << "Usage: " << argv0
               << " --model_path <path> --simulations <n>"
               << " --games <n> --output <path>"
-              << " [--max_moves <n>] [--log_every <n>]\n";
+              << " [--max_moves <n>] [--log_every <n>] [--temperature_moves <n>]\n";
 }
 
 }  // namespace
@@ -101,6 +140,7 @@ int main(int argc, char** argv) {
     std::string output_path = "selfplay_data.bin";
     int         max_moves   = kDefaultMaxMoves;
     int         log_every   = kDefaultLogEvery;
+    int         temperature_moves = kDefaultTemperatureMoves;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -110,6 +150,7 @@ int main(int argc, char** argv) {
         else if (arg == "--output"      && i + 1 < argc) output_path = argv[++i];
         else if (arg == "--max_moves"   && i + 1 < argc) max_moves   = std::stoi(argv[++i]);
         else if (arg == "--log_every"   && i + 1 < argc) log_every   = std::stoi(argv[++i]);
+        else if (arg == "--temperature_moves" && i + 1 < argc) temperature_moves = std::stoi(argv[++i]);
         else { print_usage(argv[0]); return 1; }
     }
 
@@ -121,6 +162,7 @@ int main(int argc, char** argv) {
     std::cout << "[SelfPlay]   games       = " << games       << "\n";
     std::cout << "[SelfPlay]   max_moves   = " << max_moves   << " per game\n";
     std::cout << "[SelfPlay]   log_every   = " << log_every   << " games\n";
+    std::cout << "[SelfPlay]   temperature_moves = " << temperature_moves << "\n";
     std::cout << "[SelfPlay]   output      = " << output_path << "\n";
     std::cout << "[SelfPlay] ============================================================\n";
     std::cout.flush();
@@ -161,17 +203,32 @@ int main(int argc, char** argv) {
         std::vector<float>          perspectives;
         float terminal_reward = 0.0f;
         int   plies           = 0;
+        std::mt19937 rng(static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count()));
 
         for (int ply = 0; ply < max_moves; ++ply) {
-            if (env.is_terminal()) break;
-
             chess::Movelist legal;
             env.get_legal_moves(legal);
             if (legal.empty()) break;
 
-            const std::string move_uci = bot.search(env);
+            const auto counts = bot.search_with_counts(env);
+            std::string move_uci = "none";
             chess::Move chosen = chess::Move::NO_MOVE;
-            if (!resolve_move(env, move_uci, chosen)) chosen = legal[0];
+            if (!counts.empty()) {
+                const int action_idx = sample_action_from_counts(counts, temperature_moves, ply, rng);
+                for (const auto& move : legal) {
+                    if (make_action_index(move) == action_idx) {
+                        chosen = move;
+                        break;
+                    }
+                }
+                if (chosen != chess::Move::NO_MOVE) {
+                    move_uci = chess::uci::moveToUci(chosen);
+                }
+            }
+            if (chosen == chess::Move::NO_MOVE) {
+                move_uci = bot.search(env);
+                if (!resolve_move(env, move_uci, chosen)) chosen = legal[0];
+            }
 
             const bool is_white = env.get_board().sideToMove() == chess::Color::WHITE;
             perspectives.push_back(is_white ? 1.0f : -1.0f);

@@ -35,37 +35,25 @@ def _build_model():
     import torch.nn as nn
     import torch.nn.functional as F
 
-    class ResidualBlock(nn.Module):
-        def __init__(self, channels: int, dropout: float = 0.3):
-            super().__init__()
-            self.conv1 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)
-            self.bn1 = nn.BatchNorm2d(channels)
-            self.dropout = nn.Dropout2d(p=dropout)
-            self.conv2 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)
-            self.bn2 = nn.BatchNorm2d(channels)
-
-        def forward(self, x):
-            out = F.relu(self.bn1(self.conv1(x)))
-            out = self.dropout(out)
-            out = self.bn2(self.conv2(out))
-            return F.relu(out + x)
-
     class ChessPolicyNet(nn.Module):
-        def __init__(self, num_blocks: int = 6, hidden_channels: int = 128, dropout: float = 0.3):
+        def __init__(self, num_actions: int = 4096):
             super().__init__()
-            self.conv_init = nn.Conv2d(12, hidden_channels, 3, padding=1, bias=False)
-            self.bn_init = nn.BatchNorm2d(hidden_channels)
-            self.blocks = nn.ModuleList([ResidualBlock(hidden_channels, dropout) for _ in range(num_blocks)])
-            self.policy_conv = nn.Conv2d(hidden_channels, 32, 1, bias=False)
-            self.policy_bn = nn.BatchNorm2d(32)
-            self.fc = nn.Linear(32 * 64, 4096)
+            self.conv1 = nn.Conv2d(12, 64, kernel_size=3, padding=1)
+            self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+            self.conv3 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+            self.fc1 = nn.Linear(128 * 8 * 8, 512)
+            self.policy_head = nn.Linear(512, num_actions)
+            self.value_head = nn.Linear(512, 1)
 
         def forward(self, x):
-            out = F.relu(self.bn_init(self.conv_init(x)))
-            for block in self.blocks:
-                out = block(out)
-            policy = F.relu(self.policy_bn(self.policy_conv(out)))
-            return self.fc(policy.flatten(1))
+            x = F.relu(self.conv1(x))
+            x = F.relu(self.conv2(x))
+            x = F.relu(self.conv3(x))
+            x = torch.flatten(x, start_dim=1)
+            x = F.relu(self.fc1(x))
+            policy_logits = self.policy_head(x)
+            value_logit = self.value_head(x)
+            return policy_logits, value_logit
 
     return ChessPolicyNet
 
@@ -85,15 +73,23 @@ def convert(project_root: Path | None = None):
     device = torch.device("cpu")
     ChessPolicyNet = _build_model()
 
-    model = ChessPolicyNet(num_blocks=6, hidden_channels=128, dropout=0.0).to(device)
+    model = ChessPolicyNet().to(device)
 
     print(f"-> Đang tải trọng số từ {pth_model_path}...")
     checkpoint = torch.load(pth_model_path, map_location=device)
 
-    if "model_state_dict" in checkpoint:
-        model.load_state_dict(checkpoint["model_state_dict"])
+    if isinstance(checkpoint, dict):
+        state_dict = checkpoint.get("model_state_dict") or checkpoint.get("model_state") or checkpoint
     else:
-        model.load_state_dict(checkpoint)
+        state_dict = checkpoint
+
+    if isinstance(state_dict, dict):
+        try:
+            model.load_state_dict(state_dict, strict=True)
+        except RuntimeError:
+            model.load_state_dict(state_dict, strict=False)
+    else:
+        raise TypeError("Checkpoint payload is not a state dict")
 
     model.eval()
 

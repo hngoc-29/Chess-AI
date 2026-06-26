@@ -95,8 +95,8 @@ class ChessPolicyNet(nn.Module):
         x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc1(x))
         policy_logits = self.policy_head(x)
-        value_logits = torch.tanh(self.value_head(x))
-        return policy_logits, value_logits
+        value_logit = self.value_head(x)
+        return policy_logits, value_logit
 
 
 def should_log_output(line: str) -> bool:
@@ -273,31 +273,39 @@ def setup_libtorch(project_root: Path, workdir: Path) -> Path:
     return libtorch_dir
 
 
-def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
-    engine_dir = project_root / "AI" / "engine"
-    if not (engine_dir / "CMakeLists.txt").exists():
-        engine_dir = project_root / "engine"
-    build_dir = engine_dir / "build"
-    build_dir.mkdir(parents=True, exist_ok=True)
-
-    input_files = [
+def compute_build_hash(engine_dir: Path) -> str:
+    relevant_files = [
         engine_dir / "CMakeLists.txt",
         engine_dir / "selfplay.cpp",
         engine_dir / "mcts.cpp",
         engine_dir / "mcts.hpp",
         engine_dir / "ChessEnv.cpp",
     ]
-    hash_payload = []
-    for path in input_files:
+    hasher = hashlib.sha256()
+    for path in relevant_files:
         if path.exists():
-            hash_payload.append(path.read_bytes())
-    build_hash = hashlib.sha256(b"".join(hash_payload)).hexdigest()
-    hash_marker = build_dir / ".build_hash"
-    binary = build_dir / "selfplay"
+            hasher.update(path.read_bytes())
+        else:
+            hasher.update(b"<missing>")
+    return hasher.hexdigest()
 
-    if binary.exists() and hash_marker.exists() and hash_marker.read_text(encoding="utf-8").strip() == build_hash:
-        print(f"[Build] reusing existing engine binary: {binary}")
-        return binary
+
+def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
+    engine_dir = project_root / "AI" / "engine"
+    if not (engine_dir / "CMakeLists.txt").exists():
+        engine_dir = project_root / "engine"
+    build_dir = engine_dir / "build"
+    build_hash_path = build_dir / ".build_hash"
+    binary = build_dir / "selfplay"
+    current_hash = compute_build_hash(engine_dir)
+
+    if build_dir.exists() and binary.exists() and build_hash_path.exists():
+        try:
+            if build_hash_path.read_text(encoding="utf-8").strip() == current_hash:
+                print(f"[Build] Reusing existing engine build at {build_dir}")
+                return binary
+        except Exception as exc:  # pragma: no cover
+            print(f"[Build] Could not validate cached build hash: {exc}")
 
     if build_dir.exists():
         shutil.rmtree(build_dir, ignore_errors=True)
@@ -316,7 +324,7 @@ def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
 
     if not binary.exists():
         raise RuntimeError("The self-play binary was not built successfully.")
-    hash_marker.write_text(build_hash, encoding="utf-8")
+    build_hash_path.write_text(current_hash, encoding="utf-8")
     return binary
 
 
@@ -353,7 +361,7 @@ def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor, t
     values_np = np.concatenate(all_values, axis=0)
     x = torch.from_numpy(states_np)
     y = torch.from_numpy(moves_np)
-    v = torch.from_numpy(values_np)
+    v = torch.from_numpy(values_np).float()
     return x, y, v
 
 
@@ -403,7 +411,7 @@ def train_policy_model(
     model: nn.Module,
     states: torch.Tensor,
     moves: torch.Tensor,
-    values: torch.Tensor,
+    values: Optional[torch.Tensor] = None,
     lr: float = 1e-3,
     batch_size: int = 256,
     epochs: int = 3,
@@ -437,7 +445,10 @@ def train_policy_model(
         current_batch_size = effective_batch_size
         while True:
             try:
-                dataset = TensorDataset(states, moves, values)
+                if values is not None:
+                    dataset = TensorDataset(states, moves, values)
+                else:
+                    dataset = TensorDataset(states, moves)
                 loader = DataLoader(
                     dataset,
                     batch_size=current_batch_size,
@@ -453,16 +464,18 @@ def train_policy_model(
                     continue
                 raise
 
-        for xb, yb, vb in loader:
-            xb = xb.to(device, non_blocking=True)
-            yb = yb.to(device, non_blocking=True)
-            vb = vb.to(device, non_blocking=True).float().view(-1, 1)
+        for batch_idx, batch in enumerate(loader):
+            xb = batch[0].to(device, non_blocking=True)
+            yb = batch[1].to(device, non_blocking=True)
+            vb = None
+            if values is not None and len(batch) >= 3:
+                vb = batch[2].to(device, non_blocking=True).float()
             optimizer.zero_grad(set_to_none=True)
             if device.type == "cuda":
                 with torch.autocast(device_type="cuda", dtype=torch.float16):
                     policy_logits, value_logits = model(xb)
                     policy_loss = F.cross_entropy(policy_logits, yb.long())
-                    value_loss = F.mse_loss(value_logits, vb)
+                    value_loss = torch.nn.functional.mse_loss(value_logits.squeeze(-1), vb) if vb is not None else torch.tensor(0.0, device=device)
                     loss = policy_loss + value_loss
                 scaler.scale(loss).backward()
                 scaler.unscale_(optimizer)
@@ -472,13 +485,14 @@ def train_policy_model(
             else:
                 policy_logits, value_logits = model(xb)
                 policy_loss = F.cross_entropy(policy_logits, yb.long())
-                value_loss = F.mse_loss(value_logits, vb)
+                value_loss = torch.nn.functional.mse_loss(value_logits.squeeze(-1), vb) if vb is not None else torch.tensor(0.0, device=device)
                 loss = policy_loss + value_loss
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
             running_loss += float(loss.item())
-            running_value_loss += float(value_loss.item())
+            if vb is not None:
+                running_value_loss += float(value_loss.item())
             total_batches += 1
 
         avg_loss = running_loss / max(1, total_batches)
@@ -661,15 +675,8 @@ def save_resume_state(
 
 
 def load_checkpoint(model: nn.Module, checkpoint_path: Path, device: torch.device) -> Tuple[nn.Module, dict]:
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    state_dict = checkpoint.get("model_state") or checkpoint.get("model_state_dict") or checkpoint
-    if isinstance(state_dict, dict) and any(k.startswith("module.") for k in state_dict.keys()):
-        state_dict = {k.replace("module.", "", 1): v for k, v in state_dict.items()}
-    incompatible = model.load_state_dict(state_dict, strict=False)
-    if incompatible.missing_keys:
-        print(f"[Checkpoint] missing keys: {incompatible.missing_keys}")
-    if incompatible.unexpected_keys:
-        print(f"[Checkpoint] unexpected keys: {incompatible.unexpected_keys}")
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(checkpoint["model_state"])
     model.to(device)
     return model, checkpoint
 
@@ -707,6 +714,7 @@ def run_generation(
     games: int,
     log_every: int = 50,
     heartbeat_seconds: float = 30.0,
+    temperature_moves: int = 30,
 ) -> Path:
     local_generation_file = workdir / f"selfplay_gen_{generation}.bin"
     drive_generation_file = drive_root / f"selfplay_gen_{generation}.bin"
@@ -720,6 +728,8 @@ def run_generation(
         str(games),
         "--log_every",
         str(log_every),
+        "--temperature_moves",
+        str(temperature_moves),
         "--output",
         str(local_generation_file),
     ]
@@ -790,6 +800,7 @@ def run_pipeline(
     heartbeat_seconds: float = 30.0,
     resume: bool = False,
     checkpoint_dir: Optional[Path] = None,
+    temperature_moves: int = 30,
 ) -> None:
     workdir.mkdir(parents=True, exist_ok=True)
     drive_root.mkdir(parents=True, exist_ok=True)
@@ -872,12 +883,13 @@ def run_pipeline(
             games=games_per_generation,
             log_every=log_every_games,
             heartbeat_seconds=heartbeat_seconds,
+            temperature_moves=temperature_moves,
         )
 
         validate_torchscript_model(best_model_path, device)
         replay_files = select_replay_files(drive_root, generation_file)
         states, moves, values = load_replay_buffer(replay_files)
-        validate_training_inputs(states.tolist(), moves.tolist(), values.tolist())
+        validate_training_inputs(states.tolist(), moves.tolist())
         print(f"[Progress] Generation {generation}: training with {states.shape[0]} samples")
         checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
         latest_checkpoint_path = checkpoint_dir / "latest_checkpoint.pt"
@@ -968,43 +980,49 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--heartbeat", type=float, default=60.0, help="Print a heartbeat every N seconds while the engine is running")
     parser.add_argument("--checkpoint_dir", type=str, default="", help="Directory for persistent checkpoints and resume state")
     parser.add_argument("--resume", action="store_true", help="Resume from the latest completed generation in the output directory")
+    parser.add_argument("--temperature_moves", type=int, default=30, help="Use temperature-based sampling for the first N moves of each game")
     parser.add_argument("--no_infinite", action="store_true")
     return parser.parse_args()
 
 
 def main() -> None:
-    args = parse_args()
-    ensure_drive_mount()
+    try:
+        args = parse_args()
+        ensure_drive_mount()
 
-    default_project_root, default_workdir, default_output_root = detect_runtime_defaults()
-    project_root = Path(args.project_root).expanduser().resolve() if args.project_root else default_project_root
-    workdir = Path(args.workdir).expanduser().resolve() if args.workdir else default_workdir
-    drive_root = Path(args.drive_root).expanduser().resolve() if args.drive_root else default_output_root
-    initial_model_path = Path(args.initial_model).expanduser().resolve() if args.initial_model else None
-    best_model_path_override = Path(args.best_model_path).expanduser().resolve() if args.best_model_path else None
-    archive_path = Path(args.archive_path).expanduser().resolve() if args.archive_path else None
-    checkpoint_dir = Path(args.checkpoint_dir).expanduser().resolve() if args.checkpoint_dir else drive_root / "checkpoints"
+        default_project_root, default_workdir, default_output_root = detect_runtime_defaults()
+        project_root = Path(args.project_root).expanduser().resolve() if args.project_root else default_project_root
+        workdir = Path(args.workdir).expanduser().resolve() if args.workdir else default_workdir
+        drive_root = Path(args.drive_root).expanduser().resolve() if args.drive_root else default_output_root
+        initial_model_path = Path(args.initial_model).expanduser().resolve() if args.initial_model else None
+        best_model_path_override = Path(args.best_model_path).expanduser().resolve() if args.best_model_path else None
+        archive_path = Path(args.archive_path).expanduser().resolve() if args.archive_path else None
+        checkpoint_dir = Path(args.checkpoint_dir).expanduser().resolve() if args.checkpoint_dir else drive_root / "checkpoints"
 
-    project_root = prepare_project_root(project_root, archive_path)
+        project_root = prepare_project_root(project_root, archive_path)
 
-    run_pipeline(
-        project_root=project_root,
-        workdir=workdir,
-        drive_root=drive_root,
-        initial_model_path=initial_model_path,
-        best_model_path_override=best_model_path_override,
-        simulations=args.simulations,
-        games_per_generation=args.games,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        learning_rate=args.lr,
-        max_generations=args.max_generations,
-        infinite=not args.no_infinite,
-        log_every_games=args.log_every,
-        heartbeat_seconds=args.heartbeat,
-        resume=args.resume,
-        checkpoint_dir=checkpoint_dir,
-    )
+        run_pipeline(
+            project_root=project_root,
+            workdir=workdir,
+            drive_root=drive_root,
+            initial_model_path=initial_model_path,
+            best_model_path_override=best_model_path_override,
+            simulations=args.simulations,
+            games_per_generation=args.games,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.lr,
+            max_generations=args.max_generations,
+            infinite=not args.no_infinite,
+            log_every_games=args.log_every,
+            heartbeat_seconds=args.heartbeat,
+            resume=args.resume,
+            checkpoint_dir=checkpoint_dir,
+            temperature_moves=args.temperature_moves,
+        )
+    except Exception as exc:  # pragma: no cover
+        print(f"[ERROR] {exc}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
