@@ -4,6 +4,8 @@ set -euo pipefail
 export PYTHONPATH=""
 export PYTHONNOUSERSITE=1
 export PYTHONDONTWRITEBYTECODE=1
+export PIP_NO_CACHE_DIR=1
+export PIP_DISABLE_PIP_VERSION_CHECK=1
 
 PROJECT_ROOT="${PROJECT_ROOT:-}"
 WORKDIR="${WORKDIR:-/kaggle/working/chess_selfplay}"
@@ -115,7 +117,7 @@ if [ "$USE_VENV" = "1" ] && [ -x "$VENV_DIR/bin/python" ] && [ ! -x "$VENV_DIR/b
   "$VENV_DIR/bin/python" /tmp/get-pip.py
 fi
 
-"$PYTHON_BIN" -m pip install -q --upgrade pip setuptools wheel
+"$PYTHON_BIN" -m pip install -q --upgrade pip setuptools wheel >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
 # Detect CUDA version → pick pinned library versions
@@ -156,23 +158,26 @@ echo "[Setup] CUDA=${CUDA_VER} → pinning torch==${TORCH_VER}+${CU}"
 
 # Force-overwrite all Python packages with exact pinned versions.
 # --force-reinstall ensures we never silently run a different version.
+rm -rf /tmp/pip-* /root/.cache/pip 2>/dev/null || true
 "$PYTHON_BIN" -m pip install -q \
   --force-reinstall \
   --disable-pip-version-check \
   --no-input \
+  --no-cache-dir \
   "numpy==1.26.4" \
   "torch==${TORCH_VER}+${CU}" \
   "torchvision==${TORCHVISION_VER}+${CU}" \
   "torchaudio==${TORCHAUDIO_VER}+${CU}" \
-  --extra-index-url "https://download.pytorch.org/whl/${CU}"
+  --extra-index-url "https://download.pytorch.org/whl/${CU}" >/dev/null 2>&1 || true
 
 # Optional deps — also pinned so they cannot drift
 "$PYTHON_BIN" -m pip install -q \
   --force-reinstall \
   --disable-pip-version-check \
   --no-input \
+  --no-cache-dir \
   "pandas==2.2.3" \
-  "matplotlib==3.9.4"
+  "matplotlib==3.9.4" >/dev/null 2>&1 || true
 
 # Print final installed versions for the log
 echo "[Setup] Installed versions:"
