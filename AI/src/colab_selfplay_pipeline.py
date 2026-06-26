@@ -19,6 +19,7 @@ This script will:
 import argparse
 import csv
 import gc
+import hashlib
 import json
 import os
 import random
@@ -76,7 +77,7 @@ def configure_torch_runtime(device: torch.device) -> None:
 
 
 class ChessPolicyNet(nn.Module):
-    """A compact policy network for 12x8x8 board inputs."""
+    """A compact policy/value network for 12x8x8 board inputs."""
 
     def __init__(self, num_actions: int = 4096) -> None:
         super().__init__()
@@ -85,14 +86,17 @@ class ChessPolicyNet(nn.Module):
         self.conv3 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
         self.fc1 = nn.Linear(128 * 8 * 8, 512)
         self.policy_head = nn.Linear(512, num_actions)
+        self.value_head = nn.Linear(512, 1)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc1(x))
-        return self.policy_head(x)
+        policy_logits = self.policy_head(x)
+        value_logits = torch.tanh(self.value_head(x))
+        return policy_logits, value_logits
 
 
 def should_log_output(line: str) -> bool:
@@ -274,6 +278,27 @@ def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
     if not (engine_dir / "CMakeLists.txt").exists():
         engine_dir = project_root / "engine"
     build_dir = engine_dir / "build"
+    build_dir.mkdir(parents=True, exist_ok=True)
+
+    input_files = [
+        engine_dir / "CMakeLists.txt",
+        engine_dir / "selfplay.cpp",
+        engine_dir / "mcts.cpp",
+        engine_dir / "mcts.hpp",
+        engine_dir / "ChessEnv.cpp",
+    ]
+    hash_payload = []
+    for path in input_files:
+        if path.exists():
+            hash_payload.append(path.read_bytes())
+    build_hash = hashlib.sha256(b"".join(hash_payload)).hexdigest()
+    hash_marker = build_dir / ".build_hash"
+    binary = build_dir / "selfplay"
+
+    if binary.exists() and hash_marker.exists() and hash_marker.read_text(encoding="utf-8").strip() == build_hash:
+        print(f"[Build] reusing existing engine binary: {binary}")
+        return binary
+
     if build_dir.exists():
         shutil.rmtree(build_dir, ignore_errors=True)
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -289,9 +314,9 @@ def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
     run(cmake_cmd, cwd=str(project_root))
     run(["cmake", "--build", str(build_dir), "-j2"], cwd=str(project_root))
 
-    binary = build_dir / "selfplay"
     if not binary.exists():
         raise RuntimeError("The self-play binary was not built successfully.")
+    hash_marker.write_text(build_hash, encoding="utf-8")
     return binary
 
 
@@ -310,22 +335,26 @@ def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndar
     return states, moves, values
 
 
-def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor]:
+def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     all_states = []
     all_moves = []
+    all_values = []
     for path in paths:
         if not path.exists():
             continue
-        states, moves, _ = load_generation_samples(path)
+        states, moves, values = load_generation_samples(path)
         all_states.append(states)
         all_moves.append(moves)
+        all_values.append(values)
     if not all_states:
         raise RuntimeError("No generation data found for training.")
     states_np = np.concatenate(all_states, axis=0)
     moves_np = np.concatenate(all_moves, axis=0)
+    values_np = np.concatenate(all_values, axis=0)
     x = torch.from_numpy(states_np)
     y = torch.from_numpy(moves_np)
-    return x, y
+    v = torch.from_numpy(values_np)
+    return x, y, v
 
 
 def validate_torchscript_model(model_path: Path, device: torch.device) -> None:
@@ -374,6 +403,7 @@ def train_policy_model(
     model: nn.Module,
     states: torch.Tensor,
     moves: torch.Tensor,
+    values: torch.Tensor,
     lr: float = 1e-3,
     batch_size: int = 256,
     epochs: int = 3,
@@ -407,7 +437,7 @@ def train_policy_model(
         current_batch_size = effective_batch_size
         while True:
             try:
-                dataset = TensorDataset(states, moves)
+                dataset = TensorDataset(states, moves, values)
                 loader = DataLoader(
                     dataset,
                     batch_size=current_batch_size,
@@ -423,26 +453,32 @@ def train_policy_model(
                     continue
                 raise
 
-        for xb, yb in loader:
+        for xb, yb, vb in loader:
             xb = xb.to(device, non_blocking=True)
             yb = yb.to(device, non_blocking=True)
+            vb = vb.to(device, non_blocking=True).float().view(-1, 1)
             optimizer.zero_grad(set_to_none=True)
             if device.type == "cuda":
                 with torch.autocast(device_type="cuda", dtype=torch.float16):
-                    logits = model(xb)
-                    loss = F.cross_entropy(logits, yb.long())
+                    policy_logits, value_logits = model(xb)
+                    policy_loss = F.cross_entropy(policy_logits, yb.long())
+                    value_loss = F.mse_loss(value_logits, vb)
+                    loss = policy_loss + value_loss
                 scaler.scale(loss).backward()
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 scaler.step(optimizer)
                 scaler.update()
             else:
-                logits = model(xb)
-                loss = F.cross_entropy(logits, yb.long())
+                policy_logits, value_logits = model(xb)
+                policy_loss = F.cross_entropy(policy_logits, yb.long())
+                value_loss = F.mse_loss(value_logits, vb)
+                loss = policy_loss + value_loss
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
             running_loss += float(loss.item())
+            running_value_loss += float(value_loss.item())
             total_batches += 1
 
         avg_loss = running_loss / max(1, total_batches)
@@ -488,7 +524,8 @@ def train_policy_model(
 def save_traced_model(model: nn.Module, path: Path, device: torch.device) -> None:
     model = model.to(device).eval()
     dummy = torch.randn(1, 12, 8, 8, device=device)
-    traced = torch.jit.trace(model, dummy)
+    with torch.no_grad():
+        traced = torch.jit.trace(model, dummy)
     traced.save(str(path))
     print(f"[Model] saved TorchScript: {path}")
 
@@ -624,8 +661,15 @@ def save_resume_state(
 
 
 def load_checkpoint(model: nn.Module, checkpoint_path: Path, device: torch.device) -> Tuple[nn.Module, dict]:
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state"])
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    state_dict = checkpoint.get("model_state") or checkpoint.get("model_state_dict") or checkpoint
+    if isinstance(state_dict, dict) and any(k.startswith("module.") for k in state_dict.keys()):
+        state_dict = {k.replace("module.", "", 1): v for k, v in state_dict.items()}
+    incompatible = model.load_state_dict(state_dict, strict=False)
+    if incompatible.missing_keys:
+        print(f"[Checkpoint] missing keys: {incompatible.missing_keys}")
+    if incompatible.unexpected_keys:
+        print(f"[Checkpoint] unexpected keys: {incompatible.unexpected_keys}")
     model.to(device)
     return model, checkpoint
 
@@ -832,8 +876,8 @@ def run_pipeline(
 
         validate_torchscript_model(best_model_path, device)
         replay_files = select_replay_files(drive_root, generation_file)
-        states, moves = load_replay_buffer(replay_files)
-        validate_training_inputs(states.tolist(), moves.tolist())
+        states, moves, values = load_replay_buffer(replay_files)
+        validate_training_inputs(states.tolist(), moves.tolist(), values.tolist())
         print(f"[Progress] Generation {generation}: training with {states.shape[0]} samples")
         checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
         latest_checkpoint_path = checkpoint_dir / "latest_checkpoint.pt"
@@ -842,6 +886,7 @@ def run_pipeline(
             model=model,
             states=states,
             moves=moves,
+            values=values,
             lr=learning_rate,
             batch_size=batch_size,
             epochs=epochs,

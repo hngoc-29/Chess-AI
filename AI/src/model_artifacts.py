@@ -3,11 +3,17 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
-def validate_training_inputs(states: List[object], moves: List[object]) -> None:
+def validate_training_inputs(
+    states: List[object],
+    moves: List[object],
+    values: Optional[List[object]] = None,
+) -> None:
     if not states or not moves:
         raise ValueError("Training data is empty")
     if len(states) != len(moves):
         raise ValueError(f"Training data length mismatch: states={len(states)}, moves={len(moves)}")
+    if values is not None and len(values) != len(states):
+        raise ValueError(f"Value target length mismatch: values={len(values)}, states={len(states)}")
 
 
 def write_model_output_summary(

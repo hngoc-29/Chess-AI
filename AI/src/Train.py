@@ -429,7 +429,8 @@ class ResidualBlock(nn.Module):
 class ChessPolicyNet(nn.Module):
     """
     Input : [B, 12, 8, 8]
-    Output: [B, 4096]  (logits cho 64×64 (from, to) pairs)
+    Output: (policy_logits, value_logits) where policy_logits has shape [B, 4096]
+    and value_logits has shape [B, 1].
     """
     def __init__(self, num_blocks: int = 6, hidden_channels: int = 128, dropout: float = 0.3):
         super().__init__()
@@ -440,14 +441,20 @@ class ChessPolicyNet(nn.Module):
         )
         self.policy_conv = nn.Conv2d(hidden_channels, 32, 1, bias=False)
         self.policy_bn   = nn.BatchNorm2d(32)
-        self.fc          = nn.Linear(32 * 64, 4096)
+        self.policy_fc   = nn.Linear(32 * 64, 4096)
+        self.value_conv  = nn.Conv2d(hidden_channels, 32, 1, bias=False)
+        self.value_bn    = nn.BatchNorm2d(32)
+        self.value_fc    = nn.Linear(32 * 64, 1)
 
     def forward(self, x):
         out = F.relu(self.bn_init(self.conv_init(x)))
         for block in self.blocks:
             out = block(out)
-        policy = F.relu(self.policy_bn(self.policy_conv(out)))
-        return self.fc(policy.flatten(1))
+        policy_features = F.relu(self.policy_bn(self.policy_conv(out)))
+        value_features = F.relu(self.value_bn(self.value_conv(out)))
+        policy_logits = self.policy_fc(policy_features.flatten(1))
+        value_logits = torch.tanh(self.value_fc(value_features.flatten(1)))
+        return policy_logits, value_logits
 
 
 # ==============================================================
@@ -597,7 +604,7 @@ def main():
         train_samples = skipped = 0
 
         for batch_idx, batch in enumerate(train_loader, 1):
-            planes, labels = batch[0], batch[1]
+            planes, labels, values = batch[0], batch[1], batch[2]
 
             if (labels < 0).any() or (labels >= 4096).any():
                 skipped += 1
@@ -605,10 +612,13 @@ def main():
 
             planes = planes.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
+            values = values.to(device, non_blocking=True).float().view(-1, 1)
 
             with torch.cuda.amp.autocast(enabled=use_amp):
-                logits = model(planes)
-                loss   = criterion(logits, labels)
+                policy_logits, value_logits = model(planes)
+                policy_loss = criterion(policy_logits, labels)
+                value_loss = F.mse_loss(value_logits, values)
+                loss = policy_loss + value_loss
 
             optimizer.zero_grad(set_to_none=True)
             scaler.scale(loss).backward()
@@ -640,20 +650,23 @@ def main():
 
         with torch.no_grad():
             for batch in val_loader:
-                planes, labels = batch[0], batch[1]
+                planes, labels, values = batch[0], batch[1], batch[2]
                 if (labels < 0).any() or (labels >= 4096).any():
                     continue
 
                 planes = planes.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
+                values = values.to(device, non_blocking=True).float().view(-1, 1)
 
                 with torch.cuda.amp.autocast(enabled=use_amp):
-                    logits = model(planes)
-                    loss   = criterion(logits, labels)
+                    policy_logits, value_logits = model(planes)
+                    policy_loss = criterion(policy_logits, labels)
+                    value_loss = F.mse_loss(value_logits, values)
+                    loss = policy_loss + value_loss
 
                 bs          = labels.size(0)
                 val_loss   += loss.item() * bs
-                val_acc    += accuracy_top1(logits, labels) * bs
+                val_acc    += accuracy_top1(policy_logits, labels) * bs
                 val_samples += bs
 
         avg_val_loss = val_loss / max(1, val_samples)

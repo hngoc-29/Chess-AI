@@ -18,6 +18,9 @@ class TrainingHelpersTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_training_inputs([1, 2, 3], [1, 2])
 
+    def test_validate_training_inputs_accepts_value_targets(self) -> None:
+        validate_training_inputs([1, 2, 3], [1, 2, 3], [0.1, 0.2, 0.3])
+
     def test_write_model_output_summary_creates_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
