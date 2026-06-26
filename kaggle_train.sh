@@ -25,7 +25,11 @@ fi
 apt-get update -qq
 apt-get install -y -qq build-essential cmake >/dev/null
 "$PYTHON_BIN" -m pip install -q --upgrade pip
-"$PYTHON_BIN" -m pip install -q numpy torch==2.2.2
+"$PYTHON_BIN" -m pip install -q --upgrade --force-reinstall \
+  numpy \
+  torch==2.2.2 \
+  torchvision==0.17.2 \
+  torchaudio==2.2.2
 
 if [ ! -d /kaggle/working/libtorch ]; then
   rm -f /kaggle/working/libtorch.zip
