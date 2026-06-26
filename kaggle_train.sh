@@ -49,45 +49,78 @@ fi
 apt-get update -qq
 apt-get install -y -qq build-essential cmake >/dev/null
 "$PYTHON_BIN" -m pip install -q --upgrade pip
-"$PYTHON_BIN" -m pip install -q --disable-pip-version-check --no-input \
-  "numpy<2.0" \
-  "torch==2.2.2" \
-  "torchvision==0.17.2" \
-  "torchaudio==2.2.2" || true
 
-PIPELINE_SCRIPT=""
-for candidate in \
-  "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" \
-  "$PROJECT_ROOT/src/colab_selfplay_pipeline.py" \
-  "$(pwd)/AI/src/colab_selfplay_pipeline.py" \
-  "$(pwd)/src/colab_selfplay_pipeline.py" \
-  /kaggle/working/ChessAI/AI/src/colab_selfplay_pipeline.py \
-  /kaggle/working/ChessAI/src/colab_selfplay_pipeline.py; do
-  if [ -f "$candidate" ]; then
-    PIPELINE_SCRIPT="$candidate"
-    break
-  fi
-done
+# ---------------------------------------------------------------------------
+# Detect CUDA version → pick pinned library versions
+# Versions are frozen here. To upgrade, change ALL four variables together.
+# ---------------------------------------------------------------------------
+CUDA_VER=$("$PYTHON_BIN" -c "import torch; print(torch.version.cuda or '')" 2>/dev/null \
+           || nvcc --version 2>/dev/null | grep -oP 'release \K[0-9.]+' | head -1 \
+           || echo "12.1")
 
-if [ -z "$PIPELINE_SCRIPT" ]; then
-  echo "Could not find colab_selfplay_pipeline.py. Checked locations:" >&2
-  for candidate in \
-    "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" \
-    "$PROJECT_ROOT/src/colab_selfplay_pipeline.py" \
-    "$(pwd)/AI/src/colab_selfplay_pipeline.py" \
-    "$(pwd)/src/colab_selfplay_pipeline.py" \
-    /kaggle/working/ChessAI/AI/src/colab_selfplay_pipeline.py \
-    /kaggle/working/ChessAI/src/colab_selfplay_pipeline.py; do
-    echo "  - $candidate" >&2
-  done
-  exit 1
+if echo "$CUDA_VER" | grep -q "^12\.4"; then
+  CU="cu124"
+  TORCH_VER="2.5.1"
+  TORCHVISION_VER="0.20.1"
+  TORCHAUDIO_VER="2.5.1"
+  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu124/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcu124.zip"
+elif echo "$CUDA_VER" | grep -q "^12\.1"; then
+  CU="cu121"
+  TORCH_VER="2.3.1"
+  TORCHVISION_VER="0.18.1"
+  TORCHAUDIO_VER="2.3.1"
+  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.2.2%2Bcu121.zip"
+elif echo "$CUDA_VER" | grep -q "^11\.8"; then
+  CU="cu118"
+  TORCH_VER="2.3.1"
+  TORCHVISION_VER="0.18.1"
+  TORCHAUDIO_VER="2.3.1"
+  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.2.2%2Bcu118.zip"
+else
+  # Unknown CUDA — fall back to cu121 set
+  CU="cu121"
+  TORCH_VER="2.3.1"
+  TORCHVISION_VER="0.18.1"
+  TORCHAUDIO_VER="2.3.1"
+  LIBTORCH_URL="https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.2.2%2Bcu121.zip"
 fi
 
-echo "[Setup] Using pipeline script: $PIPELINE_SCRIPT"
+echo "[Setup] CUDA=${CUDA_VER} → pinning torch==${TORCH_VER}+${CU}"
 
+# Force-overwrite all Python packages with exact pinned versions.
+# --force-reinstall ensures we never silently run a different version.
+"$PYTHON_BIN" -m pip install -q \
+  --force-reinstall \
+  --disable-pip-version-check \
+  --no-input \
+  "numpy==1.26.4" \
+  "torch==${TORCH_VER}+${CU}" \
+  "torchvision==${TORCHVISION_VER}+${CU}" \
+  "torchaudio==${TORCHAUDIO_VER}+${CU}" \
+  --extra-index-url "https://download.pytorch.org/whl/${CU}"
+
+# Optional deps — also pinned so they cannot drift
+"$PYTHON_BIN" -m pip install -q \
+  --force-reinstall \
+  --disable-pip-version-check \
+  --no-input \
+  "pandas==2.2.3" \
+  "matplotlib==3.9.4"
+
+# Print final installed versions for the log
+echo "[Setup] Installed versions:"
+"$PYTHON_BIN" -c "
+import numpy, torch, torchvision, torchaudio, pandas, matplotlib
+print(f'  numpy=={numpy.__version__}')
+print(f'  torch=={torch.__version__}')
+print(f'  torchvision=={torchvision.__version__}')
+print(f'  torchaudio=={torchaudio.__version__}')
+print(f'  pandas=={pandas.__version__}')
+print(f'  matplotlib=={matplotlib.__version__}')
+"
 if [ ! -d /kaggle/working/libtorch ]; then
   rm -f /kaggle/working/libtorch.zip
-  wget -q "https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.2.2%2Bcu121.zip" -O /kaggle/working/libtorch.zip
+  wget -q "$LIBTORCH_URL" -O /kaggle/working/libtorch.zip
   unzip -q /kaggle/working/libtorch.zip -d /kaggle/working
 fi
 

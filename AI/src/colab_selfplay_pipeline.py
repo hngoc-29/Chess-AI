@@ -60,7 +60,9 @@ def seed_everything(seed: int = 42) -> None:
 
 def configure_torch_runtime(device: torch.device) -> None:
     if device.type == "cuda":
-        torch.cuda.set_device(device)
+        # set_device requires an explicit index; fall back to 0 when none is given
+        cuda_index = device.index if device.index is not None else 0
+        torch.cuda.set_device(cuda_index)
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
@@ -641,7 +643,7 @@ def run_pipeline(
     drive_root.mkdir(parents=True, exist_ok=True)
 
     seed_everything()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     configure_torch_runtime(device)
     print(f"[Runtime] using device={device}")
     if device.type == "cuda":
