@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PYTHONPATH=""
+export PYTHONNOUSERSITE=1
+export PYTHONDONTWRITEBYTECODE=1
+
 PROJECT_ROOT="${PROJECT_ROOT:-}"
 WORKDIR="${WORKDIR:-/kaggle/working/chess_selfplay}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/kaggle/working/chess_outputs}"
