@@ -39,6 +39,29 @@ if [ ! -d "$PROJECT_ROOT/.git" ]; then
 fi
 cd "$PROJECT_ROOT"
 
+PIPELINE_SCRIPT="${PIPELINE_SCRIPT:-}"
+if [ -z "$PIPELINE_SCRIPT" ]; then
+  for candidate in \
+    "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" \
+    "$PROJECT_ROOT/src/colab_selfplay_pipeline.py" \
+    "$PWD/AI/src/colab_selfplay_pipeline.py" \
+    "$PWD/src/colab_selfplay_pipeline.py"; do
+    if [ -f "$candidate" ]; then
+      PIPELINE_SCRIPT="$candidate"
+      break
+    fi
+  done
+fi
+
+if [ -z "$PIPELINE_SCRIPT" ] || [ ! -f "$PIPELINE_SCRIPT" ]; then
+  echo "[Setup] Pipeline script not found. Checked:" >&2
+  echo "  - $PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" >&2
+  echo "  - $PROJECT_ROOT/src/colab_selfplay_pipeline.py" >&2
+  exit 1
+fi
+
+echo "[Setup] Using pipeline script: $PIPELINE_SCRIPT"
+
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
 if [ -z "$PYTHON_BIN" ]; then
   echo "No Python interpreter found" >&2
