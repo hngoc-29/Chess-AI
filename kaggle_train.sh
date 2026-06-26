@@ -234,6 +234,7 @@ fi
   --drive_root "$OUTPUT_ROOT" \
   --workdir "$WORKDIR" \
   --checkpoint_dir "$CHECKPOINT_DIR" \
+  "${RESUME_ARGS[@]}" \
   --simulations "$SIMULATIONS" \
   --games "$GAMES" \
   --epochs "$EPOCHS" \
