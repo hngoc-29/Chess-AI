@@ -1,0 +1,6 @@
+chessai_project.tar.gz
+data/*
+engine/build
+engine/libtorch
+src/__pycache__
+src/venv
