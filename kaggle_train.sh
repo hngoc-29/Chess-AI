@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="${PROJECT_ROOT:-/kaggle/working/ChessAI}"
+PROJECT_ROOT="${PROJECT_ROOT:-}"
 WORKDIR="${WORKDIR:-/kaggle/working/chess_selfplay}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/kaggle/working/chess_outputs}"
 REPO_URL="${REPO_URL:-https://github.com/hngoc-29/Chess-AI.git}"
@@ -13,6 +13,19 @@ LR="${LR:-0.001}"
 MAX_GENERATIONS="${MAX_GENERATIONS:-3}"
 HEARTBEAT="${HEARTBEAT:-30}"
 LOG_EVERY="${LOG_EVERY:-10}"
+
+if [ -z "$PROJECT_ROOT" ]; then
+  for candidate in "$PWD" "$PWD/ChessAI" /kaggle/working/ChessAI /content/ChessAI; do
+    if [ -f "$candidate/AI/src/colab_selfplay_pipeline.py" ] || [ -f "$candidate/src/colab_selfplay_pipeline.py" ]; then
+      PROJECT_ROOT="$candidate"
+      break
+    fi
+  done
+fi
+
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT="/kaggle/working/ChessAI"
+fi
 
 mkdir -p "$(dirname "$PROJECT_ROOT")" "$WORKDIR" "$OUTPUT_ROOT"
 if [ ! -d "$PROJECT_ROOT/.git" ]; then
@@ -43,16 +56,34 @@ apt-get install -y -qq build-essential cmake >/dev/null
   "torchaudio==2.2.2" || true
 
 PIPELINE_SCRIPT=""
-if [ -f "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" ]; then
-  PIPELINE_SCRIPT="$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py"
-elif [ -f "$PROJECT_ROOT/src/colab_selfplay_pipeline.py" ]; then
-  PIPELINE_SCRIPT="$PROJECT_ROOT/src/colab_selfplay_pipeline.py"
-elif [ -f "$(pwd)/AI/src/colab_selfplay_pipeline.py" ]; then
-  PIPELINE_SCRIPT="$(pwd)/AI/src/colab_selfplay_pipeline.py"
-else
-  echo "Could not find colab_selfplay_pipeline.py under $PROJECT_ROOT" >&2
+for candidate in \
+  "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" \
+  "$PROJECT_ROOT/src/colab_selfplay_pipeline.py" \
+  "$(pwd)/AI/src/colab_selfplay_pipeline.py" \
+  "$(pwd)/src/colab_selfplay_pipeline.py" \
+  /kaggle/working/ChessAI/AI/src/colab_selfplay_pipeline.py \
+  /kaggle/working/ChessAI/src/colab_selfplay_pipeline.py; do
+  if [ -f "$candidate" ]; then
+    PIPELINE_SCRIPT="$candidate"
+    break
+  fi
+done
+
+if [ -z "$PIPELINE_SCRIPT" ]; then
+  echo "Could not find colab_selfplay_pipeline.py. Checked locations:" >&2
+  for candidate in \
+    "$PROJECT_ROOT/AI/src/colab_selfplay_pipeline.py" \
+    "$PROJECT_ROOT/src/colab_selfplay_pipeline.py" \
+    "$(pwd)/AI/src/colab_selfplay_pipeline.py" \
+    "$(pwd)/src/colab_selfplay_pipeline.py" \
+    /kaggle/working/ChessAI/AI/src/colab_selfplay_pipeline.py \
+    /kaggle/working/ChessAI/src/colab_selfplay_pipeline.py; do
+    echo "  - $candidate" >&2
+  done
   exit 1
 fi
+
+echo "[Setup] Using pipeline script: $PIPELINE_SCRIPT"
 
 if [ ! -d /kaggle/working/libtorch ]; then
   rm -f /kaggle/working/libtorch.zip
