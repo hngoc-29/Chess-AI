@@ -69,9 +69,13 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 VENV_DIR="${VENV_DIR:-/kaggle/working/chess_venv}"
-USE_VENV="${USE_VENV:-0}"
+USE_VENV="${USE_VENV:-}"
 if [ -z "${USE_VENV}" ]; then
-  USE_VENV="0"
+  if [ -d /kaggle ] || [ -n "${KAGGLE_KERNEL_RUN_TYPE:-}" ] || [ -n "${KAGGLE_URL_BASE:-}" ]; then
+    USE_VENV="1"
+  else
+    USE_VENV="0"
+  fi
 fi
 
 "$PYTHON_BIN" -V
@@ -86,9 +90,10 @@ if [ "$USE_VENV" = "1" ]; then
     elif command -v virtualenv >/dev/null 2>&1; then
       virtualenv "$VENV_DIR"
     else
-      "$PYTHON_BIN" -m venv --without-pip "$VENV_DIR"
+      "$PYTHON_BIN" -m venv --without-pip "$VENV_DIR" 2>/dev/null || true
     fi
   fi
+
   if [ -x "$VENV_DIR/bin/python" ]; then
     PYTHON_BIN="$VENV_DIR/bin/python"
     echo "[Setup] Using virtual environment Python: $PYTHON_BIN"
@@ -99,7 +104,7 @@ if [ "$USE_VENV" = "1" ]; then
   fi
 fi
 
-if [ "$USE_VENV" = "1" ] && [ ! -x "$VENV_DIR/bin/pip" ] && [ -x "$VENV_DIR/bin/python" ]; then
+if [ "$USE_VENV" = "1" ] && [ -x "$VENV_DIR/bin/python" ] && [ ! -x "$VENV_DIR/bin/pip" ]; then
   echo "[Setup] Installing pip into virtual environment"
   curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
   "$VENV_DIR/bin/python" /tmp/get-pip.py --break-system-packages || \

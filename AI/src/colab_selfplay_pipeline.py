@@ -257,7 +257,9 @@ def setup_libtorch(project_root: Path, workdir: Path) -> Path:
 
 
 def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
-    engine_dir = project_root / "engine"
+    engine_dir = project_root / "AI" / "engine"
+    if not (engine_dir / "CMakeLists.txt").exists():
+        engine_dir = project_root / "engine"
     build_dir = engine_dir / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
 
