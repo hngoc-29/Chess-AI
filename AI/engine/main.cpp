@@ -9,7 +9,7 @@ int main() {
     std::cout << "          CHESS ENGINE AI - MONTE CARLO TREE SEARCH     \n";
     std::cout << "========================================================\n";
 
-    const std::string model_path = "/home/hn/Code/Python/ChessAI/data/best_model_traced.pt";
+    const std::string model_path = "/home/hn/Code/Python/ChessAI/AI/data/best_model_traced.pt";
 
     constexpr int simulations = 1600;
     constexpr float c_puct = 1.5f;

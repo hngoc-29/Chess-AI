@@ -100,6 +100,9 @@ int main(int argc, char** argv) {
     for (int game_idx = 0; game_idx < games; ++game_idx) {
         ChessEnv env;
         std::vector<SelfPlaySample> samples;
+        std::vector<float> sample_perspectives;
+        bool game_finished = false;
+        float terminal_reward_to_white = 0.0f;
 
         for (int ply = 0; ply < max_moves; ++ply) {
             if (env.is_terminal()) {
@@ -119,6 +122,9 @@ int main(int argc, char** argv) {
                 chosen_move = legal_moves[0];
             }
 
+            const bool side_to_move_is_white = env.get_board().sideToMove() == chess::Color::WHITE;
+            sample_perspectives.push_back(side_to_move_is_white ? 1.0f : -1.0f);
+
             SelfPlaySample sample;
             const auto state_vec = encode_state(env);
             std::copy(state_vec.begin(), state_vec.end(), sample.state.begin());
@@ -126,11 +132,17 @@ int main(int argc, char** argv) {
             sample.value = 0.0f;
             samples.push_back(sample);
 
-            env.step(chosen_move);
+            const auto step_result = env.step(chosen_move);
+            game_finished = step_result.done;
+            if (game_finished) {
+                terminal_reward_to_white = step_result.reward;
+                break;
+            }
         }
 
-        for (const auto& sample : samples) {
-            out.write(reinterpret_cast<const char*>(&sample), sizeof(sample));
+        for (std::size_t i = 0; i < samples.size(); ++i) {
+            samples[i].value = sample_perspectives[i] * terminal_reward_to_white;
+            out.write(reinterpret_cast<const char*>(&samples[i]), sizeof(samples[i]));
             ++total_samples_written;
         }
 

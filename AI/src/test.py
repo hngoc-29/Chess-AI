@@ -158,7 +158,7 @@ def random_board(max_plies=20):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ChessPolicyNet(num_blocks=6, hidden_channels=128, dropout=0.0).to(device)
 
-BEST_MODEL_PATH = "/home/hn/Code/Python/ChessAI/data/best_model.pth"
+BEST_MODEL_PATH = "/home/hn/Code/Python/ChessAI/AI/data/best_model.pth"
 checkpoint = torch.load(BEST_MODEL_PATH, map_location=device)
 
 if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:

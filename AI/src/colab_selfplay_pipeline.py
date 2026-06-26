@@ -17,7 +17,9 @@ This script will:
 """
 
 import argparse
+import csv
 import gc
+import json
 import os
 import random
 import shutil
@@ -34,6 +36,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
+
+try:
+    import pandas as pd
+except Exception:  # pragma: no cover
+    pd = None
+
+try:
+    import matplotlib.pyplot as plt
+except Exception:  # pragma: no cover
+    plt = None
 
 
 def seed_everything(seed: int = 42) -> None:
@@ -286,6 +298,48 @@ def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor]:
     return x, y
 
 
+def validate_torchscript_model(model_path: Path, device: torch.device) -> None:
+    if not model_path.exists():
+        raise FileNotFoundError(f"TorchScript model not found: {model_path}")
+    try:
+        scripted = torch.jit.load(str(model_path), map_location=device)
+        with torch.no_grad():
+            dummy = torch.randn(1, 12, 8, 8, device=device)
+            scripted(dummy)
+        print(f"[Model] validated TorchScript model: {model_path}")
+    except Exception as exc:  # pragma: no cover
+        raise RuntimeError(f"TorchScript model validation failed for {model_path}: {exc}") from exc
+
+
+def select_replay_files(drive_root: Path, generation_file: Path, min_samples: int = 4096, max_files: int = 6) -> List[Path]:
+    candidates = sorted(
+        [path for path in drive_root.glob("selfplay_gen_*.bin") if path.exists()],
+        key=lambda path: int(path.stem.split("_")[-1]),
+    )
+    if generation_file.exists() and generation_file not in candidates:
+        candidates.append(generation_file)
+    candidates = sorted(candidates, key=lambda path: int(path.stem.split("_")[-1]))
+
+    replay_files: List[Path] = []
+    total_samples = 0
+    for path in reversed(candidates):
+        try:
+            states, _, _ = load_generation_samples(path)
+        except Exception as exc:  # pragma: no cover
+            print(f"[Pipeline] skipping replay {path}: {exc}")
+            continue
+
+        replay_files.append(path)
+        total_samples += int(states.shape[0])
+        if total_samples >= min_samples or len(replay_files) >= max_files:
+            break
+
+    if not replay_files:
+        replay_files = [generation_file]
+    print(f"[Pipeline] using {len(replay_files)} replay files with {total_samples} total samples")
+    return replay_files
+
+
 def train_policy_model(
     model: nn.Module,
     states: torch.Tensor,
@@ -294,19 +348,30 @@ def train_policy_model(
     batch_size: int = 256,
     epochs: int = 3,
     device: torch.device = torch.device("cpu"),
-) -> nn.Module:
+    checkpoint_path: Optional[Path] = None,
+    metrics_output_dir: Optional[Path] = None,
+    patience: int = 2,
+    min_delta: float = 1e-4,
+) -> Tuple[nn.Module, dict]:
     model = model.to(device)
     model.train()
 
     effective_batch_size = max(16, batch_size)
     if device.type == "cuda":
-        effective_batch_size = min(effective_batch_size, 128)
+        gpu_mem_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+        max_batch = 256 if gpu_mem_gb < 24 else 512
+        effective_batch_size = min(effective_batch_size, max_batch)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
+    history = {"epochs": []}
+    best_loss = float("inf")
+    patience_counter = 0
 
     for epoch in range(epochs):
         running_loss = 0.0
+        running_value_loss = 0.0
+        total_batches = 0
         current_batch_size = effective_batch_size
         while True:
             try:
@@ -346,14 +411,38 @@ def train_policy_model(
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
             running_loss += float(loss.item())
+            total_batches += 1
+
+        avg_loss = running_loss / max(1, total_batches)
+        avg_value_loss = running_value_loss / max(1, total_batches)
+        if checkpoint_path is not None:
+            checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+            torch.save({
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict(),
+                "epoch": epoch + 1,
+                "loss": avg_loss,
+            }, checkpoint_path)
 
         if device.type == "cuda":
             torch.cuda.empty_cache()
         gc.collect()
-        print(f"[Train] epoch={epoch + 1}/{epochs} loss={running_loss / max(1, len(loader)):.4f}")
+        print(f"[Train] epoch={epoch + 1}/{epochs} loss={avg_loss:.4f} value_loss={avg_value_loss:.4f}")
+        history["epochs"].append({"epoch": epoch + 1, "loss": avg_loss, "value_loss": avg_value_loss})
+        if metrics_output_dir is not None:
+            export_training_metrics(history, metrics_output_dir)
+
+        if best_loss - avg_loss > min_delta:
+            best_loss = avg_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"[Train] early stopping at epoch {epoch + 1}/{epochs} due to no improvement")
+                break
 
     model.eval()
-    return model
+    return model, history
 
 
 def save_traced_model(model: nn.Module, path: Path, device: torch.device) -> None:
@@ -364,6 +453,92 @@ def save_traced_model(model: nn.Module, path: Path, device: torch.device) -> Non
     print(f"[Model] saved TorchScript: {path}")
 
 
+def save_training_summary(history: dict, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(history, handle, indent=2)
+    print(f"[Train] saved summary: {path}")
+
+
+def export_training_metrics(history: dict, output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if not history.get("epochs"):
+        return
+
+    epochs = [entry["epoch"] for entry in history["epochs"]]
+    losses = [entry["loss"] for entry in history["epochs"]]
+    value_losses = [entry.get("value_loss", 0.0) for entry in history["epochs"]]
+
+    csv_path = output_dir / "training_metrics.csv"
+    with csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["epoch", "loss", "value_loss"])
+        writer.writeheader()
+        for epoch, loss, value_loss in zip(epochs, losses, value_losses):
+            writer.writerow({"epoch": epoch, "loss": loss, "value_loss": value_loss})
+
+    if plt is not None:
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        axes[0].plot(epochs, losses, marker="o")
+        axes[0].set_title("Loss")
+        axes[0].set_xlabel("Epoch")
+        axes[0].set_ylabel("Loss")
+        axes[1].plot(epochs, value_losses, marker="o", color="orange")
+        axes[1].set_title("Value Loss")
+        axes[1].set_xlabel("Epoch")
+        axes[1].set_ylabel("Value Loss")
+        fig.tight_layout()
+        fig.savefig(output_dir / "training_metrics.png", dpi=150)
+        plt.close(fig)
+
+    print(f"[Train] exported metrics to {output_dir}")
+
+
+def export_generation_comparison(summaries: List[dict], output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = output_dir / "generation_comparison.csv"
+    md_path = output_dir / "generation_comparison.md"
+
+    with csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "generation",
+                "model_path",
+                "replay_path",
+                "samples",
+                "epochs_trained",
+                "final_loss",
+                "final_value_loss",
+            ],
+        )
+        writer.writeheader()
+        for summary in summaries:
+            writer.writerow(summary)
+
+    with md_path.open("w", encoding="utf-8") as handle:
+        handle.write("# Generation comparison\n\n")
+        handle.write("| Generation | Samples | Epochs | Final Loss | Final Value Loss |\n")
+        handle.write("| --- | ---: | ---: | ---: | ---: |\n")
+        for summary in summaries:
+            handle.write(
+                f"| {summary['generation']} | {summary['samples']} | {summary['epochs_trained']} | {summary['final_loss']:.4f} | {summary['final_value_loss']:.4f} |\n"
+            )
+
+    print(f"[Train] exported generation comparison to {csv_path} and {md_path}")
+
+
+def find_latest_checkpoint(drive_root: Path) -> Optional[Path]:
+    checkpoints = sorted(drive_root.glob("checkpoint_gen_*.pt"), key=lambda p: int(p.stem.split("_")[-1].split(".")[0]))
+    return checkpoints[-1] if checkpoints else None
+
+
+def load_checkpoint(model: nn.Module, checkpoint_path: Path, device: torch.device) -> Tuple[nn.Module, dict]:
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(checkpoint["model_state"])
+    model.to(device)
+    return model, checkpoint
+
+
 def publish_latest_model(gen_model_path: Path, best_model_path: Path, project_root: Path) -> None:
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(gen_model_path, best_model_path)
@@ -372,8 +547,13 @@ def publish_latest_model(gen_model_path: Path, best_model_path: Path, project_ro
     project_model_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(gen_model_path, project_model_path)
 
+    legacy_project_model_path = project_root / "best_model_traced.pt"
+    legacy_project_model_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(gen_model_path, legacy_project_model_path)
+
     print(f"[Model] published new model to {best_model_path}")
     print(f"[Model] synced project model to {project_model_path}")
+    print(f"[Model] synced legacy project model to {legacy_project_model_path}")
 
 
 def run_generation(
@@ -414,11 +594,28 @@ def run_generation(
     return drive_generation_file
 
 
+def resolve_best_model_path(project_root: Path, drive_root: Path, explicit_path: Optional[Path] = None) -> Path:
+    if explicit_path is not None:
+        return explicit_path
+
+    candidates = [
+        drive_root / "best_model_traced.pt",
+        project_root / "data" / "best_model_traced.pt",
+        project_root / "best_model_traced.pt",
+        project_root / "models" / "best_model_traced.pt",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
 def run_pipeline(
     project_root: Path,
     workdir: Path,
     drive_root: Path,
     initial_model_path: Optional[Path] = None,
+    best_model_path_override: Optional[Path] = None,
     simulations: int = 800,
     games_per_generation: int = 500,
     epochs: int = 3,
@@ -440,7 +637,7 @@ def run_pipeline(
         print(f"[Runtime] gpu={torch.cuda.get_device_name(0)}")
         print(f"[Runtime] gpu_memory_gb={torch.cuda.get_device_properties(0).total_memory / (1024 ** 3):.2f}")
 
-    best_model_path = drive_root / "best_model_traced.pt"
+    best_model_path = resolve_best_model_path(project_root, drive_root, best_model_path_override)
     if initial_model_path is not None and initial_model_path.exists():
         shutil.copy2(initial_model_path, best_model_path)
     elif not best_model_path.exists() and (project_root / "data" / "best_model_traced.pt").exists():
@@ -454,12 +651,28 @@ def run_pipeline(
             print(f"[Model] loaded weights from {best_model_path}")
         except Exception as exc:  # pragma: no cover
             print(f"[Model] could not load {best_model_path}: {exc}")
+    else:
+        print("[Model] no initial model found; creating a fresh TorchScript model")
+        save_traced_model(model, best_model_path, device)
+
+    validate_torchscript_model(best_model_path, device)
+
+    latest_checkpoint = find_latest_checkpoint(drive_root)
+    if latest_checkpoint is not None:
+        print(f"[Checkpoint] found latest checkpoint: {latest_checkpoint}")
+        try:
+            model, checkpoint = load_checkpoint(model, latest_checkpoint, device)
+            save_traced_model(model, best_model_path, device)
+            print(f"[Checkpoint] resumed from epoch {checkpoint.get('epoch', 0)} and synced weights to {best_model_path}")
+        except Exception as exc:  # pragma: no cover
+            print(f"[Checkpoint] could not resume from {latest_checkpoint}: {exc}")
 
     engine_binary = build_engine(project_root, setup_libtorch(project_root, workdir))
     print(f"[Pipeline] self-play logging interval: every {log_every_games} games")
     print(f"[Pipeline] heartbeat interval: every {heartbeat_seconds:.0f}s")
 
     generation = 0
+    generation_summaries: List[dict] = []
     while True:
         generation += 1
         print(f"\n===== Generation {generation}/{max_generations if max_generations is not None else '∞'} =====")
@@ -478,15 +691,13 @@ def run_pipeline(
             heartbeat_seconds=heartbeat_seconds,
         )
 
-        replay_files = [generation_file]
-        if generation > 1:
-            replay_files.append(drive_root / f"selfplay_gen_{generation - 1}.bin")
-        if generation > 2:
-            replay_files.append(drive_root / f"selfplay_gen_{generation - 2}.bin")
-
+        validate_torchscript_model(best_model_path, device)
+        replay_files = select_replay_files(drive_root, generation_file)
         states, moves = load_replay_buffer(replay_files)
         print(f"[Progress] Generation {generation}: training with {states.shape[0]} samples")
-        model = train_policy_model(
+        checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
+        metrics_output_dir = drive_root / f"metrics_gen_{generation}"
+        model, history = train_policy_model(
             model=model,
             states=states,
             moves=moves,
@@ -494,11 +705,29 @@ def run_pipeline(
             batch_size=batch_size,
             epochs=epochs,
             device=device,
+            checkpoint_path=checkpoint_path,
+            metrics_output_dir=metrics_output_dir,
+            patience=2,
+            min_delta=1e-4,
         )
 
         gen_model_path = drive_root / f"model_gen_{generation}.pt"
         save_traced_model(model, gen_model_path, device)
+        save_training_summary(history, drive_root / f"training_summary_gen_{generation}.json")
+        export_training_metrics(history, metrics_output_dir)
         publish_latest_model(gen_model_path, best_model_path, project_root)
+
+        generation_summary = {
+            "generation": generation,
+            "model_path": str(gen_model_path),
+            "replay_path": str(generation_file),
+            "samples": int(states.shape[0]),
+            "epochs_trained": len(history.get("epochs", [])),
+            "final_loss": history["epochs"][-1]["loss"] if history.get("epochs") else float("nan"),
+            "final_value_loss": history["epochs"][-1].get("value_loss", 0.0) if history.get("epochs") else 0.0,
+        }
+        generation_summaries.append(generation_summary)
+        export_generation_comparison(generation_summaries, drive_root)
         print(f"[Progress] Generation {generation}: training complete")
         print(f"[Progress] Generation {generation}: model saved -> {gen_model_path}")
 
@@ -525,6 +754,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--archive_path", type=str, default="")
     parser.add_argument("--workdir", type=str, default="")
     parser.add_argument("--initial_model", type=str, default="")
+    parser.add_argument("--best_model_path", type=str, default="", help="Explicit path for the best model file")
     parser.add_argument("--simulations", type=int, default=800)
     parser.add_argument("--games", type=int, default=500)
     parser.add_argument("--epochs", type=int, default=3)
@@ -546,6 +776,7 @@ def main() -> None:
     workdir = Path(args.workdir).expanduser().resolve() if args.workdir else default_workdir
     drive_root = Path(args.drive_root).expanduser().resolve() if args.drive_root else default_output_root
     initial_model_path = Path(args.initial_model).expanduser().resolve() if args.initial_model else None
+    best_model_path_override = Path(args.best_model_path).expanduser().resolve() if args.best_model_path else None
     archive_path = Path(args.archive_path).expanduser().resolve() if args.archive_path else None
 
     project_root = prepare_project_root(project_root, archive_path)
@@ -555,6 +786,7 @@ def main() -> None:
         workdir=workdir,
         drive_root=drive_root,
         initial_model_path=initial_model_path,
+        best_model_path_override=best_model_path_override,
         simulations=args.simulations,
         games_per_generation=args.games,
         epochs=args.epochs,

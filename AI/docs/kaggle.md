@@ -43,12 +43,19 @@ SIMULATIONS=200 GAMES=50 EPOCHS=2 BATCH_SIZE=128 LR=0.001 MAX_GENERATIONS=2 bash
 
 ## 6. Gợi ý cấu hình khởi đầu
 
-- Với Kaggle GPU T4, nên dùng:
-  - simulations: 200–400
-  - games: 50–100
-  - epochs: 2–3
-  - batch_size: 128–256
-  - max_generations: 2–3
+- Với Kaggle GPU T4x2, cấu hình mạnh hơn nên dùng:
+  - simulations: 400
+  - games: 100
+  - epochs: 3
+  - batch_size: 256
+  - max_generations: 3
+
+- Nếu muốn chạy nhẹ hơn để tránh quá tải, giảm dần thành:
+  - simulations: 200
+  - games: 50
+  - epochs: 2
+  - batch_size: 128
+  - max_generations: 2
 
 ## 7. Lưu ý
 

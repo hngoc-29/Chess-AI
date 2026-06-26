@@ -4,20 +4,28 @@ set -euo pipefail
 PROJECT_ROOT="${PROJECT_ROOT:-/kaggle/working/ChessAI}"
 WORKDIR="${WORKDIR:-/kaggle/working/chess_selfplay}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/kaggle/working/chess_outputs}"
-SIMULATIONS="${SIMULATIONS:-200}"
-GAMES="${GAMES:-50}"
+SIMULATIONS="${SIMULATIONS:-400}"
+GAMES="${GAMES:-40}"
 EPOCHS="${EPOCHS:-2}"
 BATCH_SIZE="${BATCH_SIZE:-128}"
 LR="${LR:-0.001}"
-MAX_GENERATIONS="${MAX_GENERATIONS:-2}"
+MAX_GENERATIONS="${MAX_GENERATIONS:-3}"
 HEARTBEAT="${HEARTBEAT:-30}"
 LOG_EVERY="${LOG_EVERY:-10}"
 
 cd "$PROJECT_ROOT"
 
-python -V
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
+if [ -z "$PYTHON_BIN" ]; then
+  echo "No Python interpreter found" >&2
+  exit 1
+fi
+
+"$PYTHON_BIN" -V
 apt-get update -qq
 apt-get install -y -qq build-essential cmake >/dev/null
+"$PYTHON_BIN" -m pip install -q --upgrade pip
+"$PYTHON_BIN" -m pip install -q numpy torch==2.2.2
 
 if [ ! -d /kaggle/working/libtorch ]; then
   rm -f /kaggle/working/libtorch.zip
@@ -25,7 +33,7 @@ if [ ! -d /kaggle/working/libtorch ]; then
   unzip -q /kaggle/working/libtorch.zip -d /kaggle/working
 fi
 
-python src/colab_selfplay_pipeline.py \
+"$PYTHON_BIN" src/colab_selfplay_pipeline.py \
   --project_root "$PROJECT_ROOT" \
   --drive_root "$OUTPUT_ROOT" \
   --workdir "$WORKDIR" \

@@ -36,8 +36,8 @@ class ChessPolicyNet(nn.Module):
 
 def convert():
     # Cấu hình đường dẫn (Hãy chỉnh lại tên file .pth cho đúng với file của bạn nếu cần)
-    pth_model_path = "/home/hn/Code/Python/ChessAI/data/best_model.pth" 
-    pt_output_path = "/home/hn/Code/Python/ChessAI/data/best_model_traced.pt"
+    pth_model_path = "/home/hn/Code/Python/ChessAI/AI/data/best_model.pth" 
+    pt_output_path = "/home/hn/Code/Python/ChessAI/AI/data/best_model_traced.pt"
 
     if not os.path.exists(pth_model_path):
         print(f"❌ Không tìm thấy file {pth_model_path} ở thư mục hiện tại!")
