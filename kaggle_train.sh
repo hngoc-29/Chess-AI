@@ -6,6 +6,7 @@ export PYTHONNOUSERSITE=1
 export PYTHONDONTWRITEBYTECODE=1
 export PIP_NO_CACHE_DIR=1
 export PIP_DISABLE_PIP_VERSION_CHECK=1
+export MPLBACKEND=Agg
 
 PROJECT_ROOT="${PROJECT_ROOT:-}"
 WORKDIR="${WORKDIR:-/kaggle/working/chess_selfplay}"
@@ -118,6 +119,7 @@ if [ "$USE_VENV" = "1" ] && [ -x "$VENV_DIR/bin/python" ] && [ ! -x "$VENV_DIR/b
 fi
 
 "$PYTHON_BIN" -m pip install -q --upgrade pip setuptools wheel >/dev/null 2>&1 || true
+"$PYTHON_BIN" -m pip install -q --disable-pip-version-check --no-input wrapt >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
 # Detect CUDA version → pick pinned library versions
@@ -182,6 +184,8 @@ rm -rf /tmp/pip-* /root/.cache/pip 2>/dev/null || true
 # Print final installed versions for the log
 echo "[Setup] Installed versions:"
 "$PYTHON_BIN" -c "
+import os
+os.environ['MPLBACKEND'] = 'Agg'
 import numpy, torch, torchvision, torchaudio, pandas, matplotlib
 print(f'  numpy=={numpy.__version__}')
 print(f'  torch=={torch.__version__}')
