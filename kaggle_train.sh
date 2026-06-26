@@ -118,8 +118,25 @@ if [ "$USE_VENV" = "1" ] && [ -x "$VENV_DIR/bin/python" ] && [ ! -x "$VENV_DIR/b
   "$VENV_DIR/bin/python" /tmp/get-pip.py
 fi
 
+install_python_package() {
+  local package="$1"
+  shift || true
+  echo "[Setup] Installing Python package: $package"
+  if "$PYTHON_BIN" -m pip install -q --disable-pip-version-check --no-input --no-cache-dir "$package" "$@"; then
+    return 0
+  fi
+  if "$PYTHON_BIN" -m pip install -q --disable-pip-version-check --no-input --no-cache-dir --break-system-packages "$package" "$@"; then
+    return 0
+  fi
+  "$PYTHON_BIN" -m pip install --disable-pip-version-check --no-input --no-cache-dir "$package" "$@"
+}
+
 "$PYTHON_BIN" -m pip install -q --upgrade pip setuptools wheel >/dev/null 2>&1 || true
-"$PYTHON_BIN" -m pip install -q --disable-pip-version-check --no-input wrapt >/dev/null 2>&1 || true
+install_python_package "wrapt"
+if ! "$PYTHON_BIN" -c "import wrapt" >/dev/null 2>&1; then
+  echo "[Setup] wrapt is still unavailable after installation" >&2
+  exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # Detect CUDA version → pick pinned library versions

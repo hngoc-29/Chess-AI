@@ -628,17 +628,39 @@ def run_generation(
     return drive_generation_file
 
 
+def iter_model_candidate_paths(project_root: Path, drive_root: Path) -> List[Path]:
+    project_root = project_root.expanduser().resolve()
+    drive_root = drive_root.expanduser().resolve()
+
+    search_roots = []
+    seen: set[Path] = set()
+    for candidate_root in [project_root, project_root / "AI", project_root.parent if project_root.name == "AI" else None]:
+        if candidate_root is None:
+            continue
+        candidate_root = candidate_root.expanduser().resolve()
+        if candidate_root not in seen:
+            search_roots.append(candidate_root)
+            seen.add(candidate_root)
+
+    candidates: List[Path] = [drive_root / "best_model_traced.pt"]
+    for root in search_roots:
+        candidates.extend(
+            [
+                root / "data" / "best_model_traced.pt",
+                root / "AI" / "data" / "best_model_traced.pt",
+                root / "best_model_traced.pt",
+                root / "models" / "best_model_traced.pt",
+            ]
+        )
+    return candidates
+
+
 def resolve_best_model_path(project_root: Path, drive_root: Path, explicit_path: Optional[Path] = None) -> Path:
     if explicit_path is not None:
+        explicit_path = explicit_path.expanduser().resolve()
         return explicit_path
 
-    candidates = [
-        drive_root / "best_model_traced.pt",
-        project_root / "AI" / "data" / "best_model_traced.pt",
-        project_root / "data" / "best_model_traced.pt",
-        project_root / "best_model_traced.pt",
-        project_root / "models" / "best_model_traced.pt",
-    ]
+    candidates = iter_model_candidate_paths(project_root, drive_root)
     for candidate in candidates:
         if candidate.exists():
             return candidate
@@ -675,8 +697,11 @@ def run_pipeline(
     best_model_path = resolve_best_model_path(project_root, drive_root, best_model_path_override)
     if initial_model_path is not None and initial_model_path.exists():
         shutil.copy2(initial_model_path, best_model_path)
-    elif not best_model_path.exists() and (project_root / "data" / "best_model_traced.pt").exists():
-        shutil.copy2(project_root / "data" / "best_model_traced.pt", best_model_path)
+    elif not best_model_path.exists():
+        for fallback_model_path in iter_model_candidate_paths(project_root, drive_root):
+            if fallback_model_path.exists():
+                shutil.copy2(fallback_model_path, best_model_path)
+                break
 
     model = ChessPolicyNet()
     if best_model_path.exists():
