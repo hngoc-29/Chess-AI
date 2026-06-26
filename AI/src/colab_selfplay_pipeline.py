@@ -228,16 +228,17 @@ def prepare_project_root(project_root: Path, archive_path: Optional[Path] = None
 
 
 def select_libtorch_url() -> str:
-    """Pick a LibTorch archive compatible with the current Colab CUDA runtime."""
+    """Pick a LibTorch archive compatible with the installed PyTorch runtime."""
     cuda_ver = torch.version.cuda or ""
+    torch_ver = torch.__version__.split("+", 1)[0]
     print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}")
-    if cuda_ver.startswith("12.4"):
+    if cuda_ver.startswith("12.4") or torch_ver.startswith("2.5"):
         return "https://download.pytorch.org/libtorch/cu124/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcu124.zip"
-    if cuda_ver.startswith("12.1"):
-        return "https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.2.2%2Bcu121.zip"
+    if cuda_ver.startswith("12.1") or torch_ver.startswith("2.3"):
+        return "https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu121.zip"
     if cuda_ver.startswith("11.8"):
-        return "https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.2.2%2Bcu118.zip"
-    return "https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.2.2%2Bcu121.zip"
+        return "https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu118.zip"
+    return "https://download.pytorch.org/libtorch/cu121/libtorch-cxx11-abi-shared-with-deps-2.3.1%2Bcu121.zip"
 
 
 def setup_libtorch(project_root: Path, workdir: Path) -> Path:
