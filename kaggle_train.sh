@@ -11,6 +11,7 @@ export MPLBACKEND=Agg
 PROJECT_ROOT="${PROJECT_ROOT:-}"
 WORKDIR="${WORKDIR:-/kaggle/working/chess_selfplay}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/kaggle/working/chess_outputs}"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-$OUTPUT_ROOT/checkpoints}"
 REPO_URL="${REPO_URL:-https://github.com/hngoc-29/Chess-AI.git}"
 SIMULATIONS="${SIMULATIONS:-400}"
 GAMES="${GAMES:-40}"
@@ -20,6 +21,7 @@ LR="${LR:-0.001}"
 MAX_GENERATIONS="${MAX_GENERATIONS:-3}"
 HEARTBEAT="${HEARTBEAT:-30}"
 LOG_EVERY="${LOG_EVERY:-10}"
+RESUME="${RESUME:-1}"
 
 if [ -z "$PROJECT_ROOT" ]; then
   for candidate in "$PWD" "$PWD/ChessAI" /kaggle/working/ChessAI /content/ChessAI; do
@@ -222,10 +224,16 @@ if [ -d "$PROJECT_ROOT/AI/engine" ] && [ ! -e "$PROJECT_ROOT/engine" ]; then
   echo "[Setup] Created engine compatibility link: $PROJECT_ROOT/engine"
 fi
 
+RESUME_ARGS=()
+if [ "$RESUME" = "1" ]; then
+  RESUME_ARGS+=(--resume)
+fi
+
 "$PYTHON_BIN" "$PIPELINE_SCRIPT" \
   --project_root "$PROJECT_ROOT" \
   --drive_root "$OUTPUT_ROOT" \
   --workdir "$WORKDIR" \
+  --checkpoint_dir "$CHECKPOINT_DIR" \
   --simulations "$SIMULATIONS" \
   --games "$GAMES" \
   --epochs "$EPOCHS" \

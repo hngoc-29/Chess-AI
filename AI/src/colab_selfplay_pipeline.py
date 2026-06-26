@@ -22,6 +22,7 @@ import gc
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -378,9 +379,11 @@ def train_policy_model(
     epochs: int = 3,
     device: torch.device = torch.device("cpu"),
     checkpoint_path: Optional[Path] = None,
+    latest_checkpoint_path: Optional[Path] = None,
     metrics_output_dir: Optional[Path] = None,
     patience: int = 2,
     min_delta: float = 1e-4,
+    start_epoch: int = 0,
 ) -> Tuple[nn.Module, dict]:
     model = model.to(device)
     model.train()
@@ -397,7 +400,7 @@ def train_policy_model(
     best_loss = float("inf")
     patience_counter = 0
 
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         running_loss = 0.0
         running_value_loss = 0.0
         total_batches = 0
@@ -452,6 +455,14 @@ def train_policy_model(
                 "epoch": epoch + 1,
                 "loss": avg_loss,
             }, checkpoint_path)
+        if latest_checkpoint_path is not None:
+            latest_checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+            torch.save({
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict(),
+                "epoch": epoch + 1,
+                "loss": avg_loss,
+            }, latest_checkpoint_path)
 
         if device.type == "cuda":
             torch.cuda.empty_cache()
@@ -556,9 +567,60 @@ def export_generation_comparison(summaries: List[dict], output_dir: Path) -> Non
     print(f"[Train] exported generation comparison to {csv_path} and {md_path}")
 
 
-def find_latest_checkpoint(drive_root: Path) -> Optional[Path]:
-    checkpoints = sorted(drive_root.glob("checkpoint_gen_*.pt"), key=lambda p: int(p.stem.split("_")[-1].split(".")[0]))
-    return checkpoints[-1] if checkpoints else None
+def find_latest_checkpoint(drive_root: Path, checkpoint_dir: Optional[Path] = None) -> Optional[Path]:
+    candidates: List[Path] = []
+    if checkpoint_dir is not None:
+        candidates.extend([checkpoint_dir / "latest_checkpoint.pt", checkpoint_dir / "checkpoint_latest.pt"])
+    candidates.extend(
+        sorted(
+            drive_root.glob("checkpoint_gen_*.pt"),
+            key=lambda p: int(p.stem.split("_")[-1].split(".")[0]),
+        )
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def detect_resume_generation(drive_root: Path) -> int:
+    generations: List[int] = []
+    for pattern in ["model_gen_*.pt", "checkpoint_gen_*.pt", "training_summary_gen_*.json"]:
+        for path in drive_root.glob(pattern):
+            match = re.search(r"(\d+)", path.name)
+            if match is not None:
+                generations.append(int(match.group(1)))
+    return max(generations) if generations else 0
+
+
+def load_resume_state(output_dir: Path) -> Optional[dict]:
+    state_path = output_dir / "resume_state.json"
+    if not state_path.exists():
+        return None
+    try:
+        with state_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except Exception:
+        return None
+
+
+def save_resume_state(
+    output_dir: Path,
+    generation: int,
+    checkpoint_path: Optional[Path],
+    best_model_path: Path,
+) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    state_path = output_dir / "resume_state.json"
+    payload = {
+        "generation": generation,
+        "checkpoint_path": str(checkpoint_path) if checkpoint_path is not None else None,
+        "best_model_path": str(best_model_path),
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    with state_path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+    return state_path
 
 
 def load_checkpoint(model: nn.Module, checkpoint_path: Path, device: torch.device) -> Tuple[nn.Module, dict]:
@@ -682,9 +744,14 @@ def run_pipeline(
     infinite: bool = True,
     log_every_games: int = 50,
     heartbeat_seconds: float = 30.0,
+    resume: bool = False,
+    checkpoint_dir: Optional[Path] = None,
 ) -> None:
     workdir.mkdir(parents=True, exist_ok=True)
     drive_root.mkdir(parents=True, exist_ok=True)
+    if checkpoint_dir is None:
+        checkpoint_dir = drive_root / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     seed_everything()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -695,6 +762,7 @@ def run_pipeline(
         print(f"[Runtime] gpu_memory_gb={torch.cuda.get_device_properties(0).total_memory / (1024 ** 3):.2f}")
 
     best_model_path = resolve_best_model_path(project_root, drive_root, best_model_path_override)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
     if initial_model_path is not None and initial_model_path.exists():
         shutil.copy2(initial_model_path, best_model_path)
     elif not best_model_path.exists():
@@ -717,7 +785,7 @@ def run_pipeline(
 
     validate_torchscript_model(best_model_path, device)
 
-    latest_checkpoint = find_latest_checkpoint(drive_root)
+    latest_checkpoint = find_latest_checkpoint(drive_root, checkpoint_dir)
     if latest_checkpoint is not None:
         print(f"[Checkpoint] found latest checkpoint: {latest_checkpoint}")
         try:
@@ -733,8 +801,19 @@ def run_pipeline(
 
     generation = 0
     generation_summaries: List[dict] = []
+    resume_state = load_resume_state(drive_root) if resume else None
+    resume_generation = 0
+    if resume_state is not None:
+        resume_generation = int(resume_state.get("generation", 0))
+    elif resume:
+        resume_generation = detect_resume_generation(drive_root)
+
+    generation = resume_generation
     while True:
         generation += 1
+        if resume and generation <= resume_generation:
+            print(f"[Resume] skipping generation {generation}; artifacts already exist in {drive_root}")
+            continue
         print(f"\n===== Generation {generation}/{max_generations if max_generations is not None else '∞'} =====")
         print(f"[Progress] Using model: {best_model_path}")
 
@@ -757,6 +836,7 @@ def run_pipeline(
         validate_training_inputs(states.tolist(), moves.tolist())
         print(f"[Progress] Generation {generation}: training with {states.shape[0]} samples")
         checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
+        latest_checkpoint_path = checkpoint_dir / "latest_checkpoint.pt"
         metrics_output_dir = drive_root / f"metrics_gen_{generation}"
         model, history = train_policy_model(
             model=model,
@@ -767,6 +847,7 @@ def run_pipeline(
             epochs=epochs,
             device=device,
             checkpoint_path=checkpoint_path,
+            latest_checkpoint_path=latest_checkpoint_path,
             metrics_output_dir=metrics_output_dir,
             patience=2,
             min_delta=1e-4,
@@ -804,6 +885,7 @@ def run_pipeline(
         }
         generation_summaries.append(generation_summary)
         export_generation_comparison(generation_summaries, drive_root)
+        save_resume_state(drive_root, generation, checkpoint_path, best_model_path)
         print(f"[Progress] Generation {generation}: training complete")
         print(f"[Progress] Generation {generation}: model saved -> {gen_model_path}")
 
@@ -839,6 +921,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max_generations", type=int, default=None)
     parser.add_argument("--log_every", type=int, default=50, help="Print self-play progress every N games")
     parser.add_argument("--heartbeat", type=float, default=60.0, help="Print a heartbeat every N seconds while the engine is running")
+    parser.add_argument("--checkpoint_dir", type=str, default="", help="Directory for persistent checkpoints and resume state")
+    parser.add_argument("--resume", action="store_true", help="Resume from the latest completed generation in the output directory")
     parser.add_argument("--no_infinite", action="store_true")
     return parser.parse_args()
 
@@ -854,6 +938,7 @@ def main() -> None:
     initial_model_path = Path(args.initial_model).expanduser().resolve() if args.initial_model else None
     best_model_path_override = Path(args.best_model_path).expanduser().resolve() if args.best_model_path else None
     archive_path = Path(args.archive_path).expanduser().resolve() if args.archive_path else None
+    checkpoint_dir = Path(args.checkpoint_dir).expanduser().resolve() if args.checkpoint_dir else drive_root / "checkpoints"
 
     project_root = prepare_project_root(project_root, archive_path)
 
@@ -872,6 +957,8 @@ def main() -> None:
         infinite=not args.no_infinite,
         log_every_games=args.log_every,
         heartbeat_seconds=args.heartbeat,
+        resume=args.resume,
+        checkpoint_dir=checkpoint_dir,
     )
 
 
