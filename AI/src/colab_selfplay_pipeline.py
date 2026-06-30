@@ -19,7 +19,6 @@ This script will:
 import argparse
 import csv
 import gc
-import hashlib
 import json
 import os
 import random
@@ -76,27 +75,82 @@ def configure_torch_runtime(device: torch.device) -> None:
         torch.set_num_threads(max(1, min(8, os.cpu_count() or 1)))
 
 
-class ChessPolicyNet(nn.Module):
-    """A compact policy/value network for 12x8x8 board inputs."""
+class ResidualBlock(nn.Module):
+    """Residual block with optional Dropout2d for regularization."""
 
-    def __init__(self, num_actions: int = 4096) -> None:
+    def __init__(self, channels: int = 128, dropout: float = 0.1) -> None:
         super().__init__()
-        self.conv1 = nn.Conv2d(12, 64, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(128 * 8 * 8, 512)
-        self.policy_head = nn.Linear(512, num_actions)
-        self.value_head = nn.Linear(512, 1)
+        self.conv1   = nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False)
+        self.bn1     = nn.BatchNorm2d(channels)
+        self.dropout = nn.Dropout2d(p=dropout)
+        self.conv2   = nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False)
+        self.bn2     = nn.BatchNorm2d(channels)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = torch.flatten(x, start_dim=1)
-        x = F.relu(self.fc1(x))
-        policy_logits = self.policy_head(x)
-        value_logit = self.value_head(x)
-        return policy_logits, value_logit
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        residual = x
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.dropout(out)
+        out = self.bn2(self.conv2(out))
+        return F.relu(out + residual)
+
+
+class ChessPolicyNet(nn.Module):
+    """ResNet-style policy + value network.
+
+    Input: [B, 20, 8, 8] — 20 planes:
+      0-11 : piece positions (W_P…W_K, B_P…B_K)
+      12   : turn (1.0 = white to move)
+      13-16: castling rights WK/WQ/BK/BQ
+      17   : en passant square
+      18   : rep1 (position repeated ≥1×)
+      19   : rep2 (position repeated ≥2×)
+
+    Policy head: 4096 logits (from_sq×64 + to_sq) + 192 underpromotion = 4288 total
+    Value head : scalar ∈ [-1, 1] — larger capacity (32ch → 256 → 64 → 1)
+    """
+
+    NUM_INPUT_PLANES = 20
+    NUM_ACTIONS      = 4288   # 4096 normal + 192 underpromotion (N/B/R × 64 to-squares)
+
+    def __init__(self, num_blocks: int = 6, channels: int = 128,
+                 policy_channels: int = 32, dropout: float = 0.1) -> None:
+        super().__init__()
+        # ── Trunk ────────────────────────────────────────────────────────────
+        self.conv_init = nn.Conv2d(self.NUM_INPUT_PLANES, channels,
+                                   kernel_size=3, padding=1, bias=False)
+        self.bn_init   = nn.BatchNorm2d(channels)
+        self.blocks    = nn.ModuleList(
+            [ResidualBlock(channels, dropout) for _ in range(num_blocks)]
+        )
+
+        # ── Policy head ───────────────────────────────────────────────────────
+        self.policy_conv = nn.Conv2d(channels, policy_channels, kernel_size=1, bias=False)
+        self.policy_bn   = nn.BatchNorm2d(policy_channels)
+        self.fc          = nn.Linear(policy_channels * 8 * 8, self.NUM_ACTIONS)
+
+        # ── Value head (larger capacity: 32ch → 256 → 64 → 1) ────────────────
+        self.value_conv  = nn.Conv2d(channels, 32, kernel_size=1, bias=False)
+        self.value_bn    = nn.BatchNorm2d(32)
+        self.value_fc1   = nn.Linear(32 * 64, 256)
+        self.value_fc2   = nn.Linear(256, 64)
+        self.value_head  = nn.Linear(64, 1)
+
+    def forward(self, x: torch.Tensor):
+        out = F.relu(self.bn_init(self.conv_init(x)))
+        for block in self.blocks:
+            out = block(out)
+
+        # Policy head
+        p = F.relu(self.policy_bn(self.policy_conv(out)))
+        policy = self.fc(torch.flatten(p, start_dim=1))
+
+        # Value head
+        v = F.relu(self.value_bn(self.value_conv(out)))
+        v = F.relu(self.value_fc1(torch.flatten(v, start_dim=1)))
+        v = F.relu(self.value_fc2(v))
+        value = torch.tanh(self.value_head(v))
+
+        return policy, value
 
 
 def should_log_output(line: str) -> bool:
@@ -109,34 +163,13 @@ def should_log_output(line: str) -> bool:
     return any(token in lowered for token in ("error", "failed", "exception", "traceback", "warning"))
 
 
-def _summarize_progress(output_chunks: List[str]) -> str:
-    for line in reversed(output_chunks):
-        text = line.strip()
-        if not text:
-            continue
-        match = re.search(r"game=(\d+)\s*/\s*(\d+)", text)
-        if match:
-            completed = int(match.group(1))
-            total = int(match.group(2))
-            if total > 0:
-                percent = completed * 100.0 / total
-                return f"game {completed}/{total} ({percent:.1f}%)"
-        match = re.search(r"(\d+)\s*/\s*(\d+)\s*games?", text, re.IGNORECASE)
-        if match:
-            completed = int(match.group(1))
-            total = int(match.group(2))
-            if total > 0:
-                percent = completed * 100.0 / total
-                return f"game {completed}/{total} ({percent:.1f}%)"
-    return "starting"
-
-
 def run(
     cmd: List[str],
     cwd: Optional[str] = None,
     env: Optional[dict] = None,
     check: bool = True,
     heartbeat_seconds: Optional[float] = None,
+    timeout: Optional[float] = None,
 ) -> subprocess.CompletedProcess:
     print("[CMD]", " ".join(cmd))
     process = subprocess.Popen(
@@ -150,26 +183,22 @@ def run(
     )
 
     output_chunks: List[str] = []
-    output_lock = threading.Lock()
     stop_event = threading.Event()
     start_time = time.time()
 
     def stream_output() -> None:
         assert process.stdout is not None
         for line in process.stdout:
-            with output_lock:
-                output_chunks.append(line)
+            output_chunks.append(line)
             if should_log_output(line):
-                print(line, end="")
+                print(line, end="", flush=True)
         process.stdout.close()
 
     def heartbeat() -> None:
         while not stop_event.is_set():
             if heartbeat_seconds is not None and heartbeat_seconds > 0:
-                with output_lock:
-                    progress = _summarize_progress(output_chunks)
                 elapsed = time.time() - start_time
-                print(f"[Heartbeat] elapsed={elapsed:.1f}s | {progress}")
+                print(f"[Heartbeat] still running after {elapsed:.1f}s", flush=True)
             if stop_event.wait(heartbeat_seconds or 1.0):
                 break
 
@@ -180,14 +209,24 @@ def run(
         heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
         heartbeat_thread.start()
 
-    returncode = process.wait()
+    try:
+        returncode = process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        stop_event.set()
+        stream_thread.join(timeout=5)
+        output = "".join(output_chunks)
+        raise RuntimeError(
+            f"[ERROR] Subprocess timed out after {timeout:.0f}s and was killed: {' '.join(cmd)}\n"
+            f"Last output:\n{output[-2000:]}"
+        )
+
     stop_event.set()
     stream_thread.join(timeout=5)
     if heartbeat_thread is not None:
         heartbeat_thread.join(timeout=1)
 
-    with output_lock:
-        output = "".join(output_chunks)
+    output = "".join(output_chunks)
     if check and returncode != 0:
         raise subprocess.CalledProcessError(returncode, cmd, output=output, stderr="")
     return subprocess.CompletedProcess(cmd, returncode, output, "")
@@ -263,25 +302,14 @@ def prepare_project_root(project_root: Path, archive_path: Optional[Path] = None
 
 
 def select_libtorch_url() -> str:
-    """Pick a LibTorch archive that matches the current PyTorch runtime and GPU availability."""
+    """Pick a CUDA-capable LibTorch archive URL matching the installed PyTorch + CUDA."""
     cuda_ver = torch.version.cuda or ""
     torch_ver = torch.__version__.split("+", 1)[0]
-    print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}, cuda_available={torch.cuda.is_available()}")
+    print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}")
 
-    if torch.cuda.is_available() and cuda_ver:
-        if cuda_ver.startswith("12.8"):
-            flavor = "cu128"
-        elif cuda_ver.startswith("12.4"):
-            flavor = "cu124"
-        elif cuda_ver.startswith("12.1"):
-            flavor = "cu121"
-        elif cuda_ver.startswith("11.8"):
-            flavor = "cu118"
-        else:
-            flavor = f"cu{cuda_ver.replace('.', '')}"
-        return f"https://download.pytorch.org/libtorch/{flavor}/libtorch-cxx11-abi-shared-with-deps-{torch_ver}%2B{flavor}.zip"
-
-    if torch_ver.startswith("2.5"):
+    if torch_ver.startswith("2.6"):
+        base_version = "2.6.0"
+    elif torch_ver.startswith("2.5"):
         base_version = "2.5.1"
     elif torch_ver.startswith("2.4"):
         base_version = "2.4.1"
@@ -290,33 +318,115 @@ def select_libtorch_url() -> str:
     else:
         base_version = "2.3.1"
 
-    return f"https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-{base_version}%2Bcpu.zip"
+    # Pick the CUDA tag that matches the installed CUDA runtime.
+    if cuda_ver.startswith("12.4"):
+        cu_tag = "cu124"
+    elif cuda_ver.startswith("12.1") or cuda_ver.startswith("12."):
+        cu_tag = "cu121"
+    elif cuda_ver.startswith("11.8") or cuda_ver.startswith("11."):
+        cu_tag = "cu118"
+    else:
+        cu_tag = None
+
+    if cu_tag:
+        print(f"[LibTorch] Selecting CUDA build: {cu_tag} for torch {base_version}")
+        return (
+            f"https://download.pytorch.org/libtorch/{cu_tag}/"
+            f"libtorch-cxx11-abi-shared-with-deps-{base_version}%2B{cu_tag}.zip"
+        )
+
+    # No CUDA → CPU fallback (should rarely happen on Kaggle)
+    print("[LibTorch] No matching CUDA version; falling back to CPU-only LibTorch")
+    return (
+        f"https://download.pytorch.org/libtorch/cpu/"
+        f"libtorch-cxx11-abi-shared-with-deps-{base_version}%2Bcpu.zip"
+    )
 
 
 def setup_libtorch(project_root: Path, workdir: Path) -> Path:
+    """Return the cmake prefix path for LibTorch (CUDA-capable when possible).
+
+    Priority:
+    1. System / venv PyTorch – already installed with CUDA, zero download cost.
+       torch.utils.cmake_prefix_path points to the cmake directory that
+       find_package(Torch) reads (contains Torch/TorchConfig.cmake).
+    2. Previously-downloaded CUDA / CPU LibTorch in workdir.
+    3. Fresh download of CUDA (or CPU-fallback) LibTorch.
+    """
+    # ── Priority 1: use the system/venv PyTorch cmake path ───────────────────
+    try:
+        cmake_prefix = Path(torch.utils.cmake_prefix_path)
+        if (cmake_prefix / "Torch" / "TorchConfig.cmake").exists():
+            n_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+            print(
+                f"[LibTorch] Using system PyTorch cmake path "
+                f"(CUDA={torch.cuda.is_available()}, GPUs={n_gpus}): {cmake_prefix}"
+            )
+            # Wipe any previously-downloaded CPU-only LibTorch so future runs
+            # don't accidentally reuse it after this code change.
+            stale = workdir / "libtorch"
+            if stale.exists():
+                # Only remove if it's a CPU build (no cudart in lib/)
+                stale_cudart = list(stale.glob("lib/libcudart*"))
+                if not stale_cudart:
+                    print(f"[LibTorch] Removing stale CPU-only LibTorch at {stale}")
+                    shutil.rmtree(stale, ignore_errors=True)
+            return cmake_prefix
+    except Exception as exc:
+        print(f"[LibTorch] Cannot use system PyTorch cmake path ({exc}); trying download")
+
+    # ── Priority 2: reuse previously-downloaded LibTorch ─────────────────────
     libtorch_dir = workdir / "libtorch"
-    torch_config = libtorch_dir / "share" / "cmake" / "Torch" / "TorchConfig.cmake"
-    expected_url = select_libtorch_url()
-    expected_cuda = "/libtorch/cpu/" not in expected_url
-    current_cuda = (libtorch_dir / "lib" / "libtorch_cuda.so").exists()
-
-    if not torch_config.exists() or current_cuda != expected_cuda:
-        if libtorch_dir.exists():
+    # cmake prefix for a downloaded LibTorch lives one level deeper
+    downloaded_cmake = libtorch_dir / "share" / "cmake"
+    torch_config = downloaded_cmake / "Torch" / "TorchConfig.cmake"
+    if torch_config.exists():
+        # Check whether it's a CUDA build; warn if it's CPU-only
+        has_cuda_lib = bool(list(libtorch_dir.glob("lib/libcudart*")))
+        if not has_cuda_lib and torch.cuda.is_available():
+            print(
+                "[LibTorch] WARNING: cached LibTorch is CPU-only but CUDA is available. "
+                "Deleting and re-downloading CUDA build."
+            )
             shutil.rmtree(libtorch_dir, ignore_errors=True)
-        archive = workdir / "libtorch.zip"
-        print(f"[LibTorch] Downloading {expected_url}")
-        run(["wget", "-q", expected_url, "-O", str(archive)])
-        run(["unzip", "-q", str(archive), "-d", str(workdir)])
-        if not torch_config.exists():
-            raise RuntimeError("LibTorch unzip did not create the expected directory.")
+        else:
+            print(f"[LibTorch] Reusing downloaded LibTorch (CUDA build={has_cuda_lib}): {libtorch_dir}")
+            return downloaded_cmake
+
+    # ── Priority 3: fresh download ────────────────────────────────────────────
+    if libtorch_dir.exists():
+        shutil.rmtree(libtorch_dir, ignore_errors=True)
+    url = select_libtorch_url()
+    archive = workdir / "libtorch.zip"
+    print(f"[LibTorch] Downloading {url}")
+    run(["wget", "-q", url, "-O", str(archive)])
+    run(["unzip", "-q", str(archive), "-d", str(workdir)])
+    if not torch_config.exists():
+        raise RuntimeError("LibTorch unzip did not create the expected directory.")
+    print(f"[LibTorch] Download complete: {libtorch_dir}")
+    return downloaded_cmake
+
+
+def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Path] = None) -> Path:
+    import hashlib
+
+    engine_dir = project_root / "AI" / "engine"
+    if not (engine_dir / "CMakeLists.txt").exists():
+        engine_dir = project_root / "engine"
+
+    # build_dir phải nằm ngoài project_root để tránh ghi vào /kaggle/input (read-only).
+    # Ưu tiên: build_base được truyền vào > /kaggle/working > engine_dir/build (local dev)
+    if build_base is not None:
+        build_dir = Path(build_base) / "engine_build"
+    elif os.path.exists("/kaggle/working"):
+        build_dir = Path("/kaggle/working/chess_engine_build")
     else:
-        print(f"[LibTorch] Reusing {libtorch_dir}")
+        build_dir = engine_dir / "build"
 
-    return libtorch_dir
+    binary = build_dir / "selfplay"
 
-
-def compute_build_hash(engine_dir: Path) -> str:
-    relevant_files = [
+    # Tính hash của tất cả source files quan trọng
+    hash_files = [
         engine_dir / "CMakeLists.txt",
         engine_dir / "selfplay.cpp",
         engine_dir / "mcts.cpp",
@@ -324,31 +434,25 @@ def compute_build_hash(engine_dir: Path) -> str:
         engine_dir / "ChessEnv.cpp",
     ]
     hasher = hashlib.sha256()
-    for path in relevant_files:
-        if path.exists():
-            hasher.update(path.read_bytes())
-        else:
-            hasher.update(b"<missing>")
-    return hasher.hexdigest()
+    for f in hash_files:
+        if f.exists():
+            hasher.update(f.read_bytes())
+    # Cũng hash libtorch path để rebuild nếu libtorch thay đổi
+    hasher.update(str(libtorch_dir).encode())
+    current_hash = hasher.hexdigest()
 
-
-def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
-    engine_dir = project_root / "AI" / "engine"
-    if not (engine_dir / "CMakeLists.txt").exists():
-        engine_dir = project_root / "engine"
-    build_dir = engine_dir / "build"
-    build_hash_path = build_dir / ".build_hash"
-    binary = build_dir / "selfplay"
-    current_hash = compute_build_hash(engine_dir)
-
-    if build_dir.exists() and binary.exists() and build_hash_path.exists():
+    hash_file = build_dir / ".build_hash"
+    if binary.exists() and hash_file.exists():
         try:
-            if build_hash_path.read_text(encoding="utf-8").strip() == current_hash:
-                print(f"[Build] Reusing existing engine build at {build_dir}")
+            cached_hash = hash_file.read_text().strip()
+            if cached_hash == current_hash:
+                print(f"[Build] Source không đổi (hash={current_hash[:12]}…) → skip rebuild, dùng binary cũ: {binary}")
                 return binary
-        except Exception as exc:  # pragma: no cover
-            print(f"[Build] Could not validate cached build hash: {exc}")
+        except Exception:
+            pass
 
+    # Cần rebuild
+    print(f"[Build] Source thay đổi hoặc binary không tồn tại → rebuild engine")
     if build_dir.exists():
         shutil.rmtree(build_dir, ignore_errors=True)
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -365,8 +469,11 @@ def build_engine(project_root: Path, libtorch_dir: Path) -> Path:
     run(["cmake", "--build", str(build_dir), "-j2"], cwd=str(project_root))
 
     if not binary.exists():
-        raise RuntimeError("The self-play binary was not built successfully.")
-    build_hash_path.write_text(current_hash, encoding="utf-8")
+        raise RuntimeError("[ERROR] The self-play binary was not built successfully.")
+
+    # Lưu hash sau khi build thành công
+    hash_file.write_text(current_hash)
+    print(f"[Build] Build thành công. Hash={current_hash[:12]}… lưu vào {hash_file}")
     return binary
 
 
@@ -376,12 +483,84 @@ def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndar
     data = np.fromfile(path, dtype=np.float32)
     if data.size == 0:
         raise ValueError(f"No samples found in {path}")
-    if data.size % 770 != 0:
-        raise ValueError(f"Unexpected sample size in {path}: {data.size}")
-    samples = data.reshape(-1, 770)
-    states = samples[:, :768].astype(np.float32).reshape(-1, 12, 8, 8)
-    moves = samples[:, 768].astype(np.int64)
-    values = samples[:, 769].astype(np.float32)
+    # NEW: SelfPlaySample = 1280 state floats + 1 move_idx + 1 value = 1282 floats/sample
+    # (OLD was 768+1+1=770 with 12 planes; now 1280+1+1=1282 with 20 planes)
+    SAMPLE_SIZE = ChessPolicyNet.NUM_INPUT_PLANES * 64 + 2  # 1282
+    if data.size % SAMPLE_SIZE != 0:
+        # Backward compat: try old 770-float format (12 planes)
+        if data.size % 770 == 0:
+            print(f"[DataLoad] {path.name}: old 12-plane format detected — upgrading on-the-fly")
+            samples_old = data.reshape(-1, 770)
+            states_old  = samples_old[:, :768].astype(np.float32).reshape(-1, 12, 8, 8)
+            moves  = samples_old[:, 768].astype(np.int64)
+            values = samples_old[:, 769].astype(np.float32)
+            # Pad old 12-plane states to 20 planes (fill extra 8 planes with zeros)
+            n = states_old.shape[0]
+            states = np.zeros((n, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8), dtype=np.float32)
+            states[:, :12] = states_old
+            # Note: no turn/castling/EP/rep info from old format — zeros is safe (neutral)
+        else:
+            raise ValueError(f"Unexpected sample size in {path}: {data.size} (not divisible by {SAMPLE_SIZE} or 770)")
+    else:
+        samples = data.reshape(-1, SAMPLE_SIZE)
+        states  = samples[:, :1280].astype(np.float32).reshape(-1, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8)
+        moves   = samples[:, 1280].astype(np.int64)
+        values  = samples[:, 1281].astype(np.float32)
+
+    # ── Log decisive/draw ratio ───────────────────────────────────────────
+    draws = (values == 0.0)
+    n_draws    = int(draws.sum())
+    n_decisive = int((~draws).sum())
+    total = len(values)
+    print(f"[DataLoad] {path.name}: {n_decisive} decisive ({100*n_decisive/max(1,total):.1f}%) "
+          f"| {n_draws} draws ({100*n_draws/max(1,total):.1f}%)")
+
+    # ── FIX: Remove random noise on draws (was: ±0.25 uniform noise) ─────
+    # BUG (cũ): values[draws] += random.uniform(-0.25, 0.25)
+    # → noise ngẫu nhiên không dạy được gì, chỉ làm nhiễu tín hiệu value.
+    #
+    # FIX mới: Dùng material balance từ state để tạo draw value có nghĩa.
+    # Mỗi draw position có material balance riêng:
+    #   - Nếu bên hiện tại đang có lợi vật chất: draw tệ → value âm nhẹ
+    #   - Nếu bên hiện tại đang bất lợi: draw tốt → value dương nhẹ
+    #   - Nếu cân bằng: draw trung lập → value gần 0
+    # Hệ số scale nhỏ (0.15) để không làm value head lệch quá nhiều.
+    if n_draws > 0:
+        # ── CRITICAL FIX: Draw penalty để MCTS không seek draw ──────────────
+        # Vấn đề gốc: draw=0 → MCTS coi hòa = neutral → safe draw > risky win
+        # → model học cách chủ động kéo hòa (repetition, stalemate bẫy) thay vì cố thắng.
+        #
+        # FIX Bug 5: DRAW_VALUE -0.15 quá nhỏ — tăng lên -0.4 để khuyến khích thắng mạnh hơn.
+        # -0.15 chỉ bằng 7.5% của range [-1,1], model không đủ động lực tránh draw.
+        # -0.4 phù hợp: đủ mạnh để MCTS avoid draw nhưng không cực đoan.
+        # Phải khớp với DRAW_VALUE trong kaggle_pgn_train_notebook.
+        BASE_DRAW_PENALTY = -0.4        #   win=+1.0,  draw=-0.4,  loss=-1.0
+        # → MCTS tìm win thay vì settle for draw
+        # → Khi đang thua: vẫn prefer draw (-0.4 > -1.0) — hợp lý
+        # → Khi đang thắng: không chấp nhận draw (-0.4 < +1.0) — MCTS tiếp tục tấn công
+        # BUG đã fix: dòng "BASE_DRAW_PENALTY = -0.15" từng nằm ở đây, ghi đè ngay lên
+        # giá trị -0.4 phía trên → toàn bộ "Fix Bug 5" ở trên chưa bao giờ có hiệu lực,
+        # và DRAW_VALUE giữa pipeline này với notebook bị lệch nhau (-0.15 vs -0.4).
+
+        PIECE_WEIGHTS = np.array([1.0, 3.0, 3.2, 5.1, 9.0,  # P N B R Q (White)
+                                  1.0, 3.0, 3.2, 5.1, 9.0,  # P N B R Q (Black)
+                                  0.0, 0.0], dtype=np.float32)  # Kings
+        draw_states = states[draws]  # [n_draws, 12, 8, 8]
+        piece_counts = draw_states.reshape(n_draws, 12, 64).sum(axis=2)  # [n_draws, 12]
+        white_mat = (piece_counts[:, :5] * PIECE_WEIGHTS[:5]).sum(axis=1)
+        black_mat = (piece_counts[:, 6:11] * PIECE_WEIGHTS[6:11]).sum(axis=1)
+        material_adv = white_mat - black_mat  # positive = White better
+
+        # Material adj nhỏ (±0.05) chỉ để phân biệt "hòa khi đang thắng" vs "hòa khi đang thua"
+        # Không dùng sideToMove vì plane encoding không reliable → dùng magnitude nhỏ
+        MAX_MAT = 39.0
+        material_adj = -np.clip(material_adv / MAX_MAT, -1.0, 1.0) * 0.05
+        # Tổng: draw_value ∈ [-0.45, -0.35] — luôn âm, nhỏ hơn loss (-1.0) nhưng lớn hơn loss
+        values[draws] = (BASE_DRAW_PENALTY + material_adj).astype(np.float32)
+        # ────────────────────────────────────────────────────────────────────
+
+    values = np.clip(values, -1.0, 1.0)
+    # ─────────────────────────────────────────────────────────────────────
     return states, moves, values
 
 
@@ -392,7 +571,11 @@ def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor, t
     for path in paths:
         if not path.exists():
             continue
-        states, moves, values = load_generation_samples(path)
+        try:
+            states, moves, values = load_generation_samples(path)
+        except Exception as exc:  # pragma: no cover
+            print(f"[ERROR] load_replay_buffer: skipping {path}: {exc}")
+            continue
         all_states.append(states)
         all_moves.append(moves)
         all_values.append(values)
@@ -401,9 +584,16 @@ def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor, t
     states_np = np.concatenate(all_states, axis=0)
     moves_np = np.concatenate(all_moves, axis=0)
     values_np = np.concatenate(all_values, axis=0)
+    # RAM guard: nếu quá nhiều samples thì lấy MAX_REPLAY_SAMPLES cuối
+    MAX_REPLAY_SAMPLES = 200_000
+    if states_np.shape[0] > MAX_REPLAY_SAMPLES:
+        print(f"[Pipeline] replay buffer quá lớn ({states_np.shape[0]} samples), cắt về {MAX_REPLAY_SAMPLES} mẫu gần nhất")
+        states_np = states_np[-MAX_REPLAY_SAMPLES:]
+        moves_np = moves_np[-MAX_REPLAY_SAMPLES:]
+        values_np = values_np[-MAX_REPLAY_SAMPLES:]
     x = torch.from_numpy(states_np)
     y = torch.from_numpy(moves_np)
-    v = torch.from_numpy(values_np).float()
+    v = torch.from_numpy(values_np)
     return x, y, v
 
 
@@ -414,13 +604,20 @@ def validate_torchscript_model(model_path: Path, device: torch.device) -> None:
         scripted = torch.jit.load(str(model_path), map_location=device)
         with torch.no_grad():
             dummy = torch.randn(1, 12, 8, 8, device=device)
-            scripted(dummy)
+            out = scripted(dummy)
+            # Handle both old (tensor) and new (tuple) model outputs
+            if isinstance(out, (tuple, list)):
+                policy_out, value_out = out[0], out[1]
+                assert policy_out.shape[-1] == ChessPolicyNet.NUM_ACTIONS, f"policy shape sai: {policy_out.shape}"
+                assert value_out.shape[-1] == 1, f"value shape sai: {value_out.shape}"
+            else:
+                assert out.shape[-1] == 4096, f"output shape sai: {out.shape}"
         print(f"[Model] validated TorchScript model: {model_path}")
     except Exception as exc:  # pragma: no cover
         raise RuntimeError(f"TorchScript model validation failed for {model_path}: {exc}") from exc
 
 
-def select_replay_files(drive_root: Path, generation_file: Path, min_samples: int = 4096, max_files: int = 6) -> List[Path]:
+def select_replay_files(drive_root: Path, generation_file: Path, min_samples: int = 20000, max_files: int = 10) -> List[Path]:
     candidates = sorted(
         [path for path in drive_root.glob("selfplay_gen_*.bin") if path.exists()],
         key=lambda path: int(path.stem.split("_")[-1]),
@@ -453,7 +650,7 @@ def train_policy_model(
     model: nn.Module,
     states: torch.Tensor,
     moves: torch.Tensor,
-    values: Optional[torch.Tensor] = None,
+    values: torch.Tensor,
     lr: float = 1e-3,
     batch_size: int = 256,
     epochs: int = 3,
@@ -461,7 +658,7 @@ def train_policy_model(
     checkpoint_path: Optional[Path] = None,
     latest_checkpoint_path: Optional[Path] = None,
     metrics_output_dir: Optional[Path] = None,
-    patience: int = 2,
+    patience: int = 5,  # tăng từ 2 → 5 để không dừng quá sớm
     min_delta: float = 1e-4,
     start_epoch: int = 0,
 ) -> Tuple[nn.Module, dict]:
@@ -480,17 +677,61 @@ def train_policy_model(
     best_loss = float("inf")
     patience_counter = 0
 
+    # ── Oversample decisive + material-adjusted draw samples ─────────────
+    # FIX: Dùng weighted random sampling thay vì repeat() cứng nhắc.
+    # - repeat() tạo exact duplicates → model overfit trên số ít decisive samples.
+    # - weighted sampling: decisive samples được chọn thường xuyên hơn nhưng
+    #   không 100% giống nhau (shuffle tự nhiên của DataLoader giải quyết order).
+    # - Cap factor ở 8x để tránh bùng nổ RAM khi decisive cực hiếm.
+    # ── Fix: threshold 0.5 để chỉ bắt actual wins/losses (±1.0), không nhầm draws ──
+    # Sau khi fix draw penalty, draw values ∈ [-0.20, -0.10].
+    # threshold 0.05 (cũ) sẽ bắt nhầm draws làm "decisive" → oversample không hiệu quả.
+    # threshold 0.5 chỉ bắt actual wins (≈+1) và losses (≈-1).
+    decisive_mask = (values.abs() > 0.5)
+    n_decisive = int(decisive_mask.sum().item())
+    total_samples = len(values)
+    draw_rate = 1.0 - n_decisive / max(1, total_samples)
+
+    # ── Dynamic oversample: tỉ lệ nghịch với decisive_rate ────────────────
+    # Khi decisive_rate rất thấp (1-5%), cần oversample mạnh hơn nhiều
+    # để value head học được tín hiệu thắng/thua thay vì bị drowning bởi draw.
+    decisive_rate = n_decisive / max(1, total_samples)
+    if decisive_rate < 0.03:
+        oversample_factor = 15  # cực kỳ hiếm decisive → phải cân bằng mạnh
+    elif decisive_rate < 0.06:
+        oversample_factor = 12
+    elif decisive_rate < 0.10:
+        oversample_factor = 8
+    elif decisive_rate < 0.20:
+        oversample_factor = 5
+    else:
+        oversample_factor = 3
+
+    if n_decisive > 0:
+        idx = decisive_mask.nonzero(as_tuple=True)[0]
+        perm = torch.randperm(len(idx))
+        idx_shuffled = idx[perm]
+        rep_idx = idx_shuffled.repeat(oversample_factor)
+        states  = torch.cat([states,  states[rep_idx]])
+        moves   = torch.cat([moves,   moves[rep_idx]])
+        values  = torch.cat([values,  values[rep_idx]])
+        print(f"[Train] Oversampled decisive: {n_decisive}×{oversample_factor} added "
+              f"| total={len(states)} samples (decisive={decisive_rate:.1%}, draw={draw_rate:.1%})")
+    else:
+        print(f"[Train] ⚠️  Không có decisive game trong replay buffer — chỉ có draw")
+        print(f"[Train] Draw penalty (-0.15) đang được áp dụng để guide MCTS trong gen tiếp theo")
+    # ────────────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────────────────────────────
+
     for epoch in range(start_epoch, epochs):
         running_loss = 0.0
+        running_policy_loss = 0.0
         running_value_loss = 0.0
         total_batches = 0
         current_batch_size = effective_batch_size
         while True:
             try:
-                if values is not None:
-                    dataset = TensorDataset(states, moves, values)
-                else:
-                    dataset = TensorDataset(states, moves)
+                dataset = TensorDataset(states, moves, values)
                 loader = DataLoader(
                     dataset,
                     batch_size=current_batch_size,
@@ -506,61 +747,67 @@ def train_policy_model(
                     continue
                 raise
 
-        for batch_idx, batch in enumerate(loader):
-            xb = batch[0].to(device, non_blocking=True)
-            yb = batch[1].to(device, non_blocking=True)
-            vb = None
-            if values is not None and len(batch) >= 3:
-                vb = batch[2].to(device, non_blocking=True).float()
+        for xb, yb, vb in loader:
+            xb = xb.to(device, non_blocking=True)
+            yb = yb.to(device, non_blocking=True)
+            vb = vb.to(device, non_blocking=True).unsqueeze(1) if vb.dim() == 1 else vb.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             if device.type == "cuda":
                 with torch.autocast(device_type="cuda", dtype=torch.float16):
-                    policy_logits, value_logits = model(xb)
+                    policy_logits, value_pred = model(xb)
                     policy_loss = F.cross_entropy(policy_logits, yb.long())
-                    value_loss = torch.nn.functional.mse_loss(value_logits.squeeze(-1), vb) if vb is not None else torch.tensor(0.0, device=device)
-                    loss = policy_loss + value_loss
+                    value_loss = F.mse_loss(value_pred, vb.float())
+                    # Dynamic value_weight: tăng khi draw_rate cao
+                    # Sau fix draw penalty, value head cần học -0.15 cho draws VÀ ±1 cho decisive.
+                    # weight cao hơn giúp value head catch up nhanh hơn với target mới.
+                    # draw_rate > 0.85: weight=3.0 | 0.70-0.85: weight=2.0 | <0.70: weight=1.5
+                    _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
+                    loss = policy_loss + _vw * value_loss
                 scaler.scale(loss).backward()
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 scaler.step(optimizer)
                 scaler.update()
             else:
-                policy_logits, value_logits = model(xb)
+                policy_logits, value_pred = model(xb)
                 policy_loss = F.cross_entropy(policy_logits, yb.long())
-                value_loss = torch.nn.functional.mse_loss(value_logits.squeeze(-1), vb) if vb is not None else torch.tensor(0.0, device=device)
-                loss = policy_loss + value_loss
+                value_loss = F.mse_loss(value_pred, vb.float())
+                _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
+                loss = policy_loss + _vw * value_loss
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
             running_loss += float(loss.item())
-            if vb is not None:
-                running_value_loss += float(value_loss.item())
+            running_policy_loss += float(policy_loss.item())
+            running_value_loss += float(value_loss.item())
             total_batches += 1
 
         avg_loss = running_loss / max(1, total_batches)
+        avg_policy_loss = running_policy_loss / max(1, total_batches)
         avg_value_loss = running_value_loss / max(1, total_batches)
+
+        ckpt_payload = {
+            "model_state": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "epoch": epoch + 1,
+            "loss": avg_loss,
+            "policy_loss": avg_policy_loss,
+            "value_loss": avg_value_loss,
+        }
         if checkpoint_path is not None:
             checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-            torch.save({
-                "model_state": model.state_dict(),
-                "optimizer_state": optimizer.state_dict(),
-                "epoch": epoch + 1,
-                "loss": avg_loss,
-            }, checkpoint_path)
+            torch.save(ckpt_payload, checkpoint_path)
         if latest_checkpoint_path is not None:
             latest_checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-            torch.save({
-                "model_state": model.state_dict(),
-                "optimizer_state": optimizer.state_dict(),
-                "epoch": epoch + 1,
-                "loss": avg_loss,
-            }, latest_checkpoint_path)
+            torch.save(ckpt_payload, latest_checkpoint_path)
 
         if device.type == "cuda":
             torch.cuda.empty_cache()
         gc.collect()
-        print(f"[Train] epoch={epoch + 1}/{epochs} loss={avg_loss:.4f} value_loss={avg_value_loss:.4f}")
-        history["epochs"].append({"epoch": epoch + 1, "loss": avg_loss, "value_loss": avg_value_loss})
+        _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
+        print(f"[Train] epoch={epoch + 1}/{epochs} | policy={avg_policy_loss:.4f} value={avg_value_loss:.4f} "
+              f"| vw={_vw:.1f} draw={draw_rate:.1%}")
+        history["epochs"].append({"epoch": epoch + 1, "loss": avg_loss, "policy_loss": avg_policy_loss, "value_loss": avg_value_loss})
         if metrics_output_dir is not None:
             export_training_metrics(history, metrics_output_dir)
 
@@ -578,12 +825,24 @@ def train_policy_model(
 
 
 def save_traced_model(model: nn.Module, path: Path, device: torch.device) -> None:
-    model = model.to(device).eval()
+    model = model.to(device)
+    model.eval()
+    # Đảm bảo tất cả BN layer ở eval mode (running stats, không dùng batch stats)
+    for m in model.modules():
+        if isinstance(m, torch.nn.BatchNorm2d):
+            m.eval()
     dummy = torch.randn(1, 12, 8, 8, device=device)
     with torch.no_grad():
         traced = torch.jit.trace(model, dummy)
+        # Verify output is tuple (policy, value)
+        out = traced(dummy)
+        if not isinstance(out, (tuple, list)):
+            raise RuntimeError(
+                f"[ERROR] Traced model phải output tuple (policy, value), got {type(out)}. "
+                "Kiểm tra ChessPolicyNet.forward() có return 2 tensors không."
+            )
     traced.save(str(path))
-    print(f"[Model] saved TorchScript: {path}")
+    print(f"[Model] saved TorchScript (policy+value): {path}")
 
 
 def save_training_summary(history: dict, path: Path) -> None:
@@ -600,25 +859,30 @@ def export_training_metrics(history: dict, output_dir: Path) -> None:
 
     epochs = [entry["epoch"] for entry in history["epochs"]]
     losses = [entry["loss"] for entry in history["epochs"]]
+    policy_losses = [entry.get("policy_loss", entry.get("loss", 0.0)) for entry in history["epochs"]]
     value_losses = [entry.get("value_loss", 0.0) for entry in history["epochs"]]
 
     csv_path = output_dir / "training_metrics.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["epoch", "loss", "value_loss"])
+        writer = csv.DictWriter(handle, fieldnames=["epoch", "loss", "policy_loss", "value_loss"])
         writer.writeheader()
-        for epoch, loss, value_loss in zip(epochs, losses, value_losses):
-            writer.writerow({"epoch": epoch, "loss": loss, "value_loss": value_loss})
+        for epoch, loss, policy_loss, value_loss in zip(epochs, losses, policy_losses, value_losses):
+            writer.writerow({"epoch": epoch, "loss": loss, "policy_loss": policy_loss, "value_loss": value_loss})
 
     if plt is not None:
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
         axes[0].plot(epochs, losses, marker="o")
-        axes[0].set_title("Loss")
+        axes[0].set_title("Total Loss")
         axes[0].set_xlabel("Epoch")
         axes[0].set_ylabel("Loss")
-        axes[1].plot(epochs, value_losses, marker="o", color="orange")
-        axes[1].set_title("Value Loss")
+        axes[1].plot(epochs, policy_losses, marker="o", color="blue")
+        axes[1].set_title("Policy Loss")
         axes[1].set_xlabel("Epoch")
-        axes[1].set_ylabel("Value Loss")
+        axes[1].set_ylabel("Loss")
+        axes[2].plot(epochs, value_losses, marker="o", color="orange")
+        axes[2].set_title("Value Loss")
+        axes[2].set_xlabel("Epoch")
+        axes[2].set_ylabel("Loss")
         fig.tight_layout()
         fig.savefig(output_dir / "training_metrics.png", dpi=150)
         plt.close(fig)
@@ -716,33 +980,124 @@ def save_resume_state(
     return state_path
 
 
+def reinit_value_head(model: nn.Module) -> None:
+    """Reinitialize value head weights to break draw collapse.
+
+    ROOT CAUSE của draw collapse:
+    Train.py (PGN training) dùng `value_target = zeros`, khiến value head
+    học output ~0 cho mọi vị trí. MCTS không phân biệt được thắng/thua,
+    dẫn đến tỉ lệ hòa >95%.
+
+    Hàm này reinit value head về Xavier normal để thoát khỏi attractor "mọi
+    thứ là hòa". Chỉ gọi 1 lần khi phát hiện value head bị collapse.
+    """
+    value_modules = {name: m for name, m in model.named_modules()
+                     if 'value' in name and isinstance(m, (nn.Linear, nn.Conv2d))}
+    if not value_modules:
+        print("[Model] Không tìm thấy value head modules để reinit")
+        return
+    for name, module in value_modules.items():
+        nn.init.xavier_normal_(module.weight, gain=0.5)
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
+    print(f"[Model] Value head reinitialized ({len(value_modules)} modules): {list(value_modules.keys())}")
+
+
+def detect_value_collapse(model: nn.Module, device: torch.device, threshold: float = 0.05) -> bool:
+    """Kiểm tra value head có bị collapse về 0 không.
+
+    Chạy 128 vị trí ngẫu nhiên. Nếu std(value_outputs) < threshold
+    → value head bị collapse, cần reinit.
+    """
+    model.eval()
+    with torch.no_grad():
+        dummy = torch.randn(128, 12, 8, 8, device=device)
+        _, values = model(dummy)
+        val_std = values.std().item()
+        val_mean = values.abs().mean().item()
+    model.train()
+    is_collapsed = (val_std < threshold) and (val_mean < threshold)
+    print(f"[Model] Value head check: mean_abs={val_mean:.4f} std={val_std:.4f} "
+          f"→ {'COLLAPSED (sẽ reinit)' if is_collapsed else 'OK'}")
+    return is_collapsed
+
+
 def load_checkpoint(model: nn.Module, checkpoint_path: Path, device: torch.device) -> Tuple[nn.Module, dict]:
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state"])
+    state_dict = checkpoint["model_state"]
+    # Backward compat: checkpoint cũ (chỉ có policy head) → load strict=False
+    has_value_head = any(k.startswith("value_") for k in state_dict.keys())
+    if not has_value_head:
+        print(f"[Checkpoint] checkpoint cũ không có value head → load strict=False")
+        missing, unexpected = model.load_state_dict(state_dict, strict=False)
+        if missing:
+            print(f"[Checkpoint] keys bị thiếu (giữ nguyên khởi tạo): {missing}")
+        # Value head mới → luôn reinit (không có gì để load)
+        reinit_value_head(model)
+    else:
+        model.load_state_dict(state_dict)
+        model.to(device)
+        # FIX: Kiểm tra và reinit nếu value head bị collapse từ zero-target training
+        if detect_value_collapse(model, device):
+            reinit_value_head(model)
     model.to(device)
     return model, checkpoint
+
+
+def _is_writable(p: Path) -> bool:
+    """Kiểm tra path có thể ghi không (tránh crash khi project_root là /kaggle/input)."""
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        test = p / ".write_test"
+        test.touch()
+        test.unlink()
+        return True
+    except (OSError, PermissionError):
+        return False
 
 
 def publish_latest_model(gen_model_path: Path, best_model_path: Path, project_root: Path) -> None:
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(gen_model_path, best_model_path)
 
+    # Sync vào project_root/AI/data nếu writable (không phải /kaggle/input)
     project_model_path = project_root / "AI" / "data" / "best_model_traced.pt"
-    project_model_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(gen_model_path, project_model_path)
+    if _is_writable(project_model_path.parent):
+        shutil.copy2(gen_model_path, project_model_path)
 
-    legacy_project_model_path = project_root / "data" / "best_model_traced.pt"
-    legacy_project_model_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(gen_model_path, legacy_project_model_path)
+    print(f"[Model] ✓ Model mới: {gen_model_path.name} → {best_model_path}")
 
-    root_legacy_model_path = project_root / "best_model_traced.pt"
-    root_legacy_model_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(gen_model_path, root_legacy_model_path)
 
-    print(f"[Model] published new model to {best_model_path}")
-    print(f"[Model] synced project model to {project_model_path}")
-    print(f"[Model] synced legacy project model to {legacy_project_model_path}")
-    print(f"[Model] synced root legacy model to {root_legacy_model_path}")
+def _run_single_selfplay_worker(
+    binary: Path,
+    model_path: Path,
+    output_path: Path,
+    simulations: int,
+    games: int,
+    log_every: int,
+    temperature_moves: int,
+    seed: int,
+    project_root: Path,
+    heartbeat_seconds: float,
+    selfplay_timeout: float,
+    env: Optional[dict] = None,
+    log_prefix: str = "",
+) -> None:
+    """Run one selfplay worker subprocess (blocking)."""
+    cmd = [
+        str(binary),
+        "--model_path",   str(model_path),
+        "--simulations",  str(simulations),
+        "--games",        str(games),
+        "--log_every",    str(log_every),
+        "--output",       str(output_path),
+        "--temperature_moves", str(temperature_moves),
+        "--seed",         str(seed),
+    ]
+    if log_prefix:
+        print(f"[Progress] {log_prefix} cmd: {' '.join(cmd)}", flush=True)
+    run(cmd, cwd=str(project_root), env=env,
+        heartbeat_seconds=heartbeat_seconds, timeout=selfplay_timeout)
 
 
 def run_generation(
@@ -756,30 +1111,118 @@ def run_generation(
     games: int,
     log_every: int = 50,
     heartbeat_seconds: float = 30.0,
-    temperature_moves: int = 30,
+    selfplay_timeout: float = 8 * 3600.0,
+    temperature_moves: int = 50,  # FIX: 30→50 tăng exploration
 ) -> Path:
     local_generation_file = workdir / f"selfplay_gen_{generation}.bin"
     drive_generation_file = drive_root / f"selfplay_gen_{generation}.bin"
-    cmd = [
-        str(binary),
-        "--model_path",
-        str(best_model_path),
-        "--simulations",
-        str(simulations),
-        "--games",
-        str(games),
-        "--log_every",
-        str(log_every),
-        "--temperature_moves",
-        str(temperature_moves),
-        "--output",
-        str(local_generation_file),
-    ]
+
+    # ── Detect available GPUs ─────────────────────────────────────────────────
+    num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+    # Use up to 2 GPUs; single worker when no GPU available
+    num_workers = max(1, min(num_gpus, 2))
+
     start_ts = time.time()
-    print(f"[Progress] Generation {generation}: starting self-play ({games} games, {simulations} simulations)")
-    run(cmd, cwd=str(project_root), heartbeat_seconds=heartbeat_seconds)
+    print(
+        f"[Progress] Generation {generation}: starting self-play "
+        f"({games} games, {simulations} simulations, {num_workers} worker(s) / {num_gpus} GPU(s))",
+        flush=True,
+    )
+
+    if num_workers == 1:
+        # ── Single worker (CPU or single-GPU) ────────────────────────────────
+        env = os.environ.copy()
+        if num_gpus >= 1:
+            env["CUDA_VISIBLE_DEVICES"] = "0"
+        try:
+            _run_single_selfplay_worker(
+                binary=binary, model_path=best_model_path,
+                output_path=local_generation_file,
+                simulations=simulations, games=games, log_every=log_every,
+                temperature_moves=temperature_moves, seed=42,
+                project_root=project_root,
+                heartbeat_seconds=heartbeat_seconds, selfplay_timeout=selfplay_timeout,
+                env=env,
+            )
+        except subprocess.CalledProcessError as exc:
+            print(f"[ERROR] Self-play binary exited with code {exc.returncode}")
+            print(f"[ERROR] Output: {exc.output[-2000:] if exc.output else '(none)'}")
+            raise RuntimeError(f"[ERROR] Self-play failed for generation {generation}") from exc
+
+    else:
+        # ── Parallel workers: split games across GPUs ─────────────────────────
+        # Distribute games evenly; last worker picks up any remainder
+        base_games   = games // num_workers
+        extra_games  = games % num_workers
+        games_split  = [base_games + (1 if i < extra_games else 0) for i in range(num_workers)]
+
+        partial_files = [
+            workdir / f"selfplay_gen_{generation}_worker{i}.bin"
+            for i in range(num_workers)
+        ]
+
+        errors: List[Exception] = []
+        errors_lock = threading.Lock()
+
+        def run_worker(worker_idx: int) -> None:
+            env = os.environ.copy()
+            env["CUDA_VISIBLE_DEVICES"] = str(worker_idx)
+            try:
+                _run_single_selfplay_worker(
+                    binary=binary, model_path=best_model_path,
+                    output_path=partial_files[worker_idx],
+                    simulations=simulations, games=games_split[worker_idx],
+                    log_every=max(1, log_every // num_workers),
+                    temperature_moves=temperature_moves,
+                    seed=42 + worker_idx * 1000,
+                    project_root=project_root,
+                    heartbeat_seconds=heartbeat_seconds,
+                    selfplay_timeout=selfplay_timeout,
+                    env=env,
+                    log_prefix=f"[GPU{worker_idx}]",
+                )
+            except Exception as exc:
+                with errors_lock:
+                    errors.append(exc)
+                print(f"[ERROR] Worker {worker_idx} (GPU {worker_idx}) failed: {exc}", flush=True)
+
+        worker_threads = [
+            threading.Thread(target=run_worker, args=(i,), daemon=False)
+            for i in range(num_workers)
+        ]
+        print(
+            f"[Progress] Launching {num_workers} parallel workers: "
+            + ", ".join(f"GPU{i}={games_split[i]} games" for i in range(num_workers)),
+            flush=True,
+        )
+        for t in worker_threads:
+            t.start()
+        for t in worker_threads:
+            t.join()
+
+        if errors:
+            raise RuntimeError(
+                f"[ERROR] {len(errors)} self-play worker(s) failed for generation {generation}: "
+                + str(errors[0])
+            )
+
+        # Merge partial outputs into a single generation file
+        print(f"[Progress] Merging {num_workers} worker outputs → {local_generation_file}", flush=True)
+        with open(local_generation_file, "wb") as outf:
+            for pf in partial_files:
+                if pf.exists() and pf.stat().st_size > 0:
+                    outf.write(pf.read_bytes())
+                    pf.unlink(missing_ok=True)
+                else:
+                    print(f"[WARNING] Partial file missing or empty: {pf}", flush=True)
+
     elapsed = time.time() - start_ts
-    print(f"[Progress] Generation {generation}: self-play complete in {elapsed:.1f}s")
+
+    if not local_generation_file.exists() or local_generation_file.stat().st_size == 0:
+        raise RuntimeError(f"[ERROR] Self-play output file missing/empty: {local_generation_file}")
+
+    print(f"[Progress] Generation {generation}: self-play complete in {elapsed:.1f}s", flush=True)
+
     shutil.copy2(local_generation_file, drive_generation_file)
     print(f"[Progress] Generation {generation}: replay saved -> {drive_generation_file}")
     print(f"[Progress] Generation {generation}: replay size={local_generation_file.stat().st_size} bytes")
@@ -842,7 +1285,7 @@ def run_pipeline(
     heartbeat_seconds: float = 30.0,
     resume: bool = False,
     checkpoint_dir: Optional[Path] = None,
-    temperature_moves: int = 30,
+    temperature_moves: int = 50,  # FIX: 30→50 tăng exploration
 ) -> None:
     workdir.mkdir(parents=True, exist_ok=True)
     drive_root.mkdir(parents=True, exist_ok=True)
@@ -871,14 +1314,39 @@ def run_pipeline(
     model = ChessPolicyNet()
     if best_model_path.exists():
         try:
-            script_module = torch.jit.load(str(best_model_path))
-            model.load_state_dict(script_module.state_dict(), strict=False)
-            print(f"[Model] loaded weights from {best_model_path}")
+            script_module = torch.jit.load(str(best_model_path), map_location="cpu")
+            old_sd = script_module.state_dict()
+            new_sd = model.state_dict()
+            # Chỉ load các key khớp cả tên lẫn shape
+            matched, skipped = {}, []
+            for k, v in old_sd.items():
+                if k in new_sd and new_sd[k].shape == v.shape:
+                    matched[k] = v
+                else:
+                    skipped.append(k)
+            load_result = model.load_state_dict(matched, strict=False)
+            n_loaded = len(matched)
+            n_new    = len([k for k in load_result.missing_keys if k not in old_sd])
+            print(f"[Model] Loaded {best_model_path.name}: matched={n_loaded} | new(rand-init)={n_new} | skipped={len(skipped)}")
+            if skipped:
+                print(f"[Model]   skipped keys: {skipped[:5]}{'...' if len(skipped) > 5 else ''}")
         except Exception as exc:  # pragma: no cover
             print(f"[Model] could not load {best_model_path}: {exc}")
     else:
-        print("[Model] no initial model found; creating a fresh TorchScript model")
+        print("[Model] Không tìm thấy model ban đầu → tạo model mới ngẫu nhiên")
         save_traced_model(model, best_model_path, device)
+
+    # ── CRITICAL FIX: Kiểm tra value head collapse ngay sau khi load ────────
+    # Lỗi thường gặp: model được pre-train bằng Train.py với value_target=zeros
+    # → value head học output ~0 cho mọi vị trí → MCTS không phân biệt win/loss
+    # → tỉ lệ hòa > 95%. Phải reinit TRƯỚC khi bắt đầu generation đầu tiên.
+    model.to(device)
+    if detect_value_collapse(model, device):
+        print("[Model] ⚠️  Value head COLLAPSED (có thể do Train.py với value_target=0) → reinit")
+        reinit_value_head(model)
+        save_traced_model(model, best_model_path, device)
+        print(f"[Model] ✓ Đã reinit và lưu model mới: {best_model_path}")
+    # ─────────────────────────────────────────────────────────────────────────
 
     validate_torchscript_model(best_model_path, device)
 
@@ -892,7 +1360,7 @@ def run_pipeline(
         except Exception as exc:  # pragma: no cover
             print(f"[Checkpoint] could not resume from {latest_checkpoint}: {exc}")
 
-    engine_binary = build_engine(project_root, setup_libtorch(project_root, workdir))
+    engine_binary = build_engine(project_root, setup_libtorch(project_root, workdir), build_base=workdir)
     print(f"[Pipeline] self-play logging interval: every {log_every_games} games")
     print(f"[Pipeline] heartbeat interval: every {heartbeat_seconds:.0f}s")
 
@@ -912,7 +1380,10 @@ def run_pipeline(
             print(f"[Resume] skipping generation {generation}; artifacts already exist in {drive_root}")
             continue
         print(f"\n===== Generation {generation}/{max_generations if max_generations is not None else '∞'} =====")
-        print(f"[Progress] Using model: {best_model_path}")
+        if best_model_path.exists():
+            _mtime = time.strftime("%d/%m %H:%M:%S", time.localtime(best_model_path.stat().st_mtime))
+            _size  = best_model_path.stat().st_size / 1e6
+            print(f"[Model] Dùng: {best_model_path.name}  ({_size:.1f}MB, updated={_mtime})")
 
         generation_file = run_generation(
             binary=engine_binary,
@@ -931,7 +1402,7 @@ def run_pipeline(
         validate_torchscript_model(best_model_path, device)
         replay_files = select_replay_files(drive_root, generation_file)
         states, moves, values = load_replay_buffer(replay_files)
-        validate_training_inputs(states.tolist(), moves.tolist())
+        validate_training_inputs(states.tolist(), moves.tolist(), values.tolist())
         print(f"[Progress] Generation {generation}: training with {states.shape[0]} samples")
         checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
         latest_checkpoint_path = checkpoint_dir / "latest_checkpoint.pt"
@@ -965,8 +1436,6 @@ def run_pipeline(
                 "generation_model": gen_model_path,
                 "best_model": best_model_path,
                 "project_model": project_root / "AI" / "data" / "best_model_traced.pt",
-                "legacy_project_model": project_root / "data" / "best_model_traced.pt",
-                "root_legacy_model": project_root / "best_model_traced.pt",
             },
             replay_path=generation_file,
             checkpoint_path=checkpoint_path,
@@ -985,15 +1454,18 @@ def run_pipeline(
         generation_summaries.append(generation_summary)
         export_generation_comparison(generation_summaries, drive_root)
         save_resume_state(drive_root, generation, checkpoint_path, best_model_path)
-        print(f"[Progress] Generation {generation}: training complete")
-        print(f"[Progress] Generation {generation}: model saved -> {gen_model_path}")
+        print(f"[Progress] Gen {generation}: hoàn tất → model={gen_model_path.name}")
+        if max_generations is not None and generation < max_generations:
+            print(f"[Progress] Gen {generation + 1} sẽ dùng model vừa train: {best_model_path.name}")
 
         if max_generations is not None and generation >= max_generations:
             print(f"[Progress] Generation {generation}: completed ({generation}/{max_generations})")
             print("[Pipeline] session completed")
             break
-        if not infinite:
-            print(f"[Progress] Generation {generation}: completed ({generation}/{max_generations if max_generations is not None else '∞'})")
+        # infinite=False chỉ dừng khi KHÔNG có max_generations (tức chạy 1 gen rồi dừng)
+        # Nếu có max_generations thì dùng điều kiện trên để kiểm soát
+        if not infinite and max_generations is None:
+            print(f"[Progress] Generation {generation}: completed ({generation}/1)")
             print("[Pipeline] session completed")
             break
 
@@ -1022,49 +1494,45 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--heartbeat", type=float, default=60.0, help="Print a heartbeat every N seconds while the engine is running")
     parser.add_argument("--checkpoint_dir", type=str, default="", help="Directory for persistent checkpoints and resume state")
     parser.add_argument("--resume", action="store_true", help="Resume from the latest completed generation in the output directory")
-    parser.add_argument("--temperature_moves", type=int, default=30, help="Use temperature-based sampling for the first N moves of each game")
+    parser.add_argument("--temperature_moves", type=int, default=50, help="Number of opening moves to use temperature=1 sampling (default 50; was 30)")
     parser.add_argument("--no_infinite", action="store_true")
     return parser.parse_args()
 
 
 def main() -> None:
-    try:
-        args = parse_args()
-        ensure_drive_mount()
+    args = parse_args()
+    ensure_drive_mount()
 
-        default_project_root, default_workdir, default_output_root = detect_runtime_defaults()
-        project_root = Path(args.project_root).expanduser().resolve() if args.project_root else default_project_root
-        workdir = Path(args.workdir).expanduser().resolve() if args.workdir else default_workdir
-        drive_root = Path(args.drive_root).expanduser().resolve() if args.drive_root else default_output_root
-        initial_model_path = Path(args.initial_model).expanduser().resolve() if args.initial_model else None
-        best_model_path_override = Path(args.best_model_path).expanduser().resolve() if args.best_model_path else None
-        archive_path = Path(args.archive_path).expanduser().resolve() if args.archive_path else None
-        checkpoint_dir = Path(args.checkpoint_dir).expanduser().resolve() if args.checkpoint_dir else drive_root / "checkpoints"
+    default_project_root, default_workdir, default_output_root = detect_runtime_defaults()
+    project_root = Path(args.project_root).expanduser().resolve() if args.project_root else default_project_root
+    workdir = Path(args.workdir).expanduser().resolve() if args.workdir else default_workdir
+    drive_root = Path(args.drive_root).expanduser().resolve() if args.drive_root else default_output_root
+    initial_model_path = Path(args.initial_model).expanduser().resolve() if args.initial_model else None
+    best_model_path_override = Path(args.best_model_path).expanduser().resolve() if args.best_model_path else None
+    archive_path = Path(args.archive_path).expanduser().resolve() if args.archive_path else None
+    checkpoint_dir = Path(args.checkpoint_dir).expanduser().resolve() if args.checkpoint_dir else drive_root / "checkpoints"
 
-        project_root = prepare_project_root(project_root, archive_path)
+    project_root = prepare_project_root(project_root, archive_path)
 
-        run_pipeline(
-            project_root=project_root,
-            workdir=workdir,
-            drive_root=drive_root,
-            initial_model_path=initial_model_path,
-            best_model_path_override=best_model_path_override,
-            simulations=args.simulations,
-            games_per_generation=args.games,
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            learning_rate=args.lr,
-            max_generations=args.max_generations,
-            infinite=not args.no_infinite,
-            log_every_games=args.log_every,
-            heartbeat_seconds=args.heartbeat,
-            resume=args.resume,
-            checkpoint_dir=checkpoint_dir,
-            temperature_moves=args.temperature_moves,
-        )
-    except Exception as exc:  # pragma: no cover
-        print(f"[ERROR] {exc}")
-        sys.exit(1)
+    run_pipeline(
+        project_root=project_root,
+        workdir=workdir,
+        drive_root=drive_root,
+        initial_model_path=initial_model_path,
+        best_model_path_override=best_model_path_override,
+        simulations=args.simulations,
+        games_per_generation=args.games,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
+        max_generations=args.max_generations,
+        infinite=not args.no_infinite,
+        log_every_games=args.log_every,
+        heartbeat_seconds=args.heartbeat,
+        resume=args.resume,
+        checkpoint_dir=checkpoint_dir,
+        temperature_moves=args.temperature_moves,
+    )
 
 
 if __name__ == "__main__":

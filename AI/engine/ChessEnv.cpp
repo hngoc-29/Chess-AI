@@ -54,9 +54,10 @@ struct StepResult {
 
 class ChessEnv final {
 public:
-    static constexpr std::size_t kPiecePlanes = 12;
+    static constexpr std::size_t kPiecePlanes   = 12;
+    static constexpr std::size_t kTotalNNPlanes = 20;  // 12 piece + turn + 4 castle + EP + rep1 + rep2
     static constexpr std::size_t kSquaresPerPlane = 64;
-    static constexpr std::size_t kStateSize = kPiecePlanes * kSquaresPerPlane; // 768
+    static constexpr std::size_t kStateSize = kTotalNNPlanes * kSquaresPerPlane; // 1280
     static constexpr std::size_t kHistoryFrames = 8;
     // 5 board scalars + 1 en-passant file → 6 total
     static constexpr std::size_t kScalarCount = 6;
@@ -162,7 +163,67 @@ public:
         return true;
     }
 
-    void write_stacked_state_tensor(float* out, std::size_t capacity, std::size_t frames = kHistoryFrames) const {
+    // ── Primary NN input: 20 planes × 64 squares = 1280 floats ──────────────
+    // Layout (must match Python encode_board exactly):
+    //   Planes  0-11: piece bitboards (W_P,W_N,W_B,W_R,W_Q,W_K, B_P..B_K)
+    //   Plane   12  : turn (all 1.0 = white to move, all 0.0 = black)
+    //   Planes 13-16: castling rights WK, WQ, BK, BQ (all 1.0 / all 0.0)
+    //   Plane   17  : en-passant square (1.0 at EP square only)
+    //   Plane   18  : rep1 — this position seen ≥1 time before (all 1.0 or 0.0)
+    //   Plane   19  : rep2 — this position seen ≥2 times before (all 1.0 or 0.0)
+    void write_nn_planes(float* dst) const noexcept {
+        std::fill_n(dst, kStateSize, 0.0f);
+
+        // ── Planes 0-11: piece positions ────────────────────────────────────
+        const FrameSnapshot& snap = history_[history_head_];
+        encode_snapshot_into(snap, dst);    // writes planes 0-11
+
+        // ── Plane 12: turn ──────────────────────────────────────────────────
+        float* turn_plane = dst + 12 * 64;
+        if (board_.sideToMove() == chess::Color::WHITE) {
+            std::fill_n(turn_plane, 64, 1.0f);
+        }
+        // else: already 0.0 from fill_n above
+
+        // ── Planes 13-16: castling rights ───────────────────────────────────
+        if (has_castle(castle_mask_, CastleRights::WhiteKingSide))
+            std::fill_n(dst + 13 * 64, 64, 1.0f);
+        if (has_castle(castle_mask_, CastleRights::WhiteQueenSide))
+            std::fill_n(dst + 14 * 64, 64, 1.0f);
+        if (has_castle(castle_mask_, CastleRights::BlackKingSide))
+            std::fill_n(dst + 15 * 64, 64, 1.0f);
+        if (has_castle(castle_mask_, CastleRights::BlackQueenSide))
+            std::fill_n(dst + 16 * 64, 64, 1.0f);
+
+        // ── Plane 17: en passant ────────────────────────────────────────────
+        {
+            const int ep_idx = static_cast<int>(board_.enpassantSq().index());
+            if (ep_idx < 64) {
+                dst[17 * 64 + ep_idx] = 1.0f;
+            }
+        }
+
+        // ── Planes 18-19: repetition counters ──────────────────────────────
+        // Count how many earlier frames have the same piece configuration.
+        {
+            const auto& cur = history_[history_head_];
+            int rep_count = 0;
+            const std::size_t frames_to_check = std::min(history_count_ - 1, kHistoryFrames - 1);
+            for (std::size_t f = 1; f <= frames_to_check; ++f) {
+                const std::size_t idx = (history_head_ + kHistoryFrames - f) % kHistoryFrames;
+                if (history_[idx].planes == cur.planes) {
+                    ++rep_count;
+                }
+            }
+            if (rep_count >= 1) std::fill_n(dst + 18 * 64, 64, 1.0f);
+            if (rep_count >= 2) std::fill_n(dst + 19 * 64, 64, 1.0f);
+        }
+    }
+
+    void write_nn_planes(std::vector<float>& out) const {
+        out.resize(kStateSize);
+        write_nn_planes(out.data());
+    }
         assert(out != nullptr);
         assert(frames > 0);
         assert(capacity >= stacked_state_size(frames));
