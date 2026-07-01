@@ -14,12 +14,12 @@ enum SoundEffect {
 class AudioService {
   final AudioPlayer _player = AudioPlayer();
   final Map<SoundEffect, String> _soundPaths = {
-    SoundEffect.move: 'assets/sounds/move.mp3',
-    SoundEffect.capture: 'assets/sounds/capture.mp3',
-    SoundEffect.check: 'assets/sounds/check.mp3',
-    SoundEffect.checkmate: 'assets/sounds/checkmate.mp3',
-    SoundEffect.castle: 'assets/sounds/castle.mp3',
-    SoundEffect.button: 'assets/sounds/button.mp3',
+    SoundEffect.move: 'assets/sounds/Move.mp3',
+    SoundEffect.capture: 'assets/sounds/Capture.mp3',
+    SoundEffect.check: 'assets/sounds/Check.mp3',
+    SoundEffect.checkmate: 'assets/sounds/Checkmate.mp3',
+    SoundEffect.castle: 'assets/sounds/Move.mp3',
+    SoundEffect.button: 'assets/sounds/Select.mp3',
   };
 
   bool _soundEnabled = true;

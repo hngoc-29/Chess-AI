@@ -22,6 +22,7 @@ import '../../domain/usecases/undo_move.dart';
 import '../../services/ai/ai_service.dart';
 import '../../services/audio/audio_service.dart';
 import '../../services/engine/chess_engine_service.dart';
+import '../../services/game/chess_rules_service.dart';
 import '../../services/navigation/navigation_service.dart';
 import '../../services/storage/cache_service.dart';
 import '../../services/storage/storage_service.dart';
@@ -42,6 +43,7 @@ void _setupServices() {
   getIt.registerSingleton<StorageService>(StorageService());
   getIt.registerSingleton<CacheService>(CacheService());
   getIt.registerSingleton<NavigationService>(NavigationService());
+  getIt.registerSingleton<ChessRulesService>(ChessRulesService());
 }
 
 void _setupDataSources() {

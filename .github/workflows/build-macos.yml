@@ -1,0 +1,49 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        working-directory: ./game
+        run: flutter pub get
+
+      - name: Build macOS
+        working-directory: ./game
+        run: flutter build macos --release
+
+      - name: Create DMG (optional)
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "Chess AI" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --app-drop-link 600 185 \
+            chess-ai-macos.dmg \
+            game/build/macos/Build/Products/Release/chess_ai.app || true
+
+      - name: Upload macOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            game/build/macos/Build/Products/Release/*.app
+            chess-ai-macos.dmg
