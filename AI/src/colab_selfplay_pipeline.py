@@ -157,8 +157,7 @@ def should_log_output(line: str) -> bool:
     text = line.strip()
     if not text:
         return False
-    if text.startswith(("[CMD]", "[Heartbeat]", "[SelfPlay]", "[Drive]", "[Pipeline]", "[Model]", "[Train]", "[Runtime]", "[Torch]", "[Archive]", "[LibTorch]")):
-        return True
+    # Only log errors and warnings from subprocesses
     lowered = text.lower()
     return any(token in lowered for token in ("error", "failed", "exception", "traceback", "warning"))
 
@@ -171,7 +170,7 @@ def run(
     heartbeat_seconds: Optional[float] = None,
     timeout: Optional[float] = None,
 ) -> subprocess.CompletedProcess:
-    print("[CMD]", " ".join(cmd))
+    # Silent execution, only log errors
     process = subprocess.Popen(
         cmd,
         cwd=cwd,
@@ -196,9 +195,7 @@ def run(
 
     def heartbeat() -> None:
         while not stop_event.is_set():
-            if heartbeat_seconds is not None and heartbeat_seconds > 0:
-                elapsed = time.time() - start_time
-                print(f"[Heartbeat] still running after {elapsed:.1f}s", flush=True)
+            # Silent heartbeat
             if stop_event.wait(heartbeat_seconds or 1.0):
                 break
 
@@ -234,14 +231,12 @@ def run(
 
 def ensure_drive_mount() -> None:
     if os.path.exists('/content/drive'):
-        print('[Drive] Already mounted.')
         return
     try:
         from google.colab import drive  # type: ignore
         drive.mount('/content/drive', force_remount=False)
-        print('[Drive] Mounted successfully.')
-    except Exception as exc:  # pragma: no cover
-        print(f'[Drive] Mount skipped: {exc}')
+    except Exception:  # pragma: no cover
+        pass
 
 
 def detect_runtime_defaults() -> Tuple[Path, Path, Path]:
@@ -305,7 +300,6 @@ def select_libtorch_url() -> str:
     """Pick a CUDA-capable LibTorch archive URL matching the installed PyTorch + CUDA."""
     cuda_ver = torch.version.cuda or ""
     torch_ver = torch.__version__.split("+", 1)[0]
-    print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}")
 
     # Try to use the exact installed version first; fall back to the nearest
     # known-good release for versions that didn't have a libtorch binary.
@@ -324,10 +318,8 @@ def select_libtorch_url() -> str:
         # For torch 2.7+ use the exact version string (PyTorch publishes libtorch
         # for each release using the same x.y.z naming convention).
         base_version = torch_ver
-        print(f"[LibTorch] torch {torch_ver} ≥ 2.7 — using exact version string {base_version}")
     else:
         base_version = "2.3.1"
-        print(f"[LibTorch] Unknown torch version {torch_ver}; falling back to {base_version}")
 
     # Pick the CUDA tag that matches the installed CUDA runtime.
     if cuda_ver.startswith("12.4"):
@@ -340,14 +332,10 @@ def select_libtorch_url() -> str:
         cu_tag = None
 
     if cu_tag:
-        print(f"[LibTorch] Selecting CUDA build: {cu_tag} for torch {base_version}")
         return (
             f"https://download.pytorch.org/libtorch/{cu_tag}/"
             f"libtorch-cxx11-abi-shared-with-deps-{base_version}%2B{cu_tag}.zip"
         )
-
-    # No CUDA → CPU fallback (should rarely happen on Kaggle)
-    print("[LibTorch] No matching CUDA version; falling back to CPU-only LibTorch")
     return (
         f"https://download.pytorch.org/libtorch/cpu/"
         f"libtorch-cxx11-abi-shared-with-deps-{base_version}%2Bcpu.zip"
@@ -368,23 +356,14 @@ def setup_libtorch(project_root: Path, workdir: Path) -> Path:
     try:
         cmake_prefix = Path(torch.utils.cmake_prefix_path)
         if (cmake_prefix / "Torch" / "TorchConfig.cmake").exists():
-            n_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
-            print(
-                f"[LibTorch] Using system PyTorch cmake path "
-                f"(CUDA={torch.cuda.is_available()}, GPUs={n_gpus}): {cmake_prefix}"
-            )
-            # Wipe any previously-downloaded CPU-only LibTorch so future runs
-            # don't accidentally reuse it after this code change.
             stale = workdir / "libtorch"
             if stale.exists():
-                # Only remove if it's a CPU build (no cudart in lib/)
                 stale_cudart = list(stale.glob("lib/libcudart*"))
                 if not stale_cudart:
-                    print(f"[LibTorch] Removing stale CPU-only LibTorch at {stale}")
                     shutil.rmtree(stale, ignore_errors=True)
             return cmake_prefix
-    except Exception as exc:
-        print(f"[LibTorch] Cannot use system PyTorch cmake path ({exc}); trying download")
+    except Exception:
+        pass
 
     # ── Priority 2: reuse previously-downloaded LibTorch ─────────────────────
     libtorch_dir = workdir / "libtorch"
@@ -392,16 +371,10 @@ def setup_libtorch(project_root: Path, workdir: Path) -> Path:
     downloaded_cmake = libtorch_dir / "share" / "cmake"
     torch_config = downloaded_cmake / "Torch" / "TorchConfig.cmake"
     if torch_config.exists():
-        # Check whether it's a CUDA build; warn if it's CPU-only
         has_cuda_lib = bool(list(libtorch_dir.glob("lib/libcudart*")))
         if not has_cuda_lib and torch.cuda.is_available():
-            print(
-                "[LibTorch] WARNING: cached LibTorch is CPU-only but CUDA is available. "
-                "Deleting and re-downloading CUDA build."
-            )
             shutil.rmtree(libtorch_dir, ignore_errors=True)
         else:
-            print(f"[LibTorch] Reusing downloaded LibTorch (CUDA build={has_cuda_lib}): {libtorch_dir}")
             return downloaded_cmake
 
     # ── Priority 3: fresh download ────────────────────────────────────────────
@@ -409,12 +382,10 @@ def setup_libtorch(project_root: Path, workdir: Path) -> Path:
         shutil.rmtree(libtorch_dir, ignore_errors=True)
     url = select_libtorch_url()
     archive = workdir / "libtorch.zip"
-    print(f"[LibTorch] Downloading {url}")
     run(["wget", "-q", url, "-O", str(archive)])
     run(["unzip", "-q", str(archive), "-d", str(workdir)])
     if not torch_config.exists():
         raise RuntimeError("LibTorch unzip did not create the expected directory.")
-    print(f"[LibTorch] Download complete: {libtorch_dir}")
     return downloaded_cmake
 
 
@@ -457,13 +428,9 @@ def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Pa
         try:
             cached_hash = hash_file.read_text().strip()
             if cached_hash == current_hash:
-                print(f"[Build] Source không đổi (hash={current_hash[:12]}…) → skip rebuild, dùng binary cũ: {binary}")
                 return binary
         except Exception:
             pass
-
-    # Cần rebuild
-    print(f"[Build] Source thay đổi hoặc binary không tồn tại → rebuild engine")
     if build_dir.exists():
         shutil.rmtree(build_dir, ignore_errors=True)
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -482,9 +449,7 @@ def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Pa
     if not binary.exists():
         raise RuntimeError("[ERROR] The self-play binary was not built successfully.")
 
-    # Lưu hash sau khi build thành công
     hash_file.write_text(current_hash)
-    print(f"[Build] Build thành công. Hash={current_hash[:12]}… lưu vào {hash_file}")
     return binary
 
 
@@ -518,14 +483,8 @@ def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndar
         moves   = samples[:, 1280].astype(np.int64)
         values  = samples[:, 1281].astype(np.float32)
 
-    # ── Log decisive/draw ratio ───────────────────────────────────────────
     draws = (values == 0.0)
-    n_draws    = int(draws.sum())
-    n_decisive = int((~draws).sum())
-    total = len(values)
-    print(f"[DataLoad] {path.name}: {n_decisive} decisive ({100*n_decisive/max(1,total):.1f}%) "
-          f"| {n_draws} draws ({100*n_draws/max(1,total):.1f}%)")
-
+    n_draws = int(draws.sum())
     # ── FIX: Remove random noise on draws (was: ±0.25 uniform noise) ─────
     # BUG (cũ): values[draws] += random.uniform(-0.25, 0.25)
     # → noise ngẫu nhiên không dạy được gì, chỉ làm nhiễu tín hiệu value.
@@ -599,10 +558,8 @@ def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor, t
     states_np = np.concatenate(all_states, axis=0)
     moves_np = np.concatenate(all_moves, axis=0)
     values_np = np.concatenate(all_values, axis=0)
-    # RAM guard: nếu quá nhiều samples thì lấy MAX_REPLAY_SAMPLES cuối
     MAX_REPLAY_SAMPLES = 200_000
     if states_np.shape[0] > MAX_REPLAY_SAMPLES:
-        print(f"[Pipeline] replay buffer quá lớn ({states_np.shape[0]} samples), cắt về {MAX_REPLAY_SAMPLES} mẫu gần nhất")
         states_np = states_np[-MAX_REPLAY_SAMPLES:]
         moves_np = moves_np[-MAX_REPLAY_SAMPLES:]
         values_np = values_np[-MAX_REPLAY_SAMPLES:]
@@ -618,18 +575,14 @@ def validate_torchscript_model(model_path: Path, device: torch.device) -> None:
     try:
         scripted = torch.jit.load(str(model_path), map_location=device)
         with torch.no_grad():
-            # Must use NUM_INPUT_PLANES=20 channels — model conv_init expects 20,
-            # so a 12-channel dummy would throw a shape mismatch immediately.
             dummy = torch.randn(1, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8, device=device)
             out = scripted(dummy)
-            # Handle both old (tensor) and new (tuple) model outputs
             if isinstance(out, (tuple, list)):
                 policy_out, value_out = out[0], out[1]
                 assert policy_out.shape[-1] == ChessPolicyNet.NUM_ACTIONS, f"policy shape sai: {policy_out.shape}"
                 assert value_out.shape[-1] == 1, f"value shape sai: {value_out.shape}"
             else:
                 assert out.shape[-1] == 4096, f"output shape sai: {out.shape}"
-        print(f"[Model] validated TorchScript model: {model_path}")
     except Exception as exc:  # pragma: no cover
         raise RuntimeError(f"TorchScript model validation failed for {model_path}: {exc}") from exc
 
@@ -659,7 +612,6 @@ def select_replay_files(drive_root: Path, generation_file: Path, min_samples: in
 
     if not replay_files:
         replay_files = [generation_file]
-    print(f"[Pipeline] using {len(replay_files)} replay files with {total_samples} total samples")
     return replay_files
 
 
@@ -733,11 +685,6 @@ def train_policy_model(
         states  = torch.cat([states,  states[rep_idx]])
         moves   = torch.cat([moves,   moves[rep_idx]])
         values  = torch.cat([values,  values[rep_idx]])
-        print(f"[Train] Oversampled decisive: {n_decisive}×{oversample_factor} added "
-              f"| total={len(states)} samples (decisive={decisive_rate:.1%}, draw={draw_rate:.1%})")
-    else:
-        print(f"[Train] ⚠️  Không có decisive game trong replay buffer — chỉ có draw")
-        print(f"[Train] Draw penalty (-0.4) đang được áp dụng để guide MCTS trong gen tiếp theo")
     # ────────────────────────────────────────────────────────────────────────
     # ──────────────────────────────────────────────────────────────────────
 
@@ -761,7 +708,6 @@ def train_policy_model(
             except RuntimeError as exc:  # pragma: no cover
                 if device.type == "cuda" and "out of memory" in str(exc).lower():
                     current_batch_size = max(16, current_batch_size // 2)
-                    print(f"[Train] reducing batch size to {current_batch_size} after OOM")
                     continue
                 raise
 
@@ -854,7 +800,6 @@ def train_policy_model(
         else:
             patience_counter += 1
             if patience_counter >= patience:
-                print(f"[Train] early stopping at epoch {epoch + 1}/{epochs} due to no improvement")
                 break
 
     model.eval()
@@ -882,14 +827,12 @@ def save_traced_model(model: nn.Module, path: Path, device: torch.device) -> Non
                 "Kiểm tra ChessPolicyNet.forward() có return 2 tensors không."
             )
     traced.save(str(path))
-    print(f"[Model] saved TorchScript (policy+value): {path}")
 
 
 def save_training_summary(history: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         json.dump(history, handle, indent=2)
-    print(f"[Train] saved summary: {path}")
 
 
 def export_training_metrics(history: dict, output_dir: Path) -> None:
@@ -927,8 +870,6 @@ def export_training_metrics(history: dict, output_dir: Path) -> None:
         fig.savefig(output_dir / "training_metrics.png", dpi=150)
         plt.close(fig)
 
-    print(f"[Train] exported metrics to {output_dir}")
-
 
 def export_generation_comparison(summaries: List[dict], output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -960,8 +901,6 @@ def export_generation_comparison(summaries: List[dict], output_dir: Path) -> Non
             handle.write(
                 f"| {summary['generation']} | {summary['samples']} | {summary['epochs_trained']} | {summary['final_loss']:.4f} | {summary['final_value_loss']:.4f} |\n"
             )
-
-    print(f"[Train] exported generation comparison to {csv_path} and {md_path}")
 
 
 def find_latest_checkpoint(drive_root: Path, checkpoint_dir: Optional[Path] = None) -> Optional[Path]:
@@ -1040,7 +979,6 @@ def reinit_value_head(model: nn.Module) -> None:
         nn.init.xavier_normal_(module.weight, gain=0.5)
         if module.bias is not None:
             nn.init.zeros_(module.bias)
-    print(f"[Model] Value head reinitialized ({len(value_modules)} modules): {list(value_modules.keys())}")
 
 
 def detect_value_collapse(model: nn.Module, device: torch.device, threshold: float = 0.05) -> bool:
@@ -1058,8 +996,6 @@ def detect_value_collapse(model: nn.Module, device: torch.device, threshold: flo
         val_mean = values.abs().mean().item()
     model.train()
     is_collapsed = (val_std < threshold) and (val_mean < threshold)
-    print(f"[Model] Value head check: mean_abs={val_mean:.4f} std={val_std:.4f} "
-          f"→ {'COLLAPSED (sẽ reinit)' if is_collapsed else 'OK'}")
     return is_collapsed
 
 
@@ -1069,16 +1005,11 @@ def load_checkpoint(model: nn.Module, checkpoint_path: Path, device: torch.devic
     # Backward compat: checkpoint cũ (chỉ có policy head) → load strict=False
     has_value_head = any(k.startswith("value_") for k in state_dict.keys())
     if not has_value_head:
-        print(f"[Checkpoint] checkpoint cũ không có value head → load strict=False")
-        missing, unexpected = model.load_state_dict(state_dict, strict=False)
-        if missing:
-            print(f"[Checkpoint] keys bị thiếu (giữ nguyên khởi tạo): {missing}")
-        # Value head mới → luôn reinit (không có gì để load)
+        model.load_state_dict(state_dict, strict=False)
         reinit_value_head(model)
     else:
         model.load_state_dict(state_dict)
         model.to(device)
-        # FIX: Kiểm tra và reinit nếu value head bị collapse từ zero-target training
         if detect_value_collapse(model, device):
             reinit_value_head(model)
     model.to(device)
@@ -1101,12 +1032,9 @@ def publish_latest_model(gen_model_path: Path, best_model_path: Path, project_ro
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(gen_model_path, best_model_path)
 
-    # Sync vào project_root/AI/data nếu writable (không phải /kaggle/input)
     project_model_path = project_root / "AI" / "data" / "best_model_traced.pt"
     if _is_writable(project_model_path.parent):
         shutil.copy2(gen_model_path, project_model_path)
-
-    print(f"[Model] ✓ Model mới: {gen_model_path.name} → {best_model_path}")
 
 
 def _run_single_selfplay_worker(
@@ -1139,8 +1067,6 @@ def _run_single_selfplay_worker(
         "--resign_thresh",     str(resign_thresh),
         "--min_resign_ply",    str(min_resign_ply),
     ]
-    if log_prefix:
-        print(f"[Progress] {log_prefix} cmd: {' '.join(cmd)}", flush=True)
     run(cmd, cwd=str(project_root), env=env,
         heartbeat_seconds=heartbeat_seconds, timeout=selfplay_timeout)
 
@@ -1166,15 +1092,9 @@ def run_generation(
 
     # ── Detect available GPUs ─────────────────────────────────────────────────
     num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
-    # Use up to 2 GPUs; single worker when no GPU available
     num_workers = max(1, min(num_gpus, 2))
 
     start_ts = time.time()
-    print(
-        f"[Progress] Generation {generation}: starting self-play "
-        f"({games} games, {simulations} simulations, {num_workers} worker(s) / {num_gpus} GPU(s))",
-        flush=True,
-    )
 
     if num_workers == 1:
         # ── Single worker (CPU or single-GPU) ────────────────────────────────
@@ -1235,17 +1155,11 @@ def run_generation(
             except Exception as exc:
                 with errors_lock:
                     errors.append(exc)
-                print(f"[ERROR] Worker {worker_idx} (GPU {worker_idx}) failed: {exc}", flush=True)
 
         worker_threads = [
             threading.Thread(target=run_worker, args=(i,), daemon=False)
             for i in range(num_workers)
         ]
-        print(
-            f"[Progress] Launching {num_workers} parallel workers: "
-            + ", ".join(f"GPU{i}={games_split[i]} games" for i in range(num_workers)),
-            flush=True,
-        )
         for t in worker_threads:
             t.start()
         for t in worker_threads:
@@ -1257,26 +1171,20 @@ def run_generation(
                 + str(errors[0])
             )
 
-        # Merge partial outputs into a single generation file
-        print(f"[Progress] Merging {num_workers} worker outputs → {local_generation_file}", flush=True)
         with open(local_generation_file, "wb") as outf:
             for pf in partial_files:
                 if pf.exists() and pf.stat().st_size > 0:
                     outf.write(pf.read_bytes())
                     pf.unlink(missing_ok=True)
-                else:
-                    print(f"[WARNING] Partial file missing or empty: {pf}", flush=True)
 
     elapsed = time.time() - start_ts
 
     if not local_generation_file.exists() or local_generation_file.stat().st_size == 0:
         raise RuntimeError(f"[ERROR] Self-play output file missing/empty: {local_generation_file}")
 
-    print(f"[Progress] Generation {generation}: self-play complete in {elapsed:.1f}s", flush=True)
+    print(f"[Progress] Gen {generation}: self-play done ({elapsed:.1f}s, {local_generation_file.stat().st_size/1e6:.1f}MB)", flush=True)
 
     shutil.copy2(local_generation_file, drive_generation_file)
-    print(f"[Progress] Generation {generation}: replay saved -> {drive_generation_file}")
-    print(f"[Progress] Generation {generation}: replay size={local_generation_file.stat().st_size} bytes")
     return drive_generation_file
 
 
@@ -1350,10 +1258,6 @@ def run_pipeline(
     seed_everything()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     configure_torch_runtime(device)
-    print(f"[Runtime] using device={device}")
-    if device.type == "cuda":
-        print(f"[Runtime] gpu={torch.cuda.get_device_name(0)}")
-        print(f"[Runtime] gpu_memory_gb={torch.cuda.get_device_properties(0).total_memory / (1024 ** 3):.2f}")
 
     best_model_path = resolve_best_model_path(project_root, drive_root, best_model_path_override)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -1371,52 +1275,29 @@ def run_pipeline(
             script_module = torch.jit.load(str(best_model_path), map_location="cpu")
             old_sd = script_module.state_dict()
             new_sd = model.state_dict()
-            # Chỉ load các key khớp cả tên lẫn shape
-            matched, skipped = {}, []
-            for k, v in old_sd.items():
-                if k in new_sd and new_sd[k].shape == v.shape:
-                    matched[k] = v
-                else:
-                    skipped.append(k)
-            load_result = model.load_state_dict(matched, strict=False)
-            n_loaded = len(matched)
-            n_new    = len([k for k in load_result.missing_keys if k not in old_sd])
-            print(f"[Model] Loaded {best_model_path.name}: matched={n_loaded} | new(rand-init)={n_new} | skipped={len(skipped)}")
-            if skipped:
-                print(f"[Model]   skipped keys: {skipped[:5]}{'...' if len(skipped) > 5 else ''}")
-        except Exception as exc:  # pragma: no cover
-            print(f"[Model] could not load {best_model_path}: {exc}")
+            matched = {k: v for k, v in old_sd.items() if k in new_sd and new_sd[k].shape == v.shape}
+            model.load_state_dict(matched, strict=False)
+        except Exception:
+            pass
     else:
-        print("[Model] Không tìm thấy model ban đầu → tạo model mới ngẫu nhiên")
         save_traced_model(model, best_model_path, device)
 
-    # ── CRITICAL FIX: Kiểm tra value head collapse ngay sau khi load ────────
-    # Lỗi thường gặp: model được pre-train bằng Train.py với value_target=zeros
-    # → value head học output ~0 cho mọi vị trí → MCTS không phân biệt win/loss
-    # → tỉ lệ hòa > 95%. Phải reinit TRƯỚC khi bắt đầu generation đầu tiên.
     model.to(device)
     if detect_value_collapse(model, device):
-        print("[Model] ⚠️  Value head COLLAPSED (có thể do Train.py với value_target=0) → reinit")
         reinit_value_head(model)
         save_traced_model(model, best_model_path, device)
-        print(f"[Model] ✓ Đã reinit và lưu model mới: {best_model_path}")
-    # ─────────────────────────────────────────────────────────────────────────
 
     validate_torchscript_model(best_model_path, device)
 
     latest_checkpoint = find_latest_checkpoint(drive_root, checkpoint_dir)
     if latest_checkpoint is not None:
-        print(f"[Checkpoint] found latest checkpoint: {latest_checkpoint}")
         try:
             model, checkpoint = load_checkpoint(model, latest_checkpoint, device)
             save_traced_model(model, best_model_path, device)
-            print(f"[Checkpoint] resumed from epoch {checkpoint.get('epoch', 0)} and synced weights to {best_model_path}")
-        except Exception as exc:  # pragma: no cover
-            print(f"[Checkpoint] could not resume from {latest_checkpoint}: {exc}")
+        except Exception:
+            pass
 
     engine_binary = build_engine(project_root, setup_libtorch(project_root, workdir), build_base=workdir)
-    print(f"[Pipeline] self-play logging interval: every {log_every_games} games")
-    print(f"[Pipeline] heartbeat interval: every {heartbeat_seconds:.0f}s")
 
     generation = 0
     generation_summaries: List[dict] = []
@@ -1427,36 +1308,24 @@ def run_pipeline(
     elif resume:
         resume_generation = detect_resume_generation(drive_root)
 
-    # ── Time limit tracking (for infinite mode with max_generations=None) ──────
     pipeline_start_time = time.time()
-    if max_generations is None and max_runtime_seconds is not None:
-        print(f"[Pipeline] Time limit: {max_runtime_seconds / 3600:.1f}h ({max_runtime_seconds:.0f}s)")
-    # ────────────────────────────────────────────────────────────────────────────
 
     generation = resume_generation
     while True:
         generation += 1
         if resume and generation <= resume_generation:
-            print(f"[Resume] skipping generation {generation}; artifacts already exist in {drive_root}")
             continue
         
-        # ── Check time limit (only when max_generations is None) ───────────────
         if max_generations is None and max_runtime_seconds is not None:
             elapsed = time.time() - pipeline_start_time
             if elapsed >= max_runtime_seconds:
-                print(f"\n[Pipeline] ⏱️  Time limit reached: {elapsed / 3600:.2f}h / {max_runtime_seconds / 3600:.1f}h")
-                print(f"[Pipeline] Stopping after {generation - 1} generations")
-                print(f"[Pipeline] Final model: {best_model_path}")
+                print(f"\n⏱️  Time limit reached ({elapsed / 3600:.1f}h) — stopped after gen {generation - 1}")
+                
                 break
             remaining = max_runtime_seconds - elapsed
-            print(f"\n===== Generation {generation} | ⏱️  {remaining / 3600:.1f}h remaining =====")
+            print(f"\n===== Generation {generation} | {remaining / 3600:.1f}h remaining =====")
         else:
             print(f"\n===== Generation {generation}/{max_generations if max_generations is not None else '∞'} =====")
-        # ────────────────────────────────────────────────────────────────────────
-        if best_model_path.exists():
-            _mtime = time.strftime("%d/%m %H:%M:%S", time.localtime(best_model_path.stat().st_mtime))
-            _size  = best_model_path.stat().st_size / 1e6
-            print(f"[Model] Dùng: {best_model_path.name}  ({_size:.1f}MB, updated={_mtime})")
 
         generation_file = run_generation(
             binary=engine_binary,
@@ -1478,7 +1347,7 @@ def run_pipeline(
         replay_files = select_replay_files(drive_root, generation_file)
         states, moves, values = load_replay_buffer(replay_files)
         validate_training_inputs(states.tolist(), moves.tolist(), values.tolist())
-        print(f"[Progress] Generation {generation}: training with {states.shape[0]} samples")
+        print(f"[Progress] Gen {generation}: training {states.shape[0]} samples")
         checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
         latest_checkpoint_path = checkpoint_dir / "latest_checkpoint.pt"
         metrics_output_dir = drive_root / f"metrics_gen_{generation}"
@@ -1504,7 +1373,7 @@ def run_pipeline(
         export_training_metrics(history, metrics_output_dir)
         publish_latest_model(gen_model_path, best_model_path, project_root)
 
-        output_summary_path = write_model_output_summary(
+        write_model_output_summary(
             output_dir=drive_root,
             generation=generation,
             artifacts={
@@ -1515,7 +1384,6 @@ def run_pipeline(
             replay_path=generation_file,
             checkpoint_path=checkpoint_path,
         )
-        print(f"[Model] output summary -> {output_summary_path}")
 
         generation_summary = {
             "generation": generation,
@@ -1529,26 +1397,16 @@ def run_pipeline(
         generation_summaries.append(generation_summary)
         export_generation_comparison(generation_summaries, drive_root)
         save_resume_state(drive_root, generation, checkpoint_path, best_model_path)
-        print(f"[Progress] Gen {generation}: hoàn tất → model={gen_model_path.name}")
-        if max_generations is not None and generation < max_generations:
-            print(f"[Progress] Gen {generation + 1} sẽ dùng model vừa train: {best_model_path.name}")
+        print(f"[Progress] Gen {generation}: complete\n")
 
         if max_generations is not None and generation >= max_generations:
-            print(f"[Progress] Generation {generation}: completed ({generation}/{max_generations})")
-            print("[Pipeline] session completed")
+            print(f"\n✓ Completed {generation} generations")
             break
-        # infinite=False chỉ dừng khi KHÔNG có max_generations (tức chạy 1 gen rồi dừng)
-        # Nếu có max_generations thì dùng điều kiện trên để kiểm soát
         if not infinite and max_generations is None:
-            print(f"[Progress] Generation {generation}: completed ({generation}/1)")
-            print("[Pipeline] session completed")
+            print(f"\n✓ Completed 1 generation")
             break
 
-        print(f"[Progress] Generation {generation}: next generation starting")
-
-    print("[Pipeline] session completed")
-    print(f"[Pipeline] final_model={best_model_path}")
-    print(f"[Pipeline] final_output_dir={drive_root}")
+    print(f"\n✓ Pipeline complete — final model: {best_model_path}")
 
 
 def parse_args() -> argparse.Namespace:
