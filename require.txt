@@ -1,0 +1,308 @@
+Bạn là một Senior Game Developer và UI/UX Designer có kinh nghiệm phát triển game cờ vua trên cả Desktop và Mobile.
+
+Nhiệm vụ của bạn là thiết kế và xây dựng toàn bộ phần giao diện cho dự án Chess AI của tôi.
+
+## Thông tin dự án
+
+Tôi đã có Chess Engine bằng C++ và AI đã được train bằng PyTorch.
+
+Cấu trúc hiện tại:
+
+```text
+ChessAI/
+├── AI/
+│   ├── engine/
+│   │   ├── ChessEnv.cpp
+│   │   ├── chess.hpp
+│   │   ├── mcts.cpp
+│   │   ├── mcts.hpp
+│   │   ├── selfplay.cpp
+│   │   └── CMakeLists.txt
+│   └── src/
+│       ├── colab_selfplay_pipeline.py
+│       └── model_artifacts.py
+├── models/
+│   └── best_model_traced.pt
+```
+
+Phần AI không cần thay đổi. Chỉ tập trung xây dựng Game Client.
+
+---
+
+# Mục tiêu
+
+Thiết kế một game cờ vua có chất lượng thương mại (commercial quality), chạy tốt trên:
+
+* Android
+* Windows
+* Linux
+* macOS
+
+Ưu tiên giao diện giống game mobile hiện đại nhưng vẫn hoạt động tốt trên desktop.
+
+---
+
+# Yêu cầu
+
+Thiết kế project theo kiến trúc sạch (Clean Architecture).
+
+Ví dụ:
+
+```text
+game/
+    app/
+    assets/
+    screens/
+    widgets/
+    services/
+    animations/
+    themes/
+    sounds/
+```
+
+Giải thích nhiệm vụ của từng thư mục.
+
+---
+
+# Assets
+
+Tự đề xuất các assets miễn phí chất lượng cao.
+
+Bao gồm:
+
+* bộ quân cờ đẹp
+* nhiều bàn cờ
+* icon
+* font
+* hiệu ứng
+* âm thanh
+
+Ưu tiên:
+
+* CC0
+* Public Domain
+* MIT
+* hoặc miễn phí cho commercial use.
+
+Nếu có nguồn tải thì cung cấp luôn.
+
+---
+
+# Giao diện
+
+Thiết kế hiện đại.
+
+Có animation mượt.
+
+Có:
+
+* Main Menu
+* Play vs AI
+* Human vs Human
+* Settings
+* Statistics
+* Profile
+* Replay
+* Analysis
+* Exit
+
+---
+
+# Trong Game
+
+Hiển thị:
+
+* bàn cờ
+* tọa độ
+* tên người chơi
+* avatar
+* Elo
+* đồng hồ
+* lịch sử nước đi
+* captured pieces
+* evaluation bar
+* AI thinking
+* số node đã duyệt
+* depth
+* FPS
+
+Có animation:
+
+* quân cờ di chuyển
+* ăn quân
+* castling
+* promotion
+* check
+* checkmate
+
+Có hiệu ứng:
+
+* highlight nước đi
+* last move
+* legal moves
+* selected square
+
+---
+
+# Engine
+
+Không viết lại engine.
+
+Chỉ thiết kế lớp giao tiếp.
+
+Ví dụ:
+
+EngineService
+
+có các hàm
+
+* loadModel()
+* newGame()
+* makeMove()
+* undo()
+* redo()
+* getLegalMoves()
+* evaluate()
+* aiMove()
+* loadFEN()
+* exportPGN()
+
+Thiết kế API rõ ràng.
+
+---
+
+# Thiết kế UI
+
+Theo phong cách:
+
+Chess.com + Lichess + Magnus Trainer + hiện đại.
+
+Màu sắc:
+
+* Dark Theme
+* Light Theme
+
+Tự động responsive.
+
+Hỗ trợ:
+
+* điện thoại
+* tablet
+* desktop
+
+---
+
+# Hiệu ứng
+
+Có:
+
+* Fade
+* Slide
+* Zoom
+* Glow
+* Ripple
+* Piece Move Animation
+
+Không dùng hiệu ứng rườm rà.
+
+Ưu tiên mượt 60 FPS.
+
+---
+
+# Tính năng
+
+Bao gồm:
+
+* Save Game
+* Load Game
+* Auto Save
+* Undo
+* Redo
+* Flip Board
+* Hint
+* Analysis Mode
+* Puzzle Mode (có thể mở rộng)
+* Opening Explorer (có thể mở rộng)
+* Endgame Trainer (có thể mở rộng)
+
+---
+
+# Cấu hình
+
+Có file Settings.
+
+Cho phép thay đổi:
+
+* theme
+* sound
+* music
+* animation speed
+* AI difficulty
+* board style
+* piece style
+* language
+
+---
+
+# Code
+
+Viết code sạch.
+
+Có comment.
+
+Có type hint.
+
+Có logging.
+
+Tách module rõ ràng.
+
+Không viết tất cả vào một file.
+
+---
+
+# Kiến trúc
+
+Ưu tiên SOLID.
+
+Tách:
+
+* UI
+* Engine
+* Assets
+* Config
+* Services
+
+Không phụ thuộc lẫn nhau.
+
+---
+
+# Hiệu năng
+
+Tối ưu cho:
+
+* Android RAM 2GB+
+* Desktop
+
+Không load asset nhiều lần.
+
+Có cache.
+
+Texture được preload.
+
+---
+
+# Mục tiêu cuối cùng
+
+Tạo ra một game cờ vua có giao diện đẹp, chuyên nghiệp, dễ mở rộng và có thể phát hành trên Google Play cũng như chạy tốt trên Windows, Linux và macOS.
+
+Khi trả lời:
+
+1. Phân tích kiến trúc tổng thể trước.
+2. Đề xuất framework phù hợp và giải thích ưu, nhược điểm.
+3. Thiết kế cấu trúc thư mục hoàn chỉnh.
+4. Thiết kế sơ đồ các module.
+5. Thiết kế luồng hoạt động từ UI đến Chess Engine.
+6. Đề xuất nguồn assets phù hợp.
+7. Chỉ bắt đầu viết mã sau khi toàn bộ kiến trúc đã được thống nhất.
+8. Mỗi bước đều giải thích lý do lựa chọn và đảm bảo khả năng mở rộng lâu dài.
+
