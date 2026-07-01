@@ -20,13 +20,15 @@ constexpr std::size_t kStateSize          = 1280;  // 20 planes × 64 sq (matche
 constexpr int kDefaultSimulations         = 800;
 constexpr int kDefaultGames               = 500;
 constexpr int kDefaultMaxMoves            = 512;
-constexpr int kDefaultLogEvery            = 10;
-constexpr int kDefaultTemperatureMoves    = 50;   // FIX: increased from 30 → 50 for more exploration   // use T=1 sampling for first N moves
+constexpr int kDefaultLogEvery            = 50;  // Log every 50 games để giảm spam
+constexpr int kDefaultTemperatureMoves    = 80;   // FIX: increased from 30 → 80 for more exploration   // use T=1 sampling for first N moves
 constexpr unsigned kDefaultSeed          = 42;
 // Resign when MCTS root Q < resign_thresh for current player.
-// -1.0 = disabled (default); typical value: -0.9.
+// FIX: Enable resign to create decisive games and break draw loop.
+// -0.90 means resign when losing with ~10% win probability (AlphaZero standard).
+// -1.0 = disabled; typical value: -0.9.
 // Resign is suppressed for the first kDefaultMinResignPly half-moves.
-constexpr float kDefaultResignThresh     = -1.0f;
+constexpr float kDefaultResignThresh     = -0.90f;  // Was: -1.0f (disabled)
 constexpr int   kDefaultMinResignPly     = 20;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -278,9 +280,10 @@ int main(int argc, char** argv) {
                     // from their perspective; perspectives[] sign flips on assign).
                     terminal_reward = -1.0f;
                     ++plies;  // count the resign ply
-                    std::cout << "[SelfPlay] resign at ply=" << ply
-                              << " root_q=" << root_q
-                              << " thresh=" << resign_thresh << "\n";
+                    // Debug: uncomment để xem resign details
+                    // std::cout << "[SelfPlay] resign at ply=" << ply
+                    //           << " root_q=" << root_q
+                    //           << " thresh=" << resign_thresh << "\n";
                     break;
                 }
             }

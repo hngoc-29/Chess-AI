@@ -709,20 +709,21 @@ def train_policy_model(
     total_samples = len(values)
     draw_rate = 1.0 - n_decisive / max(1, total_samples)
 
-    # ── Dynamic oversample: tỉ lệ nghịch với decisive_rate ────────────────
-    # Khi decisive_rate rất thấp (1-5%), cần oversample mạnh hơn nhiều
-    # để value head học được tín hiệu thắng/thua thay vì bị drowning bởi draw.
+    # ── Dynamic oversample: giảm xuống vì đã có weighted loss (100x) ───────
+    # Trước đây: oversample 15x để cân bằng 99.6% draws
+    # Sau fix weighted loss: chỉ cần oversample nhẹ (3-5x) để tăng sample diversity
+    # Weighted loss (100x) đã handle imbalance → không cần oversample quá nhiều
     decisive_rate = n_decisive / max(1, total_samples)
     if decisive_rate < 0.03:
-        oversample_factor = 15  # cực kỳ hiếm decisive → phải cân bằng mạnh
+        oversample_factor = 5  # Was: 15 (giảm xuống vì có weighted loss)
     elif decisive_rate < 0.06:
-        oversample_factor = 12
+        oversample_factor = 4
     elif decisive_rate < 0.10:
-        oversample_factor = 8
-    elif decisive_rate < 0.20:
-        oversample_factor = 5
-    else:
         oversample_factor = 3
+    elif decisive_rate < 0.20:
+        oversample_factor = 2
+    else:
+        oversample_factor = 2
 
     if n_decisive > 0:
         idx = decisive_mask.nonzero(as_tuple=True)[0]
@@ -773,11 +774,22 @@ def train_policy_model(
                 with torch.autocast(device_type="cuda", dtype=torch.float16):
                     policy_logits, value_pred = model(xb)
                     policy_loss = F.cross_entropy(policy_logits, yb.long())
-                    value_loss = F.mse_loss(value_pred, vb.float())
+                    
+                    # ── CRITICAL FIX: Weighted Value Loss ────────────────────────────
+                    # ROOT CAUSE của value=0.0000: 99.6% draws với target ∈ [-0.45, -0.35]
+                    # → model học predict -0.4 cho mọi position → MSE ≈ 0.0001 (perfect on draws)
+                    # → 0.4% decisive samples (±1.0) bị overwhelm và ignored
+                    #
+                    # FIX: Weight decisive samples 100x để force model học win/loss signals
+                    # is_decisive: |value| > 0.5 → catches ±1.0 (wins/losses), not draws (-0.4)
+                    is_decisive = (vb.abs() > 0.5)
+                    sample_weights = torch.where(is_decisive,
+                                                torch.tensor(100.0, device=device, dtype=torch.float16),
+                                                torch.tensor(1.0, device=device, dtype=torch.float16))
+                    value_loss = (sample_weights * (value_pred - vb.float()) ** 2).mean()
+                    # ─────────────────────────────────────────────────────────────────
+                    
                     # Dynamic value_weight: tăng khi draw_rate cao
-                    # Sau fix draw penalty, value head cần học -0.15 cho draws VÀ ±1 cho decisive.
-                    # weight cao hơn giúp value head catch up nhanh hơn với target mới.
-                    # draw_rate > 0.85: weight=3.0 | 0.70-0.85: weight=2.0 | <0.70: weight=1.5
                     _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
                     loss = policy_loss + _vw * value_loss
                 scaler.scale(loss).backward()
@@ -788,7 +800,15 @@ def train_policy_model(
             else:
                 policy_logits, value_pred = model(xb)
                 policy_loss = F.cross_entropy(policy_logits, yb.long())
-                value_loss = F.mse_loss(value_pred, vb.float())
+                
+                # ── CRITICAL FIX: Weighted Value Loss (CPU path) ─────────────────
+                is_decisive = (vb.abs() > 0.5)
+                sample_weights = torch.where(is_decisive,
+                                            torch.tensor(100.0, device=device),
+                                            torch.tensor(1.0, device=device))
+                value_loss = (sample_weights * (value_pred - vb.float()) ** 2).mean()
+                # ─────────────────────────────────────────────────────────────────
+                
                 _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
                 loss = policy_loss + _vw * value_loss
                 loss.backward()
