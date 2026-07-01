@@ -307,16 +307,27 @@ def select_libtorch_url() -> str:
     torch_ver = torch.__version__.split("+", 1)[0]
     print(f"[Torch] torch={torch.__version__}, cuda={cuda_ver}")
 
-    if torch_ver.startswith("2.6"):
-        base_version = "2.6.0"
-    elif torch_ver.startswith("2.5"):
-        base_version = "2.5.1"
-    elif torch_ver.startswith("2.4"):
-        base_version = "2.4.1"
-    elif torch_ver.startswith("2.3"):
-        base_version = "2.3.1"
+    # Try to use the exact installed version first; fall back to the nearest
+    # known-good release for versions that didn't have a libtorch binary.
+    known_versions = {
+        "2.6": "2.6.0",
+        "2.5": "2.5.1",
+        "2.4": "2.4.1",
+        "2.3": "2.3.1",
+    }
+    # Extract major.minor prefix (e.g. "2.12" from "2.12.1")
+    parts = torch_ver.split(".")
+    major_minor = f"{parts[0]}.{parts[1]}" if len(parts) >= 2 else torch_ver
+    if major_minor in known_versions:
+        base_version = known_versions[major_minor]
+    elif major_minor >= "2.7":
+        # For torch 2.7+ use the exact version string (PyTorch publishes libtorch
+        # for each release using the same x.y.z naming convention).
+        base_version = torch_ver
+        print(f"[LibTorch] torch {torch_ver} ≥ 2.7 — using exact version string {base_version}")
     else:
         base_version = "2.3.1"
+        print(f"[LibTorch] Unknown torch version {torch_ver}; falling back to {base_version}")
 
     # Pick the CUDA tag that matches the installed CUDA runtime.
     if cuda_ver.startswith("12.4"):
@@ -545,8 +556,12 @@ def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndar
         PIECE_WEIGHTS = np.array([1.0, 3.0, 3.2, 5.1, 9.0,  # P N B R Q (White)
                                   1.0, 3.0, 3.2, 5.1, 9.0,  # P N B R Q (Black)
                                   0.0, 0.0], dtype=np.float32)  # Kings
-        draw_states = states[draws]  # [n_draws, 12, 8, 8]
-        piece_counts = draw_states.reshape(n_draws, 12, 64).sum(axis=2)  # [n_draws, 12]
+        draw_states = states[draws]  # [n_draws, 20, 8, 8]
+        # Planes 0-11 are piece occupancy (White P/N/B/R/Q/K, Black P/N/B/R/Q/K).
+        # Planes 12-19 are auxiliary (turn, castling, EP, repetition) — not material.
+        # Must slice [:, :12] BEFORE reshaping: states now have 20 planes (1280
+        # floats/pos), so reshape(n, 12, 64) would try to squeeze 1280→768 → ValueError.
+        piece_counts = draw_states[:, :12].reshape(n_draws, 12, 64).sum(axis=2)  # [n_draws, 12]
         white_mat = (piece_counts[:, :5] * PIECE_WEIGHTS[:5]).sum(axis=1)
         black_mat = (piece_counts[:, 6:11] * PIECE_WEIGHTS[6:11]).sum(axis=1)
         material_adv = white_mat - black_mat  # positive = White better
@@ -603,7 +618,9 @@ def validate_torchscript_model(model_path: Path, device: torch.device) -> None:
     try:
         scripted = torch.jit.load(str(model_path), map_location=device)
         with torch.no_grad():
-            dummy = torch.randn(1, 12, 8, 8, device=device)
+            # Must use NUM_INPUT_PLANES=20 channels — model conv_init expects 20,
+            # so a 12-channel dummy would throw a shape mismatch immediately.
+            dummy = torch.randn(1, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8, device=device)
             out = scripted(dummy)
             # Handle both old (tensor) and new (tuple) model outputs
             if isinstance(out, (tuple, list)):
@@ -719,7 +736,7 @@ def train_policy_model(
               f"| total={len(states)} samples (decisive={decisive_rate:.1%}, draw={draw_rate:.1%})")
     else:
         print(f"[Train] ⚠️  Không có decisive game trong replay buffer — chỉ có draw")
-        print(f"[Train] Draw penalty (-0.15) đang được áp dụng để guide MCTS trong gen tiếp theo")
+        print(f"[Train] Draw penalty (-0.4) đang được áp dụng để guide MCTS trong gen tiếp theo")
     # ────────────────────────────────────────────────────────────────────────
     # ──────────────────────────────────────────────────────────────────────
 
@@ -831,7 +848,10 @@ def save_traced_model(model: nn.Module, path: Path, device: torch.device) -> Non
     for m in model.modules():
         if isinstance(m, torch.nn.BatchNorm2d):
             m.eval()
-    dummy = torch.randn(1, 12, 8, 8, device=device)
+    # Must use NUM_INPUT_PLANES=20 channels — conv_init expects exactly 20.
+    # A 12-channel dummy here would make torch.jit.trace throw at the first
+    # conv layer (weight shape [128, 20, 3, 3] vs input [1, 12, 8, 8]).
+    dummy = torch.randn(1, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8, device=device)
     with torch.no_grad():
         traced = torch.jit.trace(model, dummy)
         # Verify output is tuple (policy, value)
@@ -1011,7 +1031,8 @@ def detect_value_collapse(model: nn.Module, device: torch.device, threshold: flo
     """
     model.eval()
     with torch.no_grad():
-        dummy = torch.randn(128, 12, 8, 8, device=device)
+        # Must match NUM_INPUT_PLANES=20; 12-channel input throws at conv_init.
+        dummy = torch.randn(128, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8, device=device)
         _, values = model(dummy)
         val_std = values.std().item()
         val_mean = values.abs().mean().item()
@@ -1082,6 +1103,8 @@ def _run_single_selfplay_worker(
     selfplay_timeout: float,
     env: Optional[dict] = None,
     log_prefix: str = "",
+    resign_thresh: float = -1.0,
+    min_resign_ply: int = 20,
 ) -> None:
     """Run one selfplay worker subprocess (blocking)."""
     cmd = [
@@ -1093,6 +1116,8 @@ def _run_single_selfplay_worker(
         "--output",       str(output_path),
         "--temperature_moves", str(temperature_moves),
         "--seed",         str(seed),
+        "--resign_thresh",     str(resign_thresh),
+        "--min_resign_ply",    str(min_resign_ply),
     ]
     if log_prefix:
         print(f"[Progress] {log_prefix} cmd: {' '.join(cmd)}", flush=True)
@@ -1113,6 +1138,8 @@ def run_generation(
     heartbeat_seconds: float = 30.0,
     selfplay_timeout: float = 8 * 3600.0,
     temperature_moves: int = 50,  # FIX: 30→50 tăng exploration
+    resign_thresh: float = -1.0,
+    min_resign_ply: int = 20,
 ) -> Path:
     local_generation_file = workdir / f"selfplay_gen_{generation}.bin"
     drive_generation_file = drive_root / f"selfplay_gen_{generation}.bin"
@@ -1143,6 +1170,8 @@ def run_generation(
                 project_root=project_root,
                 heartbeat_seconds=heartbeat_seconds, selfplay_timeout=selfplay_timeout,
                 env=env,
+                resign_thresh=resign_thresh,
+                min_resign_ply=min_resign_ply,
             )
         except subprocess.CalledProcessError as exc:
             print(f"[ERROR] Self-play binary exited with code {exc.returncode}")
@@ -1180,6 +1209,8 @@ def run_generation(
                     selfplay_timeout=selfplay_timeout,
                     env=env,
                     log_prefix=f"[GPU{worker_idx}]",
+                    resign_thresh=resign_thresh,
+                    min_resign_ply=min_resign_ply,
                 )
             except Exception as exc:
                 with errors_lock:
@@ -1286,6 +1317,8 @@ def run_pipeline(
     resume: bool = False,
     checkpoint_dir: Optional[Path] = None,
     temperature_moves: int = 50,  # FIX: 30→50 tăng exploration
+    resign_thresh: float = -1.0,
+    min_resign_ply: int = 20,
 ) -> None:
     workdir.mkdir(parents=True, exist_ok=True)
     drive_root.mkdir(parents=True, exist_ok=True)
@@ -1397,6 +1430,8 @@ def run_pipeline(
             log_every=log_every_games,
             heartbeat_seconds=heartbeat_seconds,
             temperature_moves=temperature_moves,
+            resign_thresh=resign_thresh,
+            min_resign_ply=min_resign_ply,
         )
 
         validate_torchscript_model(best_model_path, device)
@@ -1495,6 +1530,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--checkpoint_dir", type=str, default="", help="Directory for persistent checkpoints and resume state")
     parser.add_argument("--resume", action="store_true", help="Resume from the latest completed generation in the output directory")
     parser.add_argument("--temperature_moves", type=int, default=50, help="Number of opening moves to use temperature=1 sampling (default 50; was 30)")
+    parser.add_argument("--resign_thresh", type=float, default=-1.0,
+                        help="Resign when MCTS root Q < this value for current player. -1.0 = disabled (default).")
+    parser.add_argument("--min_resign_ply", type=int, default=20,
+                        help="Do not resign before this half-move count (default 20).")
     parser.add_argument("--no_infinite", action="store_true")
     return parser.parse_args()
 
@@ -1532,6 +1571,8 @@ def main() -> None:
         resume=args.resume,
         checkpoint_dir=checkpoint_dir,
         temperature_moves=args.temperature_moves,
+        resign_thresh=args.resign_thresh,
+        min_resign_ply=args.min_resign_ply,
     )
 
 

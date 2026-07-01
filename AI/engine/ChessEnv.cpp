@@ -1,3 +1,6 @@
+#ifndef CHESS_ENV_CPP_INCLUDED
+#define CHESS_ENV_CPP_INCLUDED
+
 #include "chess.hpp"
 
 #include <array>
@@ -224,6 +227,8 @@ public:
         out.resize(kStateSize);
         write_nn_planes(out.data());
     }
+
+    void write_stacked_state_tensor(float* out, std::size_t capacity, std::size_t frames = kHistoryFrames) const {
         assert(out != nullptr);
         assert(frames > 0);
         assert(capacity >= stacked_state_size(frames));
@@ -431,3 +436,5 @@ private:
 };
 
 
+
+#endif  // CHESS_ENV_CPP_INCLUDED

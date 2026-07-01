@@ -17,7 +17,16 @@ namespace {
 
 constexpr std::size_t kBatchSize  = 64;
 constexpr std::size_t kStateSize  = 1280;  // 20 planes × 64 sq: 12 piece + turn + 4 castle + EP + rep1 + rep2
-constexpr std::size_t kPolicySize = 4096;
+// NUM_ACTIONS (Python): 4096 normal/queen-promo slots (from*64+to) + 192
+// underpromotion slots (3 piece types × 64 `to` squares) = 4288.
+// Was 4096 — silently dropped the underpromotion slice of the model's
+// policy head and let knight/bishop/rook promotions collide with the
+// queen-promotion action_idx for the same from/to.
+constexpr std::size_t kPolicySize  = 4288;
+// Start of the underpromotion slice within the action space; matches
+// Python's _PROMO_OFFSET. Underpromotion piece order (matches _PROMO_IDX):
+// knight=0, bishop=1, rook=2. Queen promotions stay in the 0..4095 range.
+constexpr int kPromoOffset = 4096;
 
 // Dirichlet noise hyperparams (AlphaZero)
 // epsilon cao hơn (0.35 vs 0.25 default) để MCTS khám phá aggressive hơn,
@@ -30,16 +39,15 @@ std::vector<float> make_uniform_prior(std::size_t size) {
     return probs;
 }
 
-// get_current_20_planes: 20 planes × 64 sq = 1280 floats.
+// get_current_nn_planes: 20 planes × 64 sq = 1280 floats (= kStateSize).
 // Planes 0-11: piece positions (White P/N/B/R/Q/K, then Black P/N/B/R/Q/K).
-// Plane 12: turn (all 1.0 = white to move, all 0.0 = black).
-// Planes 13-16: castling rights WK/WQ/BK/BQ (all 1.0 or all 0.0).
-// Plane 17: en passant square (1.0 at EP square, rest 0.0).
+// Plane 12: turn (1.0 = white to move, 0.0 = black to move).
+// Planes 13-16: castling rights WK/WQ/BK/BQ (all 1.0 or all 0.0 per flag).
+// Plane 17: en passant target square (1.0 at EP square, rest 0.0).
 // Plane 18: rep1 — position repeated ≥1 time (all 1.0 or 0.0).
 // Plane 19: rep2 — position repeated ≥2 times (all 1.0 or 0.0).
-// NOTE: same name kept for minimal diff; callers unaffected.
-std::vector<float> get_current_12_planes(const ChessEnv& env) {
-    // Write 20-plane state via ChessEnv's new interface
+// Delegates to ChessEnv::write_nn_planes() which is the verified ground truth.
+std::vector<float> get_current_nn_planes(const ChessEnv& env) {
     std::vector<float> state(kStateSize, 0.0f);
     env.write_nn_planes(state.data());
     return state;
@@ -54,7 +62,28 @@ int popcount_u64(std::uint64_t value) noexcept {
 }
 
 int make_action_index(const chess::Move& move) {
-    return static_cast<int>(move.from().index()) * 64 + static_cast<int>(move.to().index());
+    const int from_sq = static_cast<int>(move.from().index());
+    const int to_sq   = static_cast<int>(move.to().index());
+
+    // Underpromotion (knight/bishop/rook) maps into the 4096..4287 slice of
+    // the action space; normal moves and queen promotions keep the original
+    // from*64+to encoding. Mirrors Python move_to_idx()/_PROMO_IDX exactly.
+    // NOTE: promotionType() is only meaningful when typeOf()==PROMOTION (see
+    // chess-library src/move.hpp) — must guard on typeOf() first.
+    if (move.typeOf() == chess::Move::PROMOTION) {
+        const chess::PieceType promo = move.promotionType();
+        int promo_idx = -1;
+        if      (promo == chess::PieceType::KNIGHT) promo_idx = 0;
+        else if (promo == chess::PieceType::BISHOP) promo_idx = 1;
+        else if (promo == chess::PieceType::ROOK)   promo_idx = 2;
+        // promo_idx stays -1 for QUEEN (and any unexpected piece), matching
+        // Python's "idx is None" fallback to the plain from*64+to encoding.
+
+        if (promo_idx >= 0) {
+            return kPromoOffset + promo_idx * 64 + to_sq;
+        }
+    }
+    return from_sq * 64 + to_sq;
 }
 
 float evaluate_material_from_white_perspective(const ChessEnv& env) {
@@ -193,7 +222,7 @@ MCTS::run_nn_inference_batch(const std::vector<std::vector<float>>& batch_planes
     }
 
     torch::Tensor input_tensor = torch::tensor(flattened, options)
-        .reshape({static_cast<int64_t>(N), 12, 8, 8});
+        .reshape({static_cast<int64_t>(N), 20, 8, 8});
 
     std::vector<torch::jit::IValue> inputs;
     inputs.emplace_back(input_tensor);
@@ -287,7 +316,7 @@ std::vector<std::pair<int, int>> MCTS::search_with_counts(const ChessEnv& curren
             const auto& [node, env, path] = batch[bi];
             (void)path;
             if (node == nullptr || !node->has_untried_moves()) continue;
-            batch_states.emplace_back(get_current_12_planes(env));
+            batch_states.emplace_back(get_current_nn_planes(env));
             valid_indices.push_back(bi);
         }
 
@@ -373,7 +402,7 @@ std::vector<std::pair<int, int>> MCTS::search_with_counts(const ChessEnv& curren
             std::vector<std::vector<float>> child_states;
             child_states.reserve(children_to_eval.size());
             for (const auto& cr : children_to_eval) {
-                child_states.emplace_back(get_current_12_planes(cr.child_env));
+                child_states.emplace_back(get_current_nn_planes(cr.child_env));
             }
             auto [_child_policies, child_values] = run_nn_inference_batch(child_states);
 
@@ -463,7 +492,17 @@ std::vector<std::pair<int, int>> MCTS::search_with_counts(const ChessEnv& curren
     for (const auto& [action_idx, child] : root->children) {
         counts.emplace_back(action_idx, child->visit_count);
     }
+    // Cache root Q-value so callers can implement resign logic without
+    // re-running inference.  Q = total_value / visit_count from current player's
+    // perspective (same sign convention as backpropagation).
+    last_root_q_ = (root->visit_count > 0)
+        ? (root->total_value / static_cast<float>(root->visit_count))
+        : 0.0f;
     return counts;
+}
+
+float MCTS::get_last_root_q() const {
+    return last_root_q_;
 }
 
 std::string MCTS::search(const ChessEnv& current_env) {

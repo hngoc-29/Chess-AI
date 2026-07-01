@@ -23,6 +23,11 @@ constexpr int kDefaultMaxMoves            = 512;
 constexpr int kDefaultLogEvery            = 10;
 constexpr int kDefaultTemperatureMoves    = 50;   // FIX: increased from 30 → 50 for more exploration   // use T=1 sampling for first N moves
 constexpr unsigned kDefaultSeed          = 42;
+// Resign when MCTS root Q < resign_thresh for current player.
+// -1.0 = disabled (default); typical value: -0.9.
+// Resign is suppressed for the first kDefaultMinResignPly half-moves.
+constexpr float kDefaultResignThresh     = -1.0f;
+constexpr int   kDefaultMinResignPly     = 20;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,9 +70,35 @@ std::vector<float> encode_state(const ChessEnv& env) {
     return features;
 }
 
+// Start of the underpromotion slice within the action space (NUM_ACTIONS=4288
+// total); matches Python's _PROMO_OFFSET. Underpromotion piece order (matches
+// _PROMO_IDX): knight=0, bishop=1, rook=2. Queen promotions and normal moves
+// stay in the 0..4095 from*64+to range.
+constexpr int kPromoOffset = 4096;
+
 int make_action_index(const chess::Move& move) {
-    return static_cast<int>(move.from().index()) * 64 +
-           static_cast<int>(move.to().index());
+    const int from_sq = static_cast<int>(move.from().index());
+    const int to_sq   = static_cast<int>(move.to().index());
+
+    // Underpromotion (knight/bishop/rook) maps into the 4096..4287 slice of
+    // the action space; normal moves and queen promotions keep the original
+    // from*64+to encoding. Mirrors Python move_to_idx()/_PROMO_IDX exactly.
+    // NOTE: promotionType() is only meaningful when typeOf()==PROMOTION (see
+    // chess-library src/move.hpp) — must guard on typeOf() first.
+    if (move.typeOf() == chess::Move::PROMOTION) {
+        const chess::PieceType promo = move.promotionType();
+        int promo_idx = -1;
+        if      (promo == chess::PieceType::KNIGHT) promo_idx = 0;
+        else if (promo == chess::PieceType::BISHOP) promo_idx = 1;
+        else if (promo == chess::PieceType::ROOK)   promo_idx = 2;
+        // promo_idx stays -1 for QUEEN (and any unexpected piece), matching
+        // Python's "idx is None" fallback to the plain from*64+to encoding.
+
+        if (promo_idx >= 0) {
+            return kPromoOffset + promo_idx * 64 + to_sq;
+        }
+    }
+    return from_sq * 64 + to_sq;
 }
 
 bool resolve_move(const ChessEnv& env, const std::string& uci, chess::Move& out_move) {
@@ -129,7 +160,10 @@ void print_usage(const char* argv0) {
               << " --model_path <path> --simulations <n>"
               << " --games <n> --output <path>"
               << " [--max_moves <n>] [--log_every <n>]"
-              << " [--temperature_moves <n>] [--seed <n>]\n";
+              << " [--temperature_moves <n>] [--seed <n>]"
+              << " [--resign_thresh <float>] [--min_resign_ply <n>]\n"
+              << "  resign_thresh: MCTS root Q below this → resign (default -1.0 = disabled)\n"
+              << "  min_resign_ply: do not resign before this half-move (default 20)\n";
 }
 
 }  // namespace
@@ -145,6 +179,8 @@ int main(int argc, char** argv) {
     int log_every            = kDefaultLogEvery;
     int temperature_moves    = kDefaultTemperatureMoves;
     unsigned seed            = kDefaultSeed;
+    float resign_thresh      = kDefaultResignThresh;  // < -1.0 = disabled
+    int   min_resign_ply     = kDefaultMinResignPly;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -156,6 +192,8 @@ int main(int argc, char** argv) {
         else if (arg == "--log_every"        && i + 1 < argc) log_every         = std::stoi(argv[++i]);
         else if (arg == "--temperature_moves"&& i + 1 < argc) temperature_moves = std::stoi(argv[++i]);
         else if (arg == "--seed"             && i + 1 < argc) seed              = static_cast<unsigned>(std::stoul(argv[++i]));
+        else if (arg == "--resign_thresh"    && i + 1 < argc) resign_thresh     = std::stof(argv[++i]);
+        else if (arg == "--min_resign_ply"   && i + 1 < argc) min_resign_ply    = std::stoi(argv[++i]);
         else { print_usage(argv[0]); return 1; }
     }
 
@@ -171,6 +209,12 @@ int main(int argc, char** argv) {
     std::cout << "[SelfPlay]   log_every         = " << log_every   << " games\n";
     std::cout << "[SelfPlay]   temperature_moves = " << temperature_moves << " (T=1 sampling)\n";
     std::cout << "[SelfPlay]   seed              = " << seed        << "\n";
+    std::cout << "[SelfPlay]   resign_thresh     = "
+              << (resign_thresh > -1.0f
+                  ? std::to_string(resign_thresh)
+                  : std::string("disabled"))
+              << "\n";
+    std::cout << "[SelfPlay]   min_resign_ply    = " << min_resign_ply << "\n";
     std::cout << "[SelfPlay]   output            = " << output_path << "\n";
     std::cout << "[SelfPlay] ============================================================\n";
     std::cout.flush();
@@ -221,6 +265,26 @@ int main(int argc, char** argv) {
 
             // search_with_counts runs MCTS and returns (action_idx, visit_count) pairs
             const auto counts = bot.search_with_counts(env);
+
+            // ── Resign check ─────────────────────────────────────────────────
+            // bot.get_last_root_q() returns the Q-value at the root of the MCTS
+            // tree (cached by search_with_counts).  A very negative Q means the
+            // current player is losing from the model's perspective.
+            // resign_thresh == -1.0 disables resign (default for robustness).
+            if (resign_thresh > -1.0f && ply >= min_resign_ply) {
+                const float root_q = bot.get_last_root_q();
+                if (root_q < resign_thresh) {
+                    // Current player resigns → they lose (terminal_reward = -1.0
+                    // from their perspective; perspectives[] sign flips on assign).
+                    terminal_reward = -1.0f;
+                    ++plies;  // count the resign ply
+                    std::cout << "[SelfPlay] resign at ply=" << ply
+                              << " root_q=" << root_q
+                              << " thresh=" << resign_thresh << "\n";
+                    break;
+                }
+            }
+            // ─────────────────────────────────────────────────────────────────
 
             chess::Move chosen = chess::Move::NO_MOVE;
             int chosen_action  = -1;
