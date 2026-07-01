@@ -1339,6 +1339,7 @@ def run_pipeline(
     temperature_moves: int = 50,  # FIX: 30→50 tăng exploration
     resign_thresh: float = -1.0,
     min_resign_ply: int = 20,
+    max_runtime_seconds: Optional[float] = None,  # Time limit when max_generations is None
 ) -> None:
     workdir.mkdir(parents=True, exist_ok=True)
     drive_root.mkdir(parents=True, exist_ok=True)
@@ -1426,13 +1427,32 @@ def run_pipeline(
     elif resume:
         resume_generation = detect_resume_generation(drive_root)
 
+    # ── Time limit tracking (for infinite mode with max_generations=None) ──────
+    pipeline_start_time = time.time()
+    if max_generations is None and max_runtime_seconds is not None:
+        print(f"[Pipeline] Time limit: {max_runtime_seconds / 3600:.1f}h ({max_runtime_seconds:.0f}s)")
+    # ────────────────────────────────────────────────────────────────────────────
+
     generation = resume_generation
     while True:
         generation += 1
         if resume and generation <= resume_generation:
             print(f"[Resume] skipping generation {generation}; artifacts already exist in {drive_root}")
             continue
-        print(f"\n===== Generation {generation}/{max_generations if max_generations is not None else '∞'} =====")
+        
+        # ── Check time limit (only when max_generations is None) ───────────────
+        if max_generations is None and max_runtime_seconds is not None:
+            elapsed = time.time() - pipeline_start_time
+            if elapsed >= max_runtime_seconds:
+                print(f"\n[Pipeline] ⏱️  Time limit reached: {elapsed / 3600:.2f}h / {max_runtime_seconds / 3600:.1f}h")
+                print(f"[Pipeline] Stopping after {generation - 1} generations")
+                print(f"[Pipeline] Final model: {best_model_path}")
+                break
+            remaining = max_runtime_seconds - elapsed
+            print(f"\n===== Generation {generation} | ⏱️  {remaining / 3600:.1f}h remaining =====")
+        else:
+            print(f"\n===== Generation {generation}/{max_generations if max_generations is not None else '∞'} =====")
+        # ────────────────────────────────────────────────────────────────────────
         if best_model_path.exists():
             _mtime = time.strftime("%d/%m %H:%M:%S", time.localtime(best_model_path.stat().st_mtime))
             _size  = best_model_path.stat().st_size / 1e6
@@ -1554,6 +1574,8 @@ def parse_args() -> argparse.Namespace:
                         help="Resign when MCTS root Q < this value for current player. -1.0 = disabled (default).")
     parser.add_argument("--min_resign_ply", type=int, default=20,
                         help="Do not resign before this half-move count (default 20).")
+    parser.add_argument("--max_runtime_hours", type=float, default=None,
+                        help="Maximum runtime in hours when max_generations is None (default: None = no limit)")
     parser.add_argument("--no_infinite", action="store_true")
     return parser.parse_args()
 
@@ -1573,6 +1595,10 @@ def main() -> None:
 
     project_root = prepare_project_root(project_root, archive_path)
 
+    max_runtime_seconds = None
+    if args.max_runtime_hours is not None:
+        max_runtime_seconds = args.max_runtime_hours * 3600
+    
     run_pipeline(
         project_root=project_root,
         workdir=workdir,
@@ -1593,6 +1619,7 @@ def main() -> None:
         temperature_moves=args.temperature_moves,
         resign_thresh=args.resign_thresh,
         min_resign_ply=args.min_resign_ply,
+        max_runtime_seconds=max_runtime_seconds,
     )
 
 
