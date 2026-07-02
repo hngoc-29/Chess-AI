@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../constants/colors.dart';
-import 'dark_theme.dart';
-import 'light_theme.dart';
+import '../../core/constants/colors.dart';
 
 class AppTheme {
   AppTheme._();

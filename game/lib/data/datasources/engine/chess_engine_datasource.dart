@@ -1,4 +1,4 @@
-import '../../services/engine/chess_engine_service.dart';
+import '../../../services/engine/chess_engine_service.dart';
 
 class ChessEngineDataSource {
   final ChessEngineService _engineService;

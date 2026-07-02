@@ -21,8 +21,8 @@ class AppRoutes {
   static const String replay = '/replay';
   static const String analysis = '/analysis';
 
-  static Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    switch (settings.name) {
+  static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
+    switch (routeSettings.name) {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case mainMenu:
@@ -43,7 +43,7 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             body: Center(
-              child: Text('No route defined for ${settings.name}'),
+              child: Text('No route defined for ${routeSettings.name}'),
             ),
           ),
         );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/strings.dart';
+import '../../../core/constants/strings.dart';
 
 class AnalysisScreen extends StatelessWidget {
   const AnalysisScreen({super.key});

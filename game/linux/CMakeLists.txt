@@ -30,7 +30,15 @@ add_executable(${BINARY_NAME}
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
 )
 
-apply_standard_settings(${BINARY_NAME})
+# Apply standard settings
+set_target_properties(${BINARY_NAME} PROPERTIES
+  CXX_VISIBILITY_PRESET hidden
+  POSITION_INDEPENDENT_CODE ON
+)
+
+target_compile_definitions(${BINARY_NAME} PRIVATE
+  "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>"
+)
 
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/strings.dart';
+import '../../../core/constants/strings.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});

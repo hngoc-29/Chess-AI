@@ -194,7 +194,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       newBoard = newBoard.setPiece(event.to, movingPiece);
 
       // Remove captured pawn
-      final capturedPawnRank = movingPiece.isWhite ? event.to.rank - 1 : event.to.rank + 1;
+      final capturedPawnRank = movingPiece!.isWhite ? event.to.rank - 1 : event.to.rank + 1;
       final capturedPawnPos = Position(file: event.to.file, rank: capturedPawnRank);
       newBoard = newBoard.setPiece(capturedPawnPos, null);
     } else {
@@ -342,7 +342,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         if (piece != null && piece.color == currentState.gameState.currentTurn) {
           final legalMoves = _rulesService.getLegalMoves(currentState.board, from);
           for (final to in legalMoves) {
-            allMoves.add(ChessMove(from: from, to: to, piece: piece));
+            allMoves.add(ChessMove(from: from, to: to));
           }
         }
       }

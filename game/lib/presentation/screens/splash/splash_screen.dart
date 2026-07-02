@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/durations.dart';
-import '../app/routes.dart';
+import '../../../core/constants/durations.dart';
+import '../../app/routes.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

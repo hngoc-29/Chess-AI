@@ -1,5 +1,5 @@
 import '../../core/utils/logger.dart';
-import 'chess_engine_service.dart';
+import '../engine/chess_engine_service.dart';
 
 class AIMove {
   final String from;

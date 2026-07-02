@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/strings.dart';
-import '../app/routes.dart';
+import '../../../core/constants/strings.dart';
+import '../../app/routes.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
