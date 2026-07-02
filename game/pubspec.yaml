@@ -56,9 +56,6 @@ flutter:
     - assets/images/pieces/alpha/
     - assets/images/pieces/pixel/
     - assets/images/boards/
-    - assets/images/icons/
-    - assets/images/backgrounds/
-    - assets/images/ui/
     - assets/sounds/
     - assets/animations/lottie/
 
