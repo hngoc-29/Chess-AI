@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/entities/board.dart';
-import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
 import 'piece_widget.dart';
 
@@ -75,17 +74,14 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                     height: squareSize,
                     decoration: BoxDecoration(
                       color: _getSquareColor(isLight, isSelected, isLegalMove),
-                      border: isLegalMove
-                          ? Border.all(color: Colors.green, width: 2)
-                          : null,
                     ),
                     child: isLegalMove
                         ? Center(
                             child: Container(
-                              width: squareSize * 0.3,
-                              height: squareSize * 0.3,
+                              width: squareSize * 0.25,
+                              height: squareSize * 0.25,
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.5),
+                                color: Colors.black.withOpacity(0.15),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -103,13 +99,16 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
   Color _getSquareColor(bool isLight, bool isSelected, bool isLegalMove) {
     if (isSelected) {
-      return Colors.yellow.withOpacity(0.6);
+      // Soft yellow highlight for selected piece
+      return const Color(0xFFFFDD88);
     }
     if (isLegalMove) {
+      // Slightly darker shade to indicate legal move destination
       return isLight
-          ? const Color(0xFFF0D9B5).withOpacity(0.8)
-          : const Color(0xFFB58863).withOpacity(0.8);
+          ? const Color(0xFFE8D0A8)
+          : const Color(0xFFA57853);
     }
+    // Standard chess board colors
     return isLight ? const Color(0xFFF0D9B5) : const Color(0xFFB58863);
   }
 
@@ -122,7 +121,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         final piece = widget.board.pieceAt(position);
 
         if (piece != null && position != _draggedFrom) {
-          final displayRank = widget.flipped ? 7 - rank : rank;
+          // Use SAME transformation as board squares
+          final displayRank = widget.flipped ? rank : 7 - rank;
           final displayFile = widget.flipped ? 7 - file : file;
 
           pieces.add(

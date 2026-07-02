@@ -87,18 +87,29 @@ class _GameView extends StatelessWidget {
                   Expanded(
                     child: Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: ChessBoardWidget(
-                          board: state.board,
-                          flipped: state.flipped,
-                          selectedSquare: state.selectedSquare,
-                          legalMoves: state.legalMoves,
-                          onSquareTap: (position) {
-                            _handleSquareTap(context, state, position);
-                          },
-                          onMove: (from, to) {
-                            _handleMove(context, state, from, to);
-                          },
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ChessBoardWidget(
+                            board: state.board,
+                            flipped: state.flipped,
+                            selectedSquare: state.selectedSquare,
+                            legalMoves: state.legalMoves,
+                            onSquareTap: (position) {
+                              _handleSquareTap(context, state, position);
+                            },
+                            onMove: (from, to) {
+                              _handleMove(context, state, from, to);
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -121,26 +132,55 @@ class _GameView extends StatelessWidget {
         : '${currentPlayer.color == PieceColor.white ? AppStrings.white : AppStrings.black} to move';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            statusText,
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            children: [
+              if (state.isAIThinking)
+                Container(
+                  width: 16,
+                  height: 16,
+                  margin: const EdgeInsets.only(right: 12),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              Text(
+                statusText,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
           ),
           if (state.gameState.isInCheck)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red),
+                color: Colors.red.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.withOpacity(0.5), width: 1.5),
               ),
               child: Text(
                 AppStrings.check,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.red,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.red.shade700,
                       fontWeight: FontWeight.bold,
                     ),
               ),
