@@ -543,46 +543,46 @@ class _GameView extends StatelessWidget {
       ),
     );
   }
+}
 
-  class _EvaluationGraphPainter extends CustomPainter {
-    @override
-    void paint(Canvas canvas, Size size) {
-      final paint = Paint()
-        ..color = AppColors.primary.withOpacity(0.6)
-        ..strokeWidth = 2
-        ..style = PaintingStyle.stroke;
+class _EvaluationGraphPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.primary.withOpacity(0.6)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
 
-      final path = Path();
+    final path = Path();
+    
+    // Sample evaluation data points
+    final points = [0.0, 0.1, 0.15, 0.2, 0.25, 0.32];
+    final stepX = size.width / (points.length - 1);
+    
+    for (int i = 0; i < points.length; i++) {
+      final x = i * stepX;
+      final y = size.height / 2 - (points[i] * size.height);
       
-      // Sample evaluation data points
-      final points = [0.0, 0.1, 0.15, 0.2, 0.25, 0.32];
-      final stepX = size.width / (points.length - 1);
-      
-      for (int i = 0; i < points.length; i++) {
-        final x = i * stepX;
-        final y = size.height / 2 - (points[i] * size.height);
-        
-        if (i == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
       }
-      
-      canvas.drawPath(path, paint);
-      
-      // Draw center line
-      final centerPaint = Paint()
-        ..color = AppColors.textSecondaryDark.withOpacity(0.3)
-        ..strokeWidth = 1;
-      canvas.drawLine(
-        Offset(0, size.height / 2),
-        Offset(size.width, size.height / 2),
-        centerPaint,
-      );
     }
-
-    @override
-    bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+    
+    canvas.drawPath(path, paint);
+    
+    // Draw center line
+    final centerPaint = Paint()
+      ..color = AppColors.textSecondaryDark.withOpacity(0.3)
+      ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(0, size.height / 2),
+      Offset(size.width, size.height / 2),
+      centerPaint,
+    );
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

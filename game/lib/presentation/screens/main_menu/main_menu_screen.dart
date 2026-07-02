@@ -120,11 +120,14 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       },
                     ),
                     const SizedBox(height: 100),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-      ),      bottomNavigationBar: _buildBottomNavBar(context),
+      ),
+      bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
 
