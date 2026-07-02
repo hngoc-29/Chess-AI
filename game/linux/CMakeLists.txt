@@ -24,6 +24,10 @@ set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
+# Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTK REQUIRED gtk+-3.0)
+
 add_executable(${BINARY_NAME}
   "main.cc"
   "my_application.cc"
