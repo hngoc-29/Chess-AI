@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/entities/board.dart';
 import '../../../domain/entities/chess_move.dart';
 import '../../../domain/entities/game_state.dart';
+import '../../../domain/entities/move_info.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/player.dart';
 import '../../../domain/entities/position.dart';
@@ -104,7 +105,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           legalMovePositions,
           currentState.gameState.currentTurn,
         );
-        final legalMovesMap = {
+        final legalMovesMap = <Position, MoveType>{
           for (final moveInfo in classifiedMoves)
             moveInfo.position: moveInfo.type
         };
@@ -132,7 +133,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           legalMovePositions,
           currentState.gameState.currentTurn,
         );
-        final legalMovesMap = {
+        final legalMovesMap = <Position, MoveType>{
           for (final moveInfo in classifiedMoves)
             moveInfo.position: moveInfo.type
         };
@@ -170,7 +171,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       if (isPromotionRank) {
         emit(currentState.copyWith(
           selectedSquare: event.from,
-          legalMoves: {event.to: MoveType.safe},
+          legalMoves: <Position, MoveType>{event.to: MoveType.safe},
         ));
         return;
       }

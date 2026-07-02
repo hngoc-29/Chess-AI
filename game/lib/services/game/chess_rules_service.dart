@@ -333,7 +333,6 @@ class ChessRulesService {
 
     return moves;
   }
-}
 
   /// Classifies legal moves into capture, safe, or dangerous moves
   List<MoveInfo> classifyLegalMoves(
@@ -344,33 +343,33 @@ class ChessRulesService {
   ) {
     final movingPiece = board.pieceAt(from);
     if (movingPiece == null) return [];
-    
-    final opponentColor = movingColor == PieceColor.white 
-        ? PieceColor.black 
+
+    final opponentColor = movingColor == PieceColor.white
+        ? PieceColor.black
         : PieceColor.white;
-    
+
     final classifiedMoves = <MoveInfo>[];
-    
+
     for (final to in legalMoves) {
       final targetPiece = board.pieceAt(to);
-      
+
       // Check if it's a capture move
       if (targetPiece != null && targetPiece.color == opponentColor) {
         classifiedMoves.add(MoveInfo(position: to, type: MoveType.capture));
         continue;
       }
-      
+
       // Check if the square would be under attack after moving
       final testBoard = board.movePiece(from, to);
       final isUnderAttack = _isSquareUnderAttack(testBoard, to, opponentColor);
-      
+
       if (isUnderAttack) {
         classifiedMoves.add(MoveInfo(position: to, type: MoveType.dangerous));
       } else {
         classifiedMoves.add(MoveInfo(position: to, type: MoveType.safe));
       }
     }
-    
+
     return classifiedMoves;
   }
 
