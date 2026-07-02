@@ -14,7 +14,7 @@ class ChessAIApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark, // Always use dark theme
       onGenerateRoute: AppRoutes.onGenerateRoute,
       home: const SplashScreen(),
     );
