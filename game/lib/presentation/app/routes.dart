@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../screens/analysis/analysis_screen.dart';
+import '../screens/debug_logs_screen.dart';
 import '../screens/game/game_screen.dart';
 import '../screens/main_menu/main_menu_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -20,6 +21,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String replay = '/replay';
   static const String analysis = '/analysis';
+  static const String debugLogs = '/debug-logs';
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -39,6 +41,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const ReplayScreen());
       case analysis:
         return MaterialPageRoute(builder: (_) => const AnalysisScreen());
+      case debugLogs:
+        return MaterialPageRoute(builder: (_) => const DebugLogsScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

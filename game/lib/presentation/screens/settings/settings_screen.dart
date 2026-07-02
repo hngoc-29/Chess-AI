@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/strings.dart';
+import '../../app/routes.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -60,6 +61,16 @@ class SettingsScreen extends StatelessWidget {
             title: const Text(AppStrings.aiDifficulty),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.bug_report),
+            title: const Text('Debug Logs'),
+            subtitle: const Text('Xem và export logs để debug'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.debugLogs);
+            },
           ),
         ],
       ),

@@ -1,24 +1,32 @@
-name: Build Android
+name: Build Android APK
 
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'game/**'
+      - '.github/workflows/build-android.yml'
   pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:
+    branches: [ main ]
+    paths:
+      - 'game/**'
+  workflow_dispatch:  # Cho phép chạy thủ công
 
 jobs:
-  build-apk:
+  build:
+    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -27,43 +35,56 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            game/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+      - name: Flutter doctor
+        run: flutter doctor -v
 
       - name: Get dependencies
-        working-directory: ./game
+        working-directory: game
         run: flutter pub get
 
-      - name: Generate Android launcher icons
-        working-directory: ./game
-        run: |
-          echo "🎯 Generating launcher icons for Chess AI..."
-          pip install Pillow
-          python3 generate_icons.py
+      - name: Analyze code
+        working-directory: game
+        run: flutter analyze
+        continue-on-error: true
 
-      - name: Build APK
-        working-directory: ./game
+      - name: Build APK (Debug)
+        working-directory: game
+        run: flutter build apk --debug
+
+      - name: Build APK (Release)
+        working-directory: game
         run: flutter build apk --release
 
-      - name: Build App Bundle
-        working-directory: ./game
-        run: flutter build appbundle --release
+      - name: Rename APKs
+        run: |
+          mkdir -p build-output
+          cp game/build/app/outputs/flutter-apk/app-debug.apk build-output/chess-ai-debug-${{ github.sha }}.apk
+          cp game/build/app/outputs/flutter-apk/app-release.apk build-output/chess-ai-release-${{ github.sha }}.apk
 
-      - name: Upload APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: game/build/app/outputs/flutter-apk/*.apk
+          name: chess-ai-debug
+          path: build-output/chess-ai-debug-*.apk
+          retention-days: 30
 
-      - name: Upload AAB
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-aab
-          path: game/build/app/outputs/bundle/release/*.aab
+          name: chess-ai-release
+          path: build-output/chess-ai-release-*.apk
+          retention-days: 90
+
+      - name: Get APK info
+        working-directory: game
+        run: |
+          echo "## APK Build Info" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Date: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Debug APK" >> $GITHUB_STEP_SUMMARY
+          ls -lh build/app/outputs/flutter-apk/app-debug.apk >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release APK" >> $GITHUB_STEP_SUMMARY
+          ls -lh build/app/outputs/flutter-apk/app-release.apk >> $GITHUB_STEP_SUMMARY

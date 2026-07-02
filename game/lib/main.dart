@@ -27,25 +27,46 @@ void main() async {
 
 Future<void> _initializeApp() async {
   try {
+    // Initialize logger FIRST để log tất cả các bước tiếp theo
+    await AppLogger.initialize();
+
     AppLogger.info('Initializing Chess AI...');
 
     setupDependencies();
 
-    final engineService = getIt<ChessEngineService>();
-    await engineService.initialize('models/best_model_traced.pt');
-    AppLogger.info('Chess engine initialized');
+    // Initialize engine service (non-critical - app can run without it)
+    try {
+      final engineService = getIt<ChessEngineService>();
+      await engineService.initialize('models/best_model_traced.pt');
+      AppLogger.info('Chess engine initialized');
+    } catch (e, stackTrace) {
+      AppLogger.error('Chess engine initialization failed (non-critical)', e, stackTrace);
+      // Continue without engine - will use fallback
+    }
 
-    final audioService = getIt<AudioService>();
-    await audioService.preloadSounds();
-    AppLogger.info('Audio service initialized');
+    // Initialize audio service (non-critical)
+    try {
+      final audioService = getIt<AudioService>();
+      await audioService.preloadSounds();
+      AppLogger.info('Audio service initialized');
+    } catch (e, stackTrace) {
+      AppLogger.error('Audio service initialization failed (non-critical)', e, stackTrace);
+      // Continue without audio
+    }
 
-    final cacheService = getIt<CacheService>();
-    await cacheService.preloadAssets();
-    AppLogger.info('Cache service initialized');
+    // Initialize cache service (non-critical)
+    try {
+      final cacheService = getIt<CacheService>();
+      await cacheService.preloadAssets();
+      AppLogger.info('Cache service initialized');
+    } catch (e, stackTrace) {
+      AppLogger.error('Cache service initialization failed (non-critical)', e, stackTrace);
+      // Continue without cache
+    }
 
     AppLogger.info('Chess AI initialization complete');
   } catch (e, stackTrace) {
-    AppLogger.error('Failed to initialize app', e, stackTrace);
-    rethrow;
+    AppLogger.error('Critical initialization error', e, stackTrace);
+    // Don't rethrow - let app start even with errors
   }
 }

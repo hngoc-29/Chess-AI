@@ -629,6 +629,12 @@ def train_policy_model(
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
+
+    # Learning rate scheduler: exponential decay to stabilize training
+    # gamma=0.9995 → gentle decay over 250 generations (1000 epochs)
+    # Prevents overshooting when model approaches convergence (fixes value loss explosion)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9995)
+
     history = {"epochs": []}
     best_loss = float("inf")
     patience_counter = 0
@@ -649,33 +655,10 @@ def train_policy_model(
     n_decisive = int(decisive_mask.sum().item())
     total_samples = len(values)
 
-    # ── Dynamic oversample: giảm xuống vì đã có weighted loss (100x) ───────
-    # Trước đây: oversample 15x để cân bằng 99.6% draws
-    # Sau fix weighted loss: chỉ cần oversample nhẹ (3-5x) để tăng sample diversity
-    # Weighted loss (100x) đã handle imbalance → không cần oversample quá nhiều
-    decisive_rate = n_decisive / max(1, total_samples)
-    if decisive_rate < 0.03:
-        oversample_factor = 5  # Was: 15 (giảm xuống vì có weighted loss)
-    elif decisive_rate < 0.06:
-        oversample_factor = 4
-    elif decisive_rate < 0.10:
-        oversample_factor = 3
-    elif decisive_rate < 0.20:
-        oversample_factor = 2
-    else:
-        oversample_factor = 2
-
-    if n_decisive > 0:
-        idx = decisive_mask.nonzero(as_tuple=True)[0]
-        perm = torch.randperm(len(idx))
-        idx_shuffled = idx[perm]
-        rep_idx = idx_shuffled.repeat(oversample_factor)
-        states  = torch.cat([states,  states[rep_idx]])
-        moves   = torch.cat([moves,   moves[rep_idx]])
-        values  = torch.cat([values,  values[rep_idx]])
-        draw_masks = torch.cat([draw_masks, draw_masks[rep_idx]])
+    # ── REMOVED: Oversampling (double-counting với weighted loss) ───────────
+    # Weighted loss (20x) đã handle imbalance → không cần oversample
+    # Oversampling 5x + weight 100x = 500x effective gradient → gradient explosion
     # ────────────────────────────────────────────────────────────────────────
-    # ──────────────────────────────────────────────────────────────────────
 
     for epoch in range(start_epoch, epochs):
         running_loss = 0.0
@@ -715,17 +698,18 @@ def train_policy_model(
                     # → model học predict -0.4 cho mọi position → MSE ≈ 0.0001 (perfect on draws)
                     # → 0.4% decisive samples (±1.0) bị overwhelm và ignored
                     #
-                    # FIX: Weight decisive samples 100x để force model học win/loss signals
+                    # FIX: Weight decisive samples 20x (REDUCED from 100x - was causing gradient explosion)
                     # is_decisive: |value| > 0.5 → catches ±1.0 (wins/losses), not draws (-0.4)
                     is_decisive = (vb.abs() > 0.5)
                     sample_weights = torch.where(is_decisive,
-                                                torch.tensor(100.0, device=device, dtype=torch.float16),
+                                                torch.tensor(20.0, device=device, dtype=torch.float16),
                                                 torch.tensor(1.0, device=device, dtype=torch.float16))
                     value_loss = (sample_weights * (value_pred - vb.float()) ** 2).mean()
                     # ─────────────────────────────────────────────────────────────────
-                    
-                    # Dynamic value_weight: tăng khi draw_rate cao
-                    _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
+
+                    # FIXED value_weight: 2.0 (was dynamic 1.5-3.0, causing feedback loop)
+                    # Dynamic weight created cycle: high draws → high vw → decisive play → low draws → low vw → confused model
+                    _vw = 2.0
                     loss = policy_loss + _vw * value_loss
                 scaler.scale(loss).backward()
                 scaler.unscale_(optimizer)
@@ -739,12 +723,13 @@ def train_policy_model(
                 # ── CRITICAL FIX: Weighted Value Loss (CPU path) ─────────────────
                 is_decisive = (vb.abs() > 0.5)
                 sample_weights = torch.where(is_decisive,
-                                            torch.tensor(100.0, device=device),
+                                            torch.tensor(20.0, device=device),
                                             torch.tensor(1.0, device=device))
                 value_loss = (sample_weights * (value_pred - vb.float()) ** 2).mean()
                 # ─────────────────────────────────────────────────────────────────
-                
-                _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
+
+                # FIXED value_weight: 2.0 (was dynamic 1.5-3.0, causing feedback loop)
+                _vw = 2.0
                 loss = policy_loss + _vw * value_loss
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -776,21 +761,25 @@ def train_policy_model(
         if device.type == "cuda":
             torch.cuda.empty_cache()
         gc.collect()
-        _vw = 3.0 if draw_rate > 0.85 else (2.0 if draw_rate > 0.70 else 1.5)
+        _vw = 2.0  # FIXED (was dynamic 1.5-3.0)
         print(f"[Train] epoch={epoch + 1}/{epochs} | policy={avg_policy_loss:.4f} value={avg_value_loss:.4f} "
               f"| vw={_vw:.1f} draw={draw_rate:.1%}")
         history["epochs"].append({"epoch": epoch + 1, "loss": avg_loss, "policy_loss": avg_policy_loss, "value_loss": avg_value_loss})
         if metrics_output_dir is not None:
             export_training_metrics(history, metrics_output_dir)
 
-        # CRITICAL FIX: Check for value head collapse every 2 epochs
-        if (epoch + 1) % 2 == 0:
-            if detect_value_collapse(model, device):
-                print(f"[WARNING] Value head collapse detected at epoch {epoch+1}")
-                reinit_value_head(model)
-                print("[FIX] Value head reinitialized")
-                best_loss = float("inf")  # Reset to give reinitialized head a chance
-                patience_counter = 0
+        # Step learning rate scheduler (decay per epoch)
+        scheduler.step()
+
+        # DISABLED: Value head reinitialization (was resetting progress mid-training)
+        # Root cause was gradient explosion from 100x weight + 5x oversampling, now fixed
+        # if (epoch + 1) % 2 == 0:
+        #     if detect_value_collapse(model, device):
+        #         print(f"[WARNING] Value head collapse detected at epoch {epoch+1}")
+        #         reinit_value_head(model)
+        #         print("[FIX] Value head reinitialized")
+        #         best_loss = float("inf")
+        #         patience_counter = 0
 
         if best_loss - avg_loss > min_delta:
             best_loss = avg_loss
