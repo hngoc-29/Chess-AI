@@ -32,7 +32,7 @@ class UpdateMusicEnabled extends SettingsEvent {
 }
 
 class UpdateTheme extends SettingsEvent {
-  final ThemeMode theme;
+  final AppThemeMode theme;
 
   const UpdateTheme(this.theme);
 

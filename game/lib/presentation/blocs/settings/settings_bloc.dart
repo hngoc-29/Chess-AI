@@ -69,7 +69,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       final settings = Settings(
         soundEnabled: soundEnabled,
         musicEnabled: false, // Not in current repo, default to false
-        theme: isDark ? ThemeMode.dark : ThemeMode.light,
+        theme: isDark ? AppThemeMode.dark : AppThemeMode.light,
         boardStyle: boardStyle,
         pieceStyle: pieceStyle,
         animationSpeed: AnimationSpeed.normal, // Not in current repo
@@ -123,7 +123,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     if (state is! SettingsLoaded) return;
     final currentSettings = (state as SettingsLoaded).settings;
 
-    final isDark = event.theme == ThemeMode.dark;
+    final isDark = event.theme == AppThemeMode.dark;
     final result = await _repository.setDarkMode(isDark);
 
     result.fold(

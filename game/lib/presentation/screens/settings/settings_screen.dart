@@ -140,13 +140,13 @@ class _SettingsView extends StatelessWidget {
     );
   }
 
-  String _getThemeLabel(ThemeMode theme) {
+  String _getThemeLabel(AppThemeMode theme) {
     switch (theme) {
-      case ThemeMode.light:
+      case AppThemeMode.light:
         return 'Light';
-      case ThemeMode.dark:
+      case AppThemeMode.dark:
         return 'Dark';
-      case ThemeMode.system:
+      case AppThemeMode.system:
         return 'System';
     }
   }
@@ -203,15 +203,15 @@ class _SettingsView extends StatelessWidget {
     }
   }
 
-  void _showThemePicker(BuildContext context, ThemeMode current) {
+  void _showThemePicker(BuildContext context, AppThemeMode current) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Select Theme'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ThemeMode.values.map((theme) {
-            return RadioListTile<ThemeMode>(
+          children: AppThemeMode.values.map((theme) {
+            return RadioListTile<AppThemeMode>(
               title: Text(_getThemeLabel(theme)),
               value: theme,
               groupValue: current,
