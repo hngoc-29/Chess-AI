@@ -109,7 +109,6 @@ def generate_launcher_icons():
 
 if __name__ == '__main__':
     try:
-        os.chdir('/home/hn/Code/Python/ChessAI/game')
         success = generate_launcher_icons()
         sys.exit(0 if success else 1)
     except Exception as e:
