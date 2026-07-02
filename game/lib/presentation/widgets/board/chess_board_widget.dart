@@ -60,30 +60,40 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
             final isSelected = widget.selectedSquare == position;
             final isLegalMove = widget.legalMoves?.contains(position) ?? false;
 
-            return GestureDetector(
-              onTap: () => _onSquareTap(position),
-              child: Container(
-                width: squareSize,
-                height: squareSize,
-                decoration: BoxDecoration(
-                  color: _getSquareColor(isLight, isSelected, isLegalMove),
-                  border: isLegalMove
-                      ? Border.all(color: Colors.green, width: 2)
-                      : null,
-                ),
-                child: isLegalMove
-                    ? Center(
-                        child: Container(
-                          width: squareSize * 0.3,
-                          height: squareSize * 0.3,
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.5),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
+            return DragTarget<Position>(
+              onWillAccept: (from) => from != null && from != position,
+              onAccept: (from) {
+                if (widget.onMove != null) {
+                  widget.onMove!(from, position);
+                }
+              },
+              builder: (context, candidateData, rejectedData) {
+                return GestureDetector(
+                  onTap: () => _onSquareTap(position),
+                  child: Container(
+                    width: squareSize,
+                    height: squareSize,
+                    decoration: BoxDecoration(
+                      color: _getSquareColor(isLight, isSelected, isLegalMove),
+                      border: isLegalMove
+                          ? Border.all(color: Colors.green, width: 2)
+                          : null,
+                    ),
+                    child: isLegalMove
+                        ? Center(
+                            child: Container(
+                              width: squareSize * 0.3,
+                              height: squareSize * 0.3,
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                );
+              },
             );
           }),
         );
@@ -121,37 +131,44 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
               top: displayRank * squareSize,
               width: squareSize,
               height: squareSize,
-              child: Draggable<Position>(
-                data: position,
-                feedback: Material(
-                  color: Colors.transparent,
-                  child: PieceWidget(
-                    piece: piece,
-                    size: squareSize,
-                    isDragging: true,
+              child: GestureDetector(
+                onTap: () => _onSquareTap(position),
+                child: Draggable<Position>(
+                  data: position,
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: PieceWidget(
+                      piece: piece,
+                      size: squareSize,
+                      isDragging: true,
+                    ),
                   ),
-                ),
-                childWhenDragging: const SizedBox.shrink(),
-                onDragStarted: () {
-                  setState(() {
-                    _draggedFrom = position;
-                  });
-                },
-                onDragEnd: (details) {
-                  setState(() {
-                    _draggedFrom = null;
-                  });
-                },
-                child: DragTarget<Position>(
-                  onWillAccept: (from) => from != null,
-                  onAccept: (from) {
-                    if (widget.onMove != null) {
-                      widget.onMove!(from, position);
+                  childWhenDragging: const SizedBox.shrink(),
+                  onDragStarted: () {
+                    setState(() {
+                      _draggedFrom = position;
+                    });
+                    // Select the piece when drag starts
+                    if (widget.onSquareTap != null) {
+                      widget.onSquareTap!(position);
                     }
                   },
-                  builder: (context, candidateData, rejectedData) {
-                    return PieceWidget(piece: piece, size: squareSize);
+                  onDragEnd: (details) {
+                    setState(() {
+                      _draggedFrom = null;
+                    });
                   },
+                  child: DragTarget<Position>(
+                    onWillAccept: (from) => from != null && from != position,
+                    onAccept: (from) {
+                      if (widget.onMove != null) {
+                        widget.onMove!(from, position);
+                      }
+                    },
+                    builder: (context, candidateData, rejectedData) {
+                      return PieceWidget(piece: piece, size: squareSize);
+                    },
+                  ),
                 ),
               ),
             ),
