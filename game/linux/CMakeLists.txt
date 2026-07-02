@@ -45,6 +45,10 @@ target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
 
 add_dependencies(${BINARY_NAME} flutter_assemble)
 
+# Install bundle directory paths
+set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/${BINARY_NAME}/data")
+set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib/${BINARY_NAME}")
+
 set(CPACK_PACKAGE_NAME ${BINARY_NAME})
 set(CPACK_PACKAGE_VERSION ${CMAKE_PROJECT_VERSION})
 set(CPACK_PACKAGE_CONTACT "Chess AI Team")

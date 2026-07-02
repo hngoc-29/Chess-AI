@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/config/injection.dart';
 import '../../../core/constants/strings.dart';
 import '../../../domain/entities/piece.dart';
+import '../../../domain/entities/position.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
 import '../../blocs/game/game_bloc.dart';

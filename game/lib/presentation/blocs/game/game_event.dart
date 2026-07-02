@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/position.dart';
+import '../../../domain/entities/piece.dart';
 
 abstract class GameEvent extends Equatable {
   const GameEvent();
