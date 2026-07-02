@@ -1,10 +1,8 @@
 name: Build macOS
 
+# NOTE: macOS builds are optional for this project
+# This workflow is disabled by default and only runs on manual trigger
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
   workflow_dispatch:
 
 jobs:

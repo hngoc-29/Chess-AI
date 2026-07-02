@@ -143,33 +143,35 @@ jobs:
           name: linux-build
           path: chess-ai-linux.tar.gz
 
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-          cache: true
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            game/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-      - name: Get dependencies
-        working-directory: ./game
-        run: flutter pub get
-      - name: Build macOS
-        working-directory: ./game
-        run: flutter build macos --release
-      - name: Upload macOS Build
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-build
-          path: game/build/macos/Build/Products/Release/*.app
+  # macOS build disabled - not required for this project
+  # Uncomment if macOS support is needed in the future
+  # build-macos:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: '3.24.0'
+  #         channel: 'stable'
+  #         cache: true
+  #     - name: Cache pub dependencies
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           ~/.pub-cache
+  #           game/.dart_tool
+  #         key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-pub-
+  #     - name: Get dependencies
+  #       working-directory: ./game
+  #       run: flutter pub get
+  #     - name: Build macOS
+  #       working-directory: ./game
+  #       run: flutter build macos --release
+  #     - name: Upload macOS Build
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: macos-build
+  #         path: game/build/macos/Build/Products/Release/*.app

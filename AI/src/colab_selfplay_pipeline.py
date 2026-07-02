@@ -453,7 +453,15 @@ def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Pa
     return binary
 
 
-def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Load samples from a self-play generation file.
+
+    Returns:
+        states: (N, 20, 8, 8) board states
+        moves: (N,) move indices
+        values: (N,) position values
+        draw_mask: (N,) binary mask indicating draws
+    """
     if not path.exists():
         raise FileNotFoundError(path)
     data = np.fromfile(path, dtype=np.float32)
@@ -485,88 +493,66 @@ def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndar
 
     draws = (values == 0.0)
     n_draws = int(draws.sum())
-    # ── FIX: Remove random noise on draws (was: ±0.25 uniform noise) ─────
-    # BUG (cũ): values[draws] += random.uniform(-0.25, 0.25)
-    # → noise ngẫu nhiên không dạy được gì, chỉ làm nhiễu tín hiệu value.
-    #
-    # FIX mới: Dùng material balance từ state để tạo draw value có nghĩa.
-    # Mỗi draw position có material balance riêng:
-    #   - Nếu bên hiện tại đang có lợi vật chất: draw tệ → value âm nhẹ
-    #   - Nếu bên hiện tại đang bất lợi: draw tốt → value dương nhẹ
-    #   - Nếu cân bằng: draw trung lập → value gần 0
-    # Hệ số scale nhỏ (0.15) để không làm value head lệch quá nhiều.
-    if n_draws > 0:
-        # ── CRITICAL FIX: Draw penalty để MCTS không seek draw ──────────────
-        # Vấn đề gốc: draw=0 → MCTS coi hòa = neutral → safe draw > risky win
-        # → model học cách chủ động kéo hòa (repetition, stalemate bẫy) thay vì cố thắng.
-        #
-        # FIX Bug 5: DRAW_VALUE -0.15 quá nhỏ — tăng lên -0.4 để khuyến khích thắng mạnh hơn.
-        # -0.15 chỉ bằng 7.5% của range [-1,1], model không đủ động lực tránh draw.
-        # -0.4 phù hợp: đủ mạnh để MCTS avoid draw nhưng không cực đoan.
-        # Phải khớp với DRAW_VALUE trong kaggle_pgn_train_notebook.
-        BASE_DRAW_PENALTY = -0.4        #   win=+1.0,  draw=-0.4,  loss=-1.0
-        # → MCTS tìm win thay vì settle for draw
-        # → Khi đang thua: vẫn prefer draw (-0.4 > -1.0) — hợp lý
-        # → Khi đang thắng: không chấp nhận draw (-0.4 < +1.0) — MCTS tiếp tục tấn công
-        # BUG đã fix: dòng "BASE_DRAW_PENALTY = -0.15" từng nằm ở đây, ghi đè ngay lên
-        # giá trị -0.4 phía trên → toàn bộ "Fix Bug 5" ở trên chưa bao giờ có hiệu lực,
-        # và DRAW_VALUE giữa pipeline này với notebook bị lệch nhau (-0.15 vs -0.4).
 
-        PIECE_WEIGHTS = np.array([1.0, 3.0, 3.2, 5.1, 9.0,  # P N B R Q (White)
-                                  1.0, 3.0, 3.2, 5.1, 9.0,  # P N B R Q (Black)
-                                  0.0, 0.0], dtype=np.float32)  # Kings
-        draw_states = states[draws]  # [n_draws, 20, 8, 8]
-        # Planes 0-11 are piece occupancy (White P/N/B/R/Q/K, Black P/N/B/R/Q/K).
-        # Planes 12-19 are auxiliary (turn, castling, EP, repetition) — not material.
-        # Must slice [:, :12] BEFORE reshaping: states now have 20 planes (1280
-        # floats/pos), so reshape(n, 12, 64) would try to squeeze 1280→768 → ValueError.
-        piece_counts = draw_states[:, :12].reshape(n_draws, 12, 64).sum(axis=2)  # [n_draws, 12]
+    if n_draws > 0:
+        BASE_DRAW_PENALTY = -0.4
+        PIECE_WEIGHTS = np.array([1.0, 3.0, 3.2, 5.1, 9.0,
+                                  1.0, 3.0, 3.2, 5.1, 9.0,
+                                  0.0, 0.0], dtype=np.float32)
+        draw_states = states[draws]
+        piece_counts = draw_states[:, :12].reshape(n_draws, 12, 64).sum(axis=2)
         white_mat = (piece_counts[:, :5] * PIECE_WEIGHTS[:5]).sum(axis=1)
         black_mat = (piece_counts[:, 6:11] * PIECE_WEIGHTS[6:11]).sum(axis=1)
-        material_adv = white_mat - black_mat  # positive = White better
+        material_adv = white_mat - black_mat
 
-        # Material adj nhỏ (±0.05) chỉ để phân biệt "hòa khi đang thắng" vs "hòa khi đang thua"
-        # Không dùng sideToMove vì plane encoding không reliable → dùng magnitude nhỏ
         MAX_MAT = 39.0
         material_adj = -np.clip(material_adv / MAX_MAT, -1.0, 1.0) * 0.05
-        # Tổng: draw_value ∈ [-0.45, -0.35] — luôn âm, nhỏ hơn loss (-1.0) nhưng lớn hơn loss
-        values[draws] = (BASE_DRAW_PENALTY + material_adj).astype(np.float32)
-        # ────────────────────────────────────────────────────────────────────
+
+        # CRITICAL FIX: Add small noise to prevent value head collapse
+        noise = np.random.uniform(-0.02, 0.02, size=n_draws).astype(np.float32)
+        values[draws] = (BASE_DRAW_PENALTY + material_adj + noise).astype(np.float32)
 
     values = np.clip(values, -1.0, 1.0)
-    # ─────────────────────────────────────────────────────────────────────
-    return states, moves, values
+
+    # CRITICAL FIX: Return draw mask for correct draw_rate calculation
+    draw_mask = draws.astype(np.float32)
+    return states, moves, values, draw_mask
 
 
-def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def load_replay_buffer(paths: List[Path]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     all_states = []
     all_moves = []
     all_values = []
+    all_draw_masks = []
     for path in paths:
         if not path.exists():
             continue
         try:
-            states, moves, values = load_generation_samples(path)
+            states, moves, values, draw_mask = load_generation_samples(path)
         except Exception as exc:  # pragma: no cover
             print(f"[ERROR] load_replay_buffer: skipping {path}: {exc}")
             continue
         all_states.append(states)
         all_moves.append(moves)
         all_values.append(values)
+        all_draw_masks.append(draw_mask)
     if not all_states:
         raise RuntimeError("No generation data found for training.")
     states_np = np.concatenate(all_states, axis=0)
     moves_np = np.concatenate(all_moves, axis=0)
     values_np = np.concatenate(all_values, axis=0)
+    draw_masks_np = np.concatenate(all_draw_masks, axis=0)
     MAX_REPLAY_SAMPLES = 200_000
     if states_np.shape[0] > MAX_REPLAY_SAMPLES:
         states_np = states_np[-MAX_REPLAY_SAMPLES:]
         moves_np = moves_np[-MAX_REPLAY_SAMPLES:]
         values_np = values_np[-MAX_REPLAY_SAMPLES:]
+        draw_masks_np = draw_masks_np[-MAX_REPLAY_SAMPLES:]
     x = torch.from_numpy(states_np)
     y = torch.from_numpy(moves_np)
     v = torch.from_numpy(values_np)
-    return x, y, v
+    d = torch.from_numpy(draw_masks_np)
+    return x, y, v, d
 
 
 def validate_torchscript_model(model_path: Path, device: torch.device) -> None:
@@ -600,7 +586,7 @@ def select_replay_files(drive_root: Path, generation_file: Path, min_samples: in
     total_samples = 0
     for path in reversed(candidates):
         try:
-            states, _, _ = load_generation_samples(path)
+            states, _, _, _ = load_generation_samples(path)  # FIXED: unpack 4 values (states, moves, values, draw_mask)
         except Exception as exc:  # pragma: no cover
             print(f"[Pipeline] skipping replay {path}: {exc}")
             continue
@@ -620,6 +606,7 @@ def train_policy_model(
     states: torch.Tensor,
     moves: torch.Tensor,
     values: torch.Tensor,
+    draw_masks: torch.Tensor,
     lr: float = 1e-3,
     batch_size: int = 256,
     epochs: int = 3,
@@ -627,7 +614,7 @@ def train_policy_model(
     checkpoint_path: Optional[Path] = None,
     latest_checkpoint_path: Optional[Path] = None,
     metrics_output_dir: Optional[Path] = None,
-    patience: int = 5,  # tăng từ 2 → 5 để không dừng quá sớm
+    patience: int = 5,
     min_delta: float = 1e-4,
     start_epoch: int = 0,
 ) -> Tuple[nn.Module, dict]:
@@ -652,14 +639,15 @@ def train_policy_model(
     # - weighted sampling: decisive samples được chọn thường xuyên hơn nhưng
     #   không 100% giống nhau (shuffle tự nhiên của DataLoader giải quyết order).
     # - Cap factor ở 8x để tránh bùng nổ RAM khi decisive cực hiếm.
-    # ── Fix: threshold 0.5 để chỉ bắt actual wins/losses (±1.0), không nhầm draws ──
-    # Sau khi fix draw penalty, draw values ∈ [-0.20, -0.10].
-    # threshold 0.05 (cũ) sẽ bắt nhầm draws làm "decisive" → oversample không hiệu quả.
-    # threshold 0.5 chỉ bắt actual wins (≈+1) và losses (≈-1).
+    # CRITICAL FIX: Use draw_masks for correct draw_rate calculation
+    # Old code: draw_rate = 1.0 - n_decisive / total_samples (WRONG - assumes non-decisive = draw)
+    # New code: draw_rate = draw_masks.mean() (CORRECT - uses actual draw detection)
+    draw_rate = draw_masks.mean().item()
+
+    # Decisive positions: |value| > 0.5 (actual wins/losses at ±1.0, not draws at -0.4)
     decisive_mask = (values.abs() > 0.5)
     n_decisive = int(decisive_mask.sum().item())
     total_samples = len(values)
-    draw_rate = 1.0 - n_decisive / max(1, total_samples)
 
     # ── Dynamic oversample: giảm xuống vì đã có weighted loss (100x) ───────
     # Trước đây: oversample 15x để cân bằng 99.6% draws
@@ -685,6 +673,7 @@ def train_policy_model(
         states  = torch.cat([states,  states[rep_idx]])
         moves   = torch.cat([moves,   moves[rep_idx]])
         values  = torch.cat([values,  values[rep_idx]])
+        draw_masks = torch.cat([draw_masks, draw_masks[rep_idx]])
     # ────────────────────────────────────────────────────────────────────────
     # ──────────────────────────────────────────────────────────────────────
 
@@ -793,6 +782,15 @@ def train_policy_model(
         history["epochs"].append({"epoch": epoch + 1, "loss": avg_loss, "policy_loss": avg_policy_loss, "value_loss": avg_value_loss})
         if metrics_output_dir is not None:
             export_training_metrics(history, metrics_output_dir)
+
+        # CRITICAL FIX: Check for value head collapse every 2 epochs
+        if (epoch + 1) % 2 == 0:
+            if detect_value_collapse(model, device):
+                print(f"[WARNING] Value head collapse detected at epoch {epoch+1}")
+                reinit_value_head(model)
+                print("[FIX] Value head reinitialized")
+                best_loss = float("inf")  # Reset to give reinitialized head a chance
+                patience_counter = 0
 
         if best_loss - avg_loss > min_delta:
             best_loss = avg_loss
@@ -988,12 +986,28 @@ def detect_value_collapse(model: nn.Module, device: torch.device, threshold: flo
     → value head bị collapse, cần reinit.
     """
     model.eval()
-    with torch.no_grad():
-        # Must match NUM_INPUT_PLANES=20; 12-channel input throws at conv_init.
-        dummy = torch.randn(128, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8, device=device)
-        _, values = model(dummy)
-        val_std = values.std().item()
-        val_mean = values.abs().mean().item()
+    try:
+        with torch.no_grad():
+            # Must match NUM_INPUT_PLANES=20; 12-channel input throws at conv_init.
+            dummy = torch.randn(128, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8, device=device)
+            _, values = model(dummy)
+            val_std = values.std().item()
+            val_mean = values.abs().mean().item()
+    except (RuntimeError, Exception) as e:
+        # CUDA compatibility error - fallback to CPU
+        if "cuda" in str(e).lower() or "kernel" in str(e).lower():
+            print(f"[WARNING] CUDA error in value collapse check: {e}")
+            print("[INFO] Falling back to CPU for value collapse detection")
+            cpu_device = torch.device("cpu")
+            model_cpu = model.to(cpu_device)
+            with torch.no_grad():
+                dummy = torch.randn(128, ChessPolicyNet.NUM_INPUT_PLANES, 8, 8, device=cpu_device)
+                _, values = model_cpu(dummy)
+                val_std = values.std().item()
+                val_mean = values.abs().mean().item()
+            model.to(device)  # Move back to original device
+        else:
+            raise
     model.train()
     is_collapsed = (val_std < threshold) and (val_mean < threshold)
     return is_collapsed
@@ -1345,7 +1359,7 @@ def run_pipeline(
 
         validate_torchscript_model(best_model_path, device)
         replay_files = select_replay_files(drive_root, generation_file)
-        states, moves, values = load_replay_buffer(replay_files)
+        states, moves, values, draw_masks = load_replay_buffer(replay_files)
         validate_training_inputs(states.tolist(), moves.tolist(), values.tolist())
         print(f"[Progress] Gen {generation}: training {states.shape[0]} samples")
         checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
@@ -1356,6 +1370,7 @@ def run_pipeline(
             states=states,
             moves=moves,
             values=values,
+            draw_masks=draw_masks,
             lr=learning_rate,
             batch_size=batch_size,
             epochs=epochs,

@@ -1,0 +1,1510 @@
+6.3s	1	0.00s - Debugger warning: It seems that frozen modules are being used, which may
+6.3s	2	0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+6.3s	3	0.00s - to python to disable frozen modules.
+6.3s	4	0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+6.9s	5	0.00s - Debugger warning: It seems that frozen modules are being used, which may
+6.9s	6	0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+6.9s	7	0.00s - to python to disable frozen modules.
+6.9s	8	0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+10.0s	9	     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.1/6.1 MB 55.3 MB/s eta 0:00:00
+10.2s	10	     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.1/6.1 MB 55.3 MB/s eta 0:00:00
+14.8s	11	✓ Cell 1 done — Cấu hình OPTIMIZED cho T4x2:
+14.8s	12	  simulations=250  games/gen=100  epochs/gen=4
+14.8s	13	  batch_size=512  lr=0.002
+14.8s	14	  max_gen=300  temperature_moves=20
+14.8s	15	  resign_thresh=0.95  min_resign_ply=25
+14.8s	16	  OUTPUT: /kaggle/working/chess_outputs
+14.8s	17	
+14.8s	18	⏱️  Ước tính runtime: ~9h cho 300 generations
+14.8s	19	📊 Total data: ~30000 games = ~1200000 positions
+14.9s	20	[Bootstrap] ✓ PROJECT_ROOT = /kaggle/input/datasets/huungoc/chess-ai-source
+14.9s	21	[Bootstrap] Pipeline dir: /kaggle/input/datasets/huungoc/chess-ai-source/AI/src
+14.9s	22	[Bootstrap] ✓ Model tìm thấy: /kaggle/input/datasets/huungoc/chess-model/best_model_traced.pt  (44.7MB)
+14.9s	23	
+14.9s	24	[Bootstrap] Chạy mới (không có resume state)
+14.9s	25	
+14.9s	26	✓ Cell 2 done
+19.6s	27	
+19.6s	28	============================================================
+19.6s	29	SELF-PLAY PIPELINE — Fresh start
+19.6s	30	  simulations   = 250
+19.6s	31	  games/gen     = 100
+19.6s	32	  epochs/gen    = 4
+19.6s	33	  max_gen       = 300
+19.6s	34	  temp_moves    = 20
+19.6s	35	  output        = /kaggle/working/chess_outputs
+19.6s	36	============================================================
+19.6s	37	
+26.8s	38	CMake Warning at /usr/local/lib/python3.12/dist-packages/torch/share/cmake/Caffe2/public/cuda.cmake:149 (message):
+26.8s	39	  Failed to compute shorthash for libnvrtc.so
+27.9s	40	CMake Warning at /usr/local/lib/python3.12/dist-packages/torch/share/cmake/Caffe2/public/cuda.cmake:332 (message):
+28.0s	41	CMake Warning at /usr/local/lib/python3.12/dist-packages/torch/share/cmake/Torch/TorchConfig.cmake:22 (message):
+61.9s	42	
+61.9s	43	===== Generation 1/300 =====
+106.1s	44	[Progress] Gen 1: self-play done (44.4s, 12.6MB)
+106.5s	45	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+106.5s	46	[Validate] ✓ 2452 samples — moves ∈ [0,4288), values ∈ [-1,1]
+106.7s	47	[Progress] Gen 1: training 2452 samples
+111.9s	48	/kaggle/input/datasets/huungoc/chess-ai-source/AI/src/colab_selfplay_pipeline.py:623: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+111.9s	49	  scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
+111.9s	50	
+111.9s	51	/kaggle/input/datasets/huungoc/chess-ai-source/AI/src/colab_selfplay_pipeline.py:623: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+111.9s	52	  scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
+121.4s	53	[Train] epoch=1/4 | policy=3.1404 value=46.3633 | vw=1.5 draw=0.0%
+123.4s	54	[Train] epoch=2/4 | policy=1.9114 value=11.2862 | vw=1.5 draw=0.0%
+125.4s	55	[Train] epoch=3/4 | policy=1.3147 value=8.0735 | vw=1.5 draw=0.0%
+127.4s	56	[Train] epoch=4/4 | policy=0.8691 value=4.5531 | vw=1.5 draw=0.0%
+129.4s	57	[Artifacts] ✓ summary gen 1 → /kaggle/working/chess_outputs/model_output_summary_gen_1.json
+129.4s	58	[Progress] Gen 1: complete
+129.4s	59	
+129.4s	60	
+129.4s	61	===== Generation 2/300 =====
+177.4s	62	[Progress] Gen 2: self-play done (48.2s, 13.3MB)
+177.8s	63	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+177.8s	64	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+178.0s	65	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+178.0s	66	[Progress] Gen 2: training 2600 samples
+182.0s	67	[Train] epoch=1/4 | policy=2.1041 value=0.8132 | vw=1.5 draw=0.0%
+184.0s	68	[Train] epoch=2/4 | policy=0.8283 value=0.0000 | vw=1.5 draw=0.0%
+186.1s	69	[Train] epoch=3/4 | policy=0.3801 value=0.0000 | vw=1.5 draw=0.0%
+188.2s	70	[Train] epoch=4/4 | policy=0.2796 value=0.0000 | vw=1.5 draw=0.0%
+190.2s	71	[Artifacts] ✓ summary gen 2 → /kaggle/working/chess_outputs/model_output_summary_gen_2.json
+190.2s	72	[Progress] Gen 2: complete
+190.2s	73	
+190.2s	74	
+190.2s	75	===== Generation 3/300 =====
+239.3s	76	[Progress] Gen 3: self-play done (49.3s, 13.3MB)
+239.7s	77	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+239.7s	78	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+239.7s	79	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+239.7s	80	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+239.9s	81	[Progress] Gen 3: training 2600 samples
+241.6s	82	[Train] epoch=1/4 | policy=1.1359 value=0.0000 | vw=1.5 draw=0.0%
+243.6s	83	[Train] epoch=2/4 | policy=0.3684 value=0.0000 | vw=1.5 draw=0.0%
+245.6s	84	[Train] epoch=3/4 | policy=0.2643 value=0.0001 | vw=1.5 draw=0.0%
+247.5s	85	[Train] epoch=4/4 | policy=0.2470 value=0.0000 | vw=1.5 draw=0.0%
+249.4s	86	[Artifacts] ✓ summary gen 3 → /kaggle/working/chess_outputs/model_output_summary_gen_3.json
+249.4s	87	[Progress] Gen 3: complete
+249.4s	88	
+249.4s	89	
+249.4s	90	===== Generation 4/300 =====
+296.3s	91	[Progress] Gen 4: self-play done (47.1s, 13.3MB)
+296.7s	92	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+296.7s	93	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+296.7s	94	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+296.7s	95	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+296.9s	96	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+296.9s	97	[Progress] Gen 4: training 2600 samples
+298.5s	98	[Train] epoch=1/4 | policy=0.9976 value=0.0000 | vw=1.5 draw=0.0%
+300.5s	99	[Train] epoch=2/4 | policy=0.3348 value=0.0000 | vw=1.5 draw=0.0%
+302.5s	100	[Train] epoch=3/4 | policy=0.2563 value=0.0000 | vw=1.5 draw=0.0%
+304.5s	101	[Train] epoch=4/4 | policy=0.2403 value=0.0000 | vw=1.5 draw=0.0%
+306.4s	102	[Artifacts] ✓ summary gen 4 → /kaggle/working/chess_outputs/model_output_summary_gen_4.json
+306.4s	103	[Progress] Gen 4: complete
+306.4s	104	
+306.4s	105	
+306.4s	106	===== Generation 5/300 =====
+354.6s	107	[Progress] Gen 5: self-play done (48.3s, 13.3MB)
+355.0s	108	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+355.0s	109	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+355.0s	110	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+355.0s	111	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+355.0s	112	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+355.2s	113	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+355.2s	114	[Progress] Gen 5: training 2600 samples
+356.8s	115	[Train] epoch=1/4 | policy=0.9430 value=0.0000 | vw=1.5 draw=0.0%
+358.7s	116	[Train] epoch=2/4 | policy=0.3178 value=0.0000 | vw=1.5 draw=0.0%
+360.8s	117	[Train] epoch=3/4 | policy=0.2516 value=0.0000 | vw=1.5 draw=0.0%
+362.8s	118	[Train] epoch=4/4 | policy=0.2354 value=0.0000 | vw=1.5 draw=0.0%
+364.6s	119	[Artifacts] ✓ summary gen 5 → /kaggle/working/chess_outputs/model_output_summary_gen_5.json
+364.6s	120	[Progress] Gen 5: complete
+364.6s	121	
+364.6s	122	
+364.6s	123	===== Generation 6/300 =====
+413.4s	124	[Progress] Gen 6: self-play done (49.1s, 13.3MB)
+413.8s	125	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+413.8s	126	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+413.8s	127	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+413.8s	128	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+413.8s	129	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+413.8s	130	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+414.0s	131	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+414.0s	132	[Progress] Gen 6: training 2600 samples
+415.6s	133	[Train] epoch=1/4 | policy=0.7729 value=0.0000 | vw=1.5 draw=0.0%
+417.6s	134	[Train] epoch=2/4 | policy=0.2930 value=0.0000 | vw=1.5 draw=0.0%
+419.6s	135	[Train] epoch=3/4 | policy=0.2390 value=0.0000 | vw=1.5 draw=0.0%
+421.7s	136	[Train] epoch=4/4 | policy=0.2409 value=0.0000 | vw=1.5 draw=0.0%
+423.4s	137	[Artifacts] ✓ summary gen 6 → /kaggle/working/chess_outputs/model_output_summary_gen_6.json
+423.4s	138	[Progress] Gen 6: complete
+423.4s	139	
+423.4s	140	
+423.4s	141	===== Generation 7/300 =====
+472.0s	142	[Progress] Gen 7: self-play done (48.8s, 13.3MB)
+472.5s	143	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+472.5s	144	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+472.5s	145	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+472.5s	146	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+472.5s	147	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+472.5s	148	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+472.5s	149	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+472.5s	150	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+472.7s	151	[Progress] Gen 7: training 2600 samples
+474.4s	152	[Train] epoch=1/4 | policy=0.5980 value=0.0000 | vw=1.5 draw=0.0%
+476.5s	153	[Train] epoch=2/4 | policy=0.2659 value=0.0000 | vw=1.5 draw=0.0%
+478.6s	154	[Train] epoch=3/4 | policy=0.2366 value=0.0000 | vw=1.5 draw=0.0%
+480.8s	155	[Train] epoch=4/4 | policy=0.2289 value=0.0000 | vw=1.5 draw=0.0%
+482.7s	156	[Artifacts] ✓ summary gen 7 → /kaggle/working/chess_outputs/model_output_summary_gen_7.json
+482.7s	157	[Progress] Gen 7: complete
+482.7s	158	
+482.7s	159	
+482.7s	160	===== Generation 8/300 =====
+531.2s	161	[Progress] Gen 8: self-play done (48.7s, 13.3MB)
+531.7s	162	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+531.7s	163	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+531.7s	164	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+531.7s	165	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+531.7s	166	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+531.7s	167	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+531.7s	168	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+531.7s	169	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+531.7s	170	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+531.9s	171	[Progress] Gen 8: training 2600 samples
+533.6s	172	[Train] epoch=1/4 | policy=0.6489 value=0.0000 | vw=1.5 draw=0.0%
+535.7s	173	[Train] epoch=2/4 | policy=0.2637 value=0.0000 | vw=1.5 draw=0.0%
+537.8s	174	[Train] epoch=3/4 | policy=0.2215 value=0.0000 | vw=1.5 draw=0.0%
+539.9s	175	[Train] epoch=4/4 | policy=0.2338 value=0.0000 | vw=1.5 draw=0.0%
+541.8s	176	[Artifacts] ✓ summary gen 8 → /kaggle/working/chess_outputs/model_output_summary_gen_8.json
+541.8s	177	[Progress] Gen 8: complete
+541.8s	178	
+541.8s	179	
+541.8s	180	===== Generation 9/300 =====
+589.9s	181	[Progress] Gen 9: self-play done (48.2s, 13.3MB)
+590.3s	182	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+590.3s	183	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+590.3s	184	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+590.3s	185	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+590.3s	186	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+590.3s	187	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+590.3s	188	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+590.3s	189	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+590.3s	190	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+590.3s	191	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+590.5s	192	[Progress] Gen 9: training 2600 samples
+592.2s	193	[Train] epoch=1/4 | policy=0.5812 value=0.0000 | vw=1.5 draw=0.0%
+594.3s	194	[Train] epoch=2/4 | policy=0.2581 value=0.0000 | vw=1.5 draw=0.0%
+596.5s	195	[Train] epoch=3/4 | policy=0.2216 value=0.0000 | vw=1.5 draw=0.0%
+598.6s	196	[Train] epoch=4/4 | policy=0.2153 value=0.0000 | vw=1.5 draw=0.0%
+600.4s	197	[Artifacts] ✓ summary gen 9 → /kaggle/working/chess_outputs/model_output_summary_gen_9.json
+600.4s	198	[Progress] Gen 9: complete
+600.4s	199	
+600.4s	200	
+600.4s	201	===== Generation 10/300 =====
+648.6s	202	[Progress] Gen 10: self-play done (48.3s, 13.3MB)
+649.0s	203	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+649.0s	204	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+649.0s	205	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+649.0s	206	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+649.0s	207	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+649.0s	208	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+649.0s	209	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+649.0s	210	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+649.0s	211	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+649.0s	212	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+649.0s	213	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+649.2s	214	[Progress] Gen 10: training 2600 samples
+650.9s	215	[Train] epoch=1/4 | policy=0.3822 value=0.0000 | vw=1.5 draw=0.0%
+653.1s	216	[Train] epoch=2/4 | policy=0.2295 value=0.0000 | vw=1.5 draw=0.0%
+655.2s	217	[Train] epoch=3/4 | policy=0.2143 value=0.0000 | vw=1.5 draw=0.0%
+657.3s	218	[Train] epoch=4/4 | policy=0.2085 value=0.0000 | vw=1.5 draw=0.0%
+659.1s	219	[Artifacts] ✓ summary gen 10 → /kaggle/working/chess_outputs/model_output_summary_gen_10.json
+659.1s	220	[Progress] Gen 10: complete
+659.1s	221	
+659.1s	222	
+659.1s	223	===== Generation 11/300 =====
+709.7s	224	[Progress] Gen 11: self-play done (50.7s, 13.3MB)
+710.1s	225	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+710.1s	226	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+710.1s	227	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+710.1s	228	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+710.1s	229	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+710.1s	230	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+710.1s	231	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+710.1s	232	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+710.1s	233	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+710.1s	234	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+710.1s	235	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+710.1s	236	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+710.3s	237	[Progress] Gen 11: training 2600 samples
+712.0s	238	[Train] epoch=1/4 | policy=0.3732 value=0.0000 | vw=1.5 draw=0.0%
+714.2s	239	[Train] epoch=2/4 | policy=0.2267 value=0.0000 | vw=1.5 draw=0.0%
+716.5s	240	[Train] epoch=3/4 | policy=0.2074 value=0.0000 | vw=1.5 draw=0.0%
+718.6s	241	[Train] epoch=4/4 | policy=0.2106 value=0.0000 | vw=1.5 draw=0.0%
+720.7s	242	[Artifacts] ✓ summary gen 11 → /kaggle/working/chess_outputs/model_output_summary_gen_11.json
+720.7s	243	[Progress] Gen 11: complete
+720.7s	244	
+720.7s	245	
+720.7s	246	===== Generation 12/300 =====
+770.7s	247	[Progress] Gen 12: self-play done (50.2s, 13.3MB)
+771.2s	248	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+771.2s	249	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+771.2s	250	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+771.2s	251	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+771.2s	252	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+771.2s	253	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+771.2s	254	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+771.2s	255	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+771.2s	256	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+771.2s	257	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+771.2s	258	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+771.2s	259	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+771.2s	260	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+771.4s	261	[Progress] Gen 12: training 2600 samples
+773.1s	262	[Train] epoch=1/4 | policy=0.3007 value=0.0000 | vw=1.5 draw=0.0%
+775.1s	263	[Train] epoch=2/4 | policy=0.2136 value=0.0000 | vw=1.5 draw=0.0%
+777.2s	264	[Train] epoch=3/4 | policy=0.2053 value=0.0000 | vw=1.5 draw=0.0%
+779.3s	265	[Train] epoch=4/4 | policy=0.2000 value=0.0000 | vw=1.5 draw=0.0%
+782.7s	266	[Artifacts] ✓ summary gen 12 → /kaggle/working/chess_outputs/model_output_summary_gen_12.json
+782.7s	267	[Progress] Gen 12: complete
+782.7s	268	
+782.7s	269	
+782.7s	270	===== Generation 13/300 =====
+831.2s	271	[Progress] Gen 13: self-play done (48.7s, 13.3MB)
+831.6s	272	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+831.6s	273	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+831.6s	274	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+831.6s	275	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+831.6s	276	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+831.6s	277	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+831.6s	278	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+831.6s	279	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+831.6s	280	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+831.6s	281	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+831.6s	282	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+831.6s	283	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+831.6s	284	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+831.6s	285	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+831.8s	286	[Progress] Gen 13: training 2600 samples
+833.5s	287	[Train] epoch=1/4 | policy=0.2868 value=0.0000 | vw=1.5 draw=0.0%
+835.8s	288	[Train] epoch=2/4 | policy=0.2087 value=0.0000 | vw=1.5 draw=0.0%
+838.0s	289	[Train] epoch=3/4 | policy=0.2068 value=0.0000 | vw=1.5 draw=0.0%
+840.2s	290	[Train] epoch=4/4 | policy=0.1984 value=0.0000 | vw=1.5 draw=0.0%
+842.8s	291	[Artifacts] ✓ summary gen 13 → /kaggle/working/chess_outputs/model_output_summary_gen_13.json
+842.8s	292	[Progress] Gen 13: complete
+842.8s	293	
+842.8s	294	
+842.8s	295	===== Generation 14/300 =====
+895.6s	296	[Progress] Gen 14: self-play done (53.1s, 13.3MB)
+896.1s	297	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+896.1s	298	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+896.1s	299	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+896.1s	300	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+896.1s	301	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+896.1s	302	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+896.1s	303	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+896.1s	304	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+896.1s	305	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+896.1s	306	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+896.1s	307	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+896.1s	308	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+896.1s	309	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+896.1s	310	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+896.1s	311	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+896.3s	312	[Progress] Gen 14: training 2600 samples
+898.0s	313	[Train] epoch=1/4 | policy=0.2832 value=0.0000 | vw=1.5 draw=0.0%
+900.2s	314	[Train] epoch=2/4 | policy=0.2053 value=0.0000 | vw=1.5 draw=0.0%
+902.3s	315	[Train] epoch=3/4 | policy=0.1989 value=0.0000 | vw=1.5 draw=0.0%
+904.5s	316	[Train] epoch=4/4 | policy=0.2041 value=0.0000 | vw=1.5 draw=0.0%
+906.4s	317	[Artifacts] ✓ summary gen 14 → /kaggle/working/chess_outputs/model_output_summary_gen_14.json
+906.4s	318	[Progress] Gen 14: complete
+906.4s	319	
+906.4s	320	
+906.4s	321	===== Generation 15/300 =====
+953.6s	322	[Progress] Gen 15: self-play done (47.4s, 13.3MB)
+954.1s	323	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+954.1s	324	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+954.1s	325	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+954.1s	326	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+954.1s	327	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+954.1s	328	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+954.1s	329	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+954.1s	330	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+954.1s	331	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+954.1s	332	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+954.1s	333	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+954.1s	334	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+954.1s	335	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+954.1s	336	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+954.1s	337	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+954.3s	338	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+954.3s	339	[Progress] Gen 15: training 2600 samples
+956.0s	340	[Train] epoch=1/4 | policy=0.2883 value=0.0000 | vw=1.5 draw=0.0%
+958.1s	341	[Train] epoch=2/4 | policy=0.2043 value=0.0000 | vw=1.5 draw=0.0%
+960.2s	342	[Train] epoch=3/4 | policy=0.1981 value=0.0000 | vw=1.5 draw=0.0%
+962.9s	343	[Train] epoch=4/4 | policy=0.1936 value=0.0000 | vw=1.5 draw=0.0%
+964.5s	344	[Artifacts] ✓ summary gen 15 → /kaggle/working/chess_outputs/model_output_summary_gen_15.json
+964.5s	345	[Progress] Gen 15: complete
+964.5s	346	
+964.5s	347	
+964.5s	348	===== Generation 16/300 =====
+1013.5s	349	[Progress] Gen 16: self-play done (49.2s, 13.3MB)
+1013.9s	350	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1013.9s	351	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1013.9s	352	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1013.9s	353	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1013.9s	354	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1013.9s	355	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1013.9s	356	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1013.9s	357	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1013.9s	358	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1013.9s	359	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1013.9s	360	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1013.9s	361	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1013.9s	362	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1013.9s	363	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1013.9s	364	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1013.9s	365	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1013.9s	366	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1014.1s	367	[Progress] Gen 16: training 2600 samples
+1015.9s	368	[Train] epoch=1/4 | policy=0.2595 value=0.0000 | vw=1.5 draw=0.0%
+1018.0s	369	[Train] epoch=2/4 | policy=0.2036 value=0.0000 | vw=1.5 draw=0.0%
+1020.3s	370	[Train] epoch=3/4 | policy=0.1964 value=0.0000 | vw=1.5 draw=0.0%
+1022.5s	371	[Train] epoch=4/4 | policy=0.1979 value=0.0000 | vw=1.5 draw=0.0%
+1024.1s	372	[Artifacts] ✓ summary gen 16 → /kaggle/working/chess_outputs/model_output_summary_gen_16.json
+1024.1s	373	[Progress] Gen 16: complete
+1024.1s	374	
+1024.1s	375	
+1024.1s	376	===== Generation 17/300 =====
+1070.4s	377	[Progress] Gen 17: self-play done (46.5s, 13.3MB)
+1070.8s	378	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1070.8s	379	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1070.8s	380	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1070.8s	381	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1070.8s	382	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1070.8s	383	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1070.8s	384	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1070.8s	385	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1070.8s	386	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1070.8s	387	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1070.8s	388	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1070.8s	389	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1070.8s	390	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1070.8s	391	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1070.8s	392	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1070.8s	393	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1070.8s	394	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1071.0s	395	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1071.0s	396	[Progress] Gen 17: training 2600 samples
+1072.8s	397	[Train] epoch=1/4 | policy=0.2597 value=0.0000 | vw=1.5 draw=0.0%
+1074.9s	398	[Train] epoch=2/4 | policy=0.1998 value=0.0000 | vw=1.5 draw=0.0%
+1077.0s	399	[Train] epoch=3/4 | policy=0.1932 value=0.0000 | vw=1.5 draw=0.0%
+1080.7s	400	[Train] epoch=4/4 | policy=0.1915 value=0.0000 | vw=1.5 draw=0.0%
+1082.5s	401	[Artifacts] ✓ summary gen 17 → /kaggle/working/chess_outputs/model_output_summary_gen_17.json
+1082.5s	402	[Progress] Gen 17: complete
+1082.5s	403	
+1082.5s	404	
+1082.5s	405	===== Generation 18/300 =====
+1128.3s	406	[Progress] Gen 18: self-play done (46.0s, 13.3MB)
+1128.7s	407	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1128.7s	408	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1128.7s	409	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1128.7s	410	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1128.7s	411	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1128.7s	412	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1128.7s	413	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1128.7s	414	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1128.7s	415	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1128.7s	416	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1128.7s	417	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1128.7s	418	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1128.7s	419	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1128.7s	420	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1128.7s	421	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1128.7s	422	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1128.7s	423	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1128.7s	424	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1128.7s	425	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1128.9s	426	[Progress] Gen 18: training 2600 samples
+1130.7s	427	[Train] epoch=1/4 | policy=0.2558 value=0.0000 | vw=1.5 draw=0.0%
+1132.9s	428	[Train] epoch=2/4 | policy=0.1967 value=0.0000 | vw=1.5 draw=0.0%
+1135.0s	429	[Train] epoch=3/4 | policy=0.1900 value=0.0000 | vw=1.5 draw=0.0%
+1137.3s	430	[Train] epoch=4/4 | policy=0.1946 value=0.0000 | vw=1.5 draw=0.0%
+1139.0s	431	[Artifacts] ✓ summary gen 18 → /kaggle/working/chess_outputs/model_output_summary_gen_18.json
+1139.0s	432	[Progress] Gen 18: complete
+1139.0s	433	
+1139.0s	434	
+1139.0s	435	===== Generation 19/300 =====
+1185.2s	436	[Progress] Gen 19: self-play done (46.5s, 13.3MB)
+1185.7s	437	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1185.7s	438	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1185.7s	439	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1185.7s	440	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1185.7s	441	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1185.7s	442	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1185.7s	443	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1185.7s	444	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1185.7s	445	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1185.7s	446	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1185.7s	447	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1185.7s	448	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1185.7s	449	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1185.7s	450	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1185.7s	451	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1185.7s	452	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1185.7s	453	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1185.7s	454	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1185.7s	455	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1185.7s	456	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1185.9s	457	[Progress] Gen 19: training 2600 samples
+1187.7s	458	[Train] epoch=1/4 | policy=0.2503 value=0.0000 | vw=1.5 draw=0.0%
+1189.9s	459	[Train] epoch=2/4 | policy=0.1980 value=0.0000 | vw=1.5 draw=0.0%
+1192.1s	460	[Train] epoch=3/4 | policy=0.1926 value=0.0000 | vw=1.5 draw=0.0%
+1194.3s	461	[Train] epoch=4/4 | policy=0.1927 value=0.0000 | vw=1.5 draw=0.0%
+1196.0s	462	[Artifacts] ✓ summary gen 19 → /kaggle/working/chess_outputs/model_output_summary_gen_19.json
+1196.0s	463	[Progress] Gen 19: complete
+1196.0s	464	
+1196.0s	465	
+1196.0s	466	===== Generation 20/300 =====
+1242.7s	467	[Progress] Gen 20: self-play done (46.9s, 13.3MB)
+1243.2s	468	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1243.2s	469	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1243.2s	470	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1243.2s	471	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1243.2s	472	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1243.2s	473	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1243.2s	474	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1243.2s	475	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1243.2s	476	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1243.2s	477	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1243.2s	478	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1243.2s	479	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1243.2s	480	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1243.2s	481	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1243.2s	482	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1243.2s	483	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1243.2s	484	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1243.2s	485	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1243.2s	486	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1243.2s	487	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1243.2s	488	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1243.2s	489	[Progress] Gen 20: training 2600 samples
+1245.2s	490	[Train] epoch=1/4 | policy=0.2151 value=0.0000 | vw=1.5 draw=0.0%
+1247.3s	491	[Train] epoch=2/4 | policy=0.1939 value=0.0000 | vw=1.5 draw=0.0%
+1249.4s	492	[Train] epoch=3/4 | policy=0.1904 value=0.0000 | vw=1.5 draw=0.0%
+1251.8s	493	[Train] epoch=4/4 | policy=0.1907 value=0.0000 | vw=1.5 draw=0.0%
+1253.6s	494	[Artifacts] ✓ summary gen 20 → /kaggle/working/chess_outputs/model_output_summary_gen_20.json
+1253.6s	495	[Progress] Gen 20: complete
+1253.6s	496	
+1253.6s	497	
+1253.6s	498	===== Generation 21/300 =====
+1300.2s	499	[Progress] Gen 21: self-play done (46.9s, 13.3MB)
+1300.7s	500	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1300.7s	501	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1300.7s	502	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1300.7s	503	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1300.7s	504	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1300.7s	505	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1300.7s	506	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1300.7s	507	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1300.7s	508	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1300.7s	509	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1300.7s	510	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1300.7s	511	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1300.7s	512	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1300.7s	513	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1300.7s	514	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1300.7s	515	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1300.7s	516	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1300.7s	517	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1300.7s	518	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1300.7s	519	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1300.7s	520	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1300.7s	521	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1300.7s	522	[Progress] Gen 21: training 2600 samples
+1302.8s	523	[Train] epoch=1/4 | policy=0.2235 value=0.0000 | vw=1.5 draw=0.0%
+1304.9s	524	[Train] epoch=2/4 | policy=0.1962 value=0.0000 | vw=1.5 draw=0.0%
+1307.1s	525	[Train] epoch=3/4 | policy=0.1891 value=0.0000 | vw=1.5 draw=0.0%
+1311.1s	526	[Train] epoch=4/4 | policy=0.1885 value=0.0000 | vw=1.5 draw=0.0%
+1312.7s	527	[Artifacts] ✓ summary gen 21 → /kaggle/working/chess_outputs/model_output_summary_gen_21.json
+1312.7s	528	[Progress] Gen 21: complete
+1312.7s	529	
+1312.7s	530	
+1312.7s	531	===== Generation 22/300 =====
+1359.4s	532	[Progress] Gen 22: self-play done (46.8s, 13.3MB)
+1359.9s	533	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1359.9s	534	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1359.9s	535	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1359.9s	536	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1359.9s	537	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1359.9s	538	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1359.9s	539	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1359.9s	540	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1359.9s	541	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1359.9s	542	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1359.9s	543	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1359.9s	544	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1359.9s	545	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1359.9s	546	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1359.9s	547	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1359.9s	548	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1359.9s	549	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1359.9s	550	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1359.9s	551	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1359.9s	552	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1359.9s	553	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1359.9s	554	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1359.9s	555	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1360.1s	556	[Progress] Gen 22: training 2600 samples
+1362.0s	557	[Train] epoch=1/4 | policy=0.2562 value=0.1393 | vw=1.5 draw=0.0%
+1364.1s	558	[Train] epoch=2/4 | policy=0.1984 value=0.0000 | vw=1.5 draw=0.0%
+1366.3s	559	[Train] epoch=3/4 | policy=0.1906 value=0.0000 | vw=1.5 draw=0.0%
+1368.6s	560	[Train] epoch=4/4 | policy=0.1859 value=0.0000 | vw=1.5 draw=0.0%
+1370.4s	561	[Artifacts] ✓ summary gen 22 → /kaggle/working/chess_outputs/model_output_summary_gen_22.json
+1370.4s	562	[Progress] Gen 22: complete
+1370.4s	563	
+1370.4s	564	
+1370.4s	565	===== Generation 23/300 =====
+1417.1s	566	[Progress] Gen 23: self-play done (46.9s, 13.3MB)
+1417.6s	567	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1417.6s	568	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1417.6s	569	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1417.6s	570	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1417.6s	571	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1417.6s	572	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1417.6s	573	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1417.6s	574	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1417.6s	575	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1417.6s	576	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1417.6s	577	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1417.6s	578	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1417.6s	579	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1417.6s	580	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1417.6s	581	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1417.6s	582	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1417.6s	583	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1417.6s	584	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1417.6s	585	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1417.6s	586	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1417.6s	587	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1417.6s	588	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1417.6s	589	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1417.6s	590	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1417.8s	591	[Progress] Gen 23: training 2600 samples
+1419.6s	592	[Train] epoch=1/4 | policy=0.2375 value=0.0000 | vw=1.5 draw=0.0%
+1421.7s	593	[Train] epoch=2/4 | policy=0.1942 value=0.0000 | vw=1.5 draw=0.0%
+1424.0s	594	[Train] epoch=3/4 | policy=0.1908 value=0.0000 | vw=1.5 draw=0.0%
+1426.2s	595	[Train] epoch=4/4 | policy=0.1878 value=0.0000 | vw=1.5 draw=0.0%
+1427.8s	596	[Artifacts] ✓ summary gen 23 → /kaggle/working/chess_outputs/model_output_summary_gen_23.json
+1427.8s	597	[Progress] Gen 23: complete
+1427.8s	598	
+1427.8s	599	
+1427.8s	600	===== Generation 24/300 =====
+1474.2s	601	[Progress] Gen 24: self-play done (46.6s, 13.3MB)
+1474.7s	602	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1474.7s	603	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1474.7s	604	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1474.7s	605	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1474.7s	606	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1474.7s	607	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1474.7s	608	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1474.7s	609	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1474.7s	610	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1474.7s	611	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1474.7s	612	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1474.7s	613	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1474.7s	614	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1474.7s	615	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1474.7s	616	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1474.7s	617	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1474.7s	618	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1474.7s	619	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1474.7s	620	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1474.7s	621	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1474.7s	622	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1474.7s	623	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1474.7s	624	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1474.7s	625	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1474.9s	626	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1474.9s	627	[Progress] Gen 24: training 2600 samples
+1476.7s	628	[Train] epoch=1/4 | policy=0.2089 value=0.0000 | vw=1.5 draw=0.0%
+1478.9s	629	[Train] epoch=2/4 | policy=0.1889 value=0.0000 | vw=1.5 draw=0.0%
+1481.2s	630	[Train] epoch=3/4 | policy=0.1884 value=0.0000 | vw=1.5 draw=0.0%
+1483.5s	631	[Train] epoch=4/4 | policy=0.1873 value=0.0000 | vw=1.5 draw=0.0%
+1485.3s	632	[Artifacts] ✓ summary gen 24 → /kaggle/working/chess_outputs/model_output_summary_gen_24.json
+1485.3s	633	[Progress] Gen 24: complete
+1485.3s	634	
+1485.3s	635	
+1485.3s	636	===== Generation 25/300 =====
+1534.0s	637	[Progress] Gen 25: self-play done (48.9s, 13.3MB)
+1534.5s	638	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1534.5s	639	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1534.5s	640	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1534.5s	641	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1534.5s	642	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1534.5s	643	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1534.5s	644	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1534.5s	645	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1534.5s	646	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1534.5s	647	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1534.5s	648	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1534.5s	649	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1534.5s	650	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1534.5s	651	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1534.5s	652	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1534.5s	653	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1534.5s	654	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1534.5s	655	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1534.5s	656	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1534.5s	657	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1534.5s	658	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1534.5s	659	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1534.5s	660	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1534.5s	661	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1534.5s	662	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1534.5s	663	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1534.7s	664	[Progress] Gen 25: training 2600 samples
+1536.7s	665	[Train] epoch=1/4 | policy=0.2160 value=0.0000 | vw=1.5 draw=0.0%
+1538.9s	666	[Train] epoch=2/4 | policy=0.1881 value=0.0000 | vw=1.5 draw=0.0%
+1541.1s	667	[Train] epoch=3/4 | policy=0.1841 value=0.0000 | vw=1.5 draw=0.0%
+1543.4s	668	[Train] epoch=4/4 | policy=0.1844 value=0.0000 | vw=1.5 draw=0.0%
+1545.5s	669	[Artifacts] ✓ summary gen 25 → /kaggle/working/chess_outputs/model_output_summary_gen_25.json
+1545.5s	670	[Progress] Gen 25: complete
+1545.5s	671	
+1545.5s	672	
+1545.5s	673	===== Generation 26/300 =====
+1591.8s	674	[Progress] Gen 26: self-play done (46.5s, 13.3MB)
+1592.3s	675	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+1592.3s	676	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1592.3s	677	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1592.3s	678	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1592.3s	679	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1592.3s	680	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1592.3s	681	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1592.3s	682	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1592.3s	683	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1592.3s	684	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1592.3s	685	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1592.3s	686	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1592.3s	687	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1592.3s	688	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1592.3s	689	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1592.3s	690	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1592.3s	691	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1592.3s	692	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1592.3s	693	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1592.3s	694	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1592.3s	695	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1592.3s	696	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1592.3s	697	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1592.3s	698	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1592.3s	699	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1592.3s	700	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1592.3s	701	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1592.5s	702	[Progress] Gen 26: training 2600 samples
+1594.4s	703	[Train] epoch=1/4 | policy=0.1938 value=1.4701 | vw=1.5 draw=0.0%
+1596.6s	704	[Train] epoch=2/4 | policy=0.1876 value=0.0000 | vw=1.5 draw=0.0%
+1598.9s	705	[Train] epoch=3/4 | policy=0.1871 value=0.0000 | vw=1.5 draw=0.0%
+1601.3s	706	[Train] epoch=4/4 | policy=0.1862 value=0.0000 | vw=1.5 draw=0.0%
+1603.1s	707	[Artifacts] ✓ summary gen 26 → /kaggle/working/chess_outputs/model_output_summary_gen_26.json
+1603.1s	708	[Progress] Gen 26: complete
+1603.1s	709	
+1603.1s	710	
+1603.1s	711	===== Generation 27/300 =====
+1652.1s	712	[Progress] Gen 27: self-play done (49.2s, 13.3MB)
+1652.3s	713	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+1652.3s	714	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+1652.3s	715	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1652.3s	716	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1652.3s	717	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1652.3s	718	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1652.3s	719	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1652.3s	720	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1652.3s	721	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1652.3s	722	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1652.3s	723	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1652.3s	724	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1652.3s	725	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1652.3s	726	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1652.3s	727	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1652.3s	728	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1652.3s	729	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1652.3s	730	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1652.3s	731	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1652.3s	732	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1652.3s	733	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1652.6s	734	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1652.6s	735	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1652.6s	736	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1652.6s	737	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1652.6s	738	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1652.6s	739	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1652.6s	740	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1652.8s	741	[Progress] Gen 27: training 2600 samples
+1654.8s	742	[Train] epoch=1/4 | policy=0.2010 value=0.0000 | vw=1.5 draw=0.0%
+1657.1s	743	[Train] epoch=2/4 | policy=0.1835 value=0.0000 | vw=1.5 draw=0.0%
+1659.5s	744	[Train] epoch=3/4 | policy=0.1814 value=0.0000 | vw=1.5 draw=0.0%
+1662.0s	745	[Train] epoch=4/4 | policy=0.1839 value=0.0000 | vw=1.5 draw=0.0%
+1663.9s	746	[Artifacts] ✓ summary gen 27 → /kaggle/working/chess_outputs/model_output_summary_gen_27.json
+1663.9s	747	[Progress] Gen 27: complete
+1663.9s	748	
+1663.9s	749	
+1663.9s	750	===== Generation 28/300 =====
+1711.7s	751	[Progress] Gen 28: self-play done (48.0s, 13.3MB)
+1711.9s	752	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+1711.9s	753	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+1711.9s	754	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+1711.9s	755	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1711.9s	756	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1711.9s	757	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1711.9s	758	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1711.9s	759	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1711.9s	760	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1711.9s	761	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1711.9s	762	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1711.9s	763	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1711.9s	764	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1711.9s	765	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1711.9s	766	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1711.9s	767	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1711.9s	768	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1711.9s	769	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1711.9s	770	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1711.9s	771	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1711.9s	772	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1711.9s	773	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1712.3s	774	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1712.3s	775	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1712.3s	776	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1712.3s	777	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1712.3s	778	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1712.3s	779	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1712.3s	780	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1712.5s	781	[Progress] Gen 28: training 2600 samples
+1714.4s	782	[Train] epoch=1/4 | policy=0.1955 value=0.0000 | vw=1.5 draw=0.0%
+1716.7s	783	[Train] epoch=2/4 | policy=0.1840 value=0.0000 | vw=1.5 draw=0.0%
+1719.1s	784	[Train] epoch=3/4 | policy=0.1830 value=0.0000 | vw=1.5 draw=0.0%
+1721.5s	785	[Train] epoch=4/4 | policy=0.1836 value=0.0000 | vw=1.5 draw=0.0%
+1723.2s	786	[Artifacts] ✓ summary gen 28 → /kaggle/working/chess_outputs/model_output_summary_gen_28.json
+1723.2s	787	[Progress] Gen 28: complete
+1723.2s	788	
+1723.2s	789	
+1723.2s	790	===== Generation 29/300 =====
+1771.1s	791	[Progress] Gen 29: self-play done (48.1s, 13.3MB)
+1771.3s	792	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+1771.3s	793	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+1771.3s	794	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+1771.3s	795	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+1771.3s	796	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1771.3s	797	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1771.3s	798	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1771.3s	799	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1771.3s	800	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1771.3s	801	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1771.3s	802	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1771.3s	803	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1771.3s	804	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1771.3s	805	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1771.3s	806	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1771.3s	807	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1771.3s	808	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1771.3s	809	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1771.3s	810	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1771.3s	811	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1771.3s	812	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1771.3s	813	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1771.3s	814	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1771.6s	815	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1771.6s	816	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1771.6s	817	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1771.6s	818	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1771.6s	819	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1771.6s	820	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1771.9s	821	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1771.9s	822	[Progress] Gen 29: training 2600 samples
+1773.9s	823	[Train] epoch=1/4 | policy=0.1892 value=0.0000 | vw=1.5 draw=0.0%
+1776.2s	824	[Train] epoch=2/4 | policy=0.1819 value=0.0000 | vw=1.5 draw=0.0%
+1778.7s	825	[Train] epoch=3/4 | policy=0.1835 value=0.0000 | vw=1.5 draw=0.0%
+1781.1s	826	[Train] epoch=4/4 | policy=0.1833 value=0.0000 | vw=1.5 draw=0.0%
+1782.9s	827	[Artifacts] ✓ summary gen 29 → /kaggle/working/chess_outputs/model_output_summary_gen_29.json
+1782.9s	828	[Progress] Gen 29: complete
+1782.9s	829	
+1782.9s	830	
+1782.9s	831	===== Generation 30/300 =====
+1831.1s	832	[Progress] Gen 30: self-play done (48.3s, 13.3MB)
+1831.2s	833	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+1831.2s	834	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+1831.2s	835	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+1831.2s	836	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+1831.2s	837	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+1831.2s	838	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1831.2s	839	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1831.2s	840	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1831.2s	841	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1831.2s	842	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1831.2s	843	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1831.2s	844	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1831.2s	845	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1831.2s	846	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1831.2s	847	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1831.2s	848	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1831.2s	849	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1831.2s	850	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1831.2s	851	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1831.2s	852	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1831.2s	853	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1831.2s	854	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1831.6s	855	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1831.6s	856	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1831.6s	857	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1831.6s	858	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1831.6s	859	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1831.6s	860	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1831.6s	861	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1831.6s	862	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1831.6s	863	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1831.8s	864	[Progress] Gen 30: training 2600 samples
+1833.8s	865	[Train] epoch=1/4 | policy=0.2005 value=0.0000 | vw=1.5 draw=0.0%
+1836.1s	866	[Train] epoch=2/4 | policy=0.1841 value=0.0000 | vw=1.5 draw=0.0%
+1838.5s	867	[Train] epoch=3/4 | policy=0.1817 value=0.0000 | vw=1.5 draw=0.0%
+1841.0s	868	[Train] epoch=4/4 | policy=0.1840 value=0.0000 | vw=1.5 draw=0.0%
+1842.9s	869	[Artifacts] ✓ summary gen 30 → /kaggle/working/chess_outputs/model_output_summary_gen_30.json
+1842.9s	870	[Progress] Gen 30: complete
+1842.9s	871	
+1842.9s	872	
+1842.9s	873	===== Generation 31/300 =====
+1892.4s	874	[Progress] Gen 31: self-play done (49.7s, 13.3MB)
+1892.6s	875	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+1892.6s	876	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+1892.6s	877	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+1892.6s	878	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+1892.6s	879	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+1892.6s	880	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+1892.6s	881	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1892.6s	882	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1892.6s	883	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1892.6s	884	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1892.6s	885	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1892.6s	886	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1892.6s	887	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1892.6s	888	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1892.6s	889	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1892.6s	890	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1892.6s	891	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1892.6s	892	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1892.6s	893	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1892.6s	894	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1892.6s	895	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1892.6s	896	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1892.6s	897	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1892.6s	898	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1892.9s	899	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1892.9s	900	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1892.9s	901	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1892.9s	902	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1892.9s	903	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1892.9s	904	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1892.9s	905	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1892.9s	906	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1893.1s	907	[Progress] Gen 31: training 2600 samples
+1895.1s	908	[Train] epoch=1/4 | policy=0.2183 value=0.0000 | vw=1.5 draw=0.0%
+1897.7s	909	[Train] epoch=2/4 | policy=0.1867 value=0.0000 | vw=1.5 draw=0.0%
+1900.2s	910	[Train] epoch=3/4 | policy=0.1815 value=0.0000 | vw=1.5 draw=0.0%
+1902.7s	911	[Train] epoch=4/4 | policy=0.1799 value=0.0000 | vw=1.5 draw=0.0%
+1904.5s	912	[Artifacts] ✓ summary gen 31 → /kaggle/working/chess_outputs/model_output_summary_gen_31.json
+1904.5s	913	[Progress] Gen 31: complete
+1904.5s	914	
+1904.5s	915	
+1904.5s	916	===== Generation 32/300 =====
+1952.0s	917	[Progress] Gen 32: self-play done (47.7s, 13.3MB)
+1952.2s	918	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+1952.2s	919	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+1952.2s	920	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+1952.2s	921	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+1952.2s	922	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+1952.2s	923	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+1952.2s	924	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+1952.2s	925	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+1952.2s	926	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+1952.2s	927	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+1952.2s	928	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+1952.2s	929	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+1952.2s	930	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+1952.2s	931	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+1952.2s	932	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+1952.2s	933	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+1952.2s	934	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+1952.2s	935	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+1952.2s	936	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+1952.2s	937	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+1952.2s	938	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+1952.2s	939	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+1952.2s	940	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+1952.2s	941	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+1952.2s	942	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+1952.2s	943	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+1952.5s	944	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+1952.5s	945	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+1952.5s	946	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+1952.5s	947	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+1952.5s	948	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+1952.5s	949	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+1952.7s	950	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+1952.7s	951	[Progress] Gen 32: training 2600 samples
+1954.7s	952	[Train] epoch=1/4 | policy=0.2140 value=0.0000 | vw=1.5 draw=0.0%
+1957.1s	953	[Train] epoch=2/4 | policy=0.1813 value=0.0000 | vw=1.5 draw=0.0%
+1959.5s	954	[Train] epoch=3/4 | policy=0.1804 value=0.0000 | vw=1.5 draw=0.0%
+1961.9s	955	[Train] epoch=4/4 | policy=0.1795 value=0.0000 | vw=1.5 draw=0.0%
+1963.9s	956	[Artifacts] ✓ summary gen 32 → /kaggle/working/chess_outputs/model_output_summary_gen_32.json
+1963.9s	957	[Progress] Gen 32: complete
+1963.9s	958	
+1963.9s	959	
+1963.9s	960	===== Generation 33/300 =====
+2012.0s	961	[Progress] Gen 33: self-play done (48.3s, 13.3MB)
+2012.1s	962	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2012.1s	963	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2012.1s	964	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2012.1s	965	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2012.1s	966	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2012.1s	967	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2012.1s	968	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2012.1s	969	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2012.1s	970	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2012.1s	971	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2012.1s	972	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2012.1s	973	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2012.1s	974	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2012.1s	975	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2012.1s	976	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2012.1s	977	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2012.1s	978	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2012.1s	979	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2012.1s	980	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2012.1s	981	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2012.1s	982	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2012.1s	983	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2012.1s	984	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2012.1s	985	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2012.1s	986	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2012.1s	987	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2012.5s	988	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2012.5s	989	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2012.5s	990	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2012.5s	991	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2012.5s	992	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2012.5s	993	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2012.5s	994	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2012.5s	995	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2012.7s	996	[Progress] Gen 33: training 2600 samples
+2014.8s	997	[Train] epoch=1/4 | policy=0.1911 value=0.0000 | vw=1.5 draw=0.0%
+2017.3s	998	[Train] epoch=2/4 | policy=0.1846 value=0.0000 | vw=1.5 draw=0.0%
+2019.9s	999	[Train] epoch=3/4 | policy=0.1860 value=0.0000 | vw=1.5 draw=0.0%
+2022.4s	1000	[Train] epoch=4/4 | policy=0.1819 value=0.0000 | vw=1.5 draw=0.0%
+2024.3s	1001	[Artifacts] ✓ summary gen 33 → /kaggle/working/chess_outputs/model_output_summary_gen_33.json
+2024.3s	1002	[Progress] Gen 33: complete
+2024.3s	1003	
+2024.3s	1004	
+2024.3s	1005	===== Generation 34/300 =====
+2079.6s	1006	[Progress] Gen 34: self-play done (55.5s, 13.3MB)
+2079.8s	1007	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2079.8s	1008	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2079.8s	1009	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2079.8s	1010	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2079.8s	1011	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2079.8s	1012	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2079.8s	1013	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2079.8s	1014	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2079.8s	1015	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2079.8s	1016	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2079.8s	1017	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2079.8s	1018	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2079.8s	1019	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2079.8s	1020	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2079.8s	1021	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2079.8s	1022	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2079.8s	1023	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2079.8s	1024	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2079.8s	1025	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2079.8s	1026	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2079.8s	1027	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2080.2s	1028	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2080.2s	1029	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2080.2s	1030	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2080.2s	1031	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2080.2s	1032	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2080.2s	1033	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2080.2s	1034	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2080.2s	1035	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2080.2s	1036	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2080.2s	1037	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2080.2s	1038	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2080.2s	1039	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2080.2s	1040	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2080.2s	1041	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2080.4s	1042	[Progress] Gen 34: training 2600 samples
+2082.6s	1043	[Train] epoch=1/4 | policy=0.1911 value=0.0000 | vw=1.5 draw=0.0%
+2085.1s	1044	[Train] epoch=2/4 | policy=0.1804 value=0.0000 | vw=1.5 draw=0.0%
+2087.7s	1045	[Train] epoch=3/4 | policy=0.1830 value=0.0000 | vw=1.5 draw=0.0%
+2090.3s	1046	[Train] epoch=4/4 | policy=0.1824 value=0.0000 | vw=1.5 draw=0.0%
+2092.4s	1047	[Artifacts] ✓ summary gen 34 → /kaggle/working/chess_outputs/model_output_summary_gen_34.json
+2092.4s	1048	[Progress] Gen 34: complete
+2092.4s	1049	
+2092.4s	1050	
+2092.4s	1051	===== Generation 35/300 =====
+2142.2s	1052	[Progress] Gen 35: self-play done (50.1s, 13.3MB)
+2142.4s	1053	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2142.4s	1054	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2142.4s	1055	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2142.4s	1056	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2142.4s	1057	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2142.4s	1058	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2142.4s	1059	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2142.4s	1060	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2142.4s	1061	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2142.4s	1062	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2142.4s	1063	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2142.4s	1064	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2142.4s	1065	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2142.4s	1066	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2142.4s	1067	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2142.4s	1068	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2142.4s	1069	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2142.4s	1070	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2142.4s	1071	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2142.4s	1072	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2142.4s	1073	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2142.4s	1074	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2142.4s	1075	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2142.4s	1076	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2142.8s	1077	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2142.8s	1078	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2142.8s	1079	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2142.8s	1080	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2142.8s	1081	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2142.8s	1082	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2142.8s	1083	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2142.8s	1084	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2142.8s	1085	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2142.8s	1086	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2142.8s	1087	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2143.0s	1088	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2143.0s	1089	[Progress] Gen 35: training 2600 samples
+2145.1s	1090	[Train] epoch=1/4 | policy=0.1848 value=0.0000 | vw=1.5 draw=0.0%
+2147.7s	1091	[Train] epoch=2/4 | policy=0.1858 value=0.0000 | vw=1.5 draw=0.0%
+2150.2s	1092	[Train] epoch=3/4 | policy=0.1818 value=0.0000 | vw=1.5 draw=0.0%
+2152.9s	1093	[Train] epoch=4/4 | policy=0.1825 value=0.0000 | vw=1.5 draw=0.0%
+2154.8s	1094	[Artifacts] ✓ summary gen 35 → /kaggle/working/chess_outputs/model_output_summary_gen_35.json
+2154.8s	1095	[Progress] Gen 35: complete
+2154.8s	1096	
+2154.8s	1097	
+2154.8s	1098	===== Generation 36/300 =====
+2204.0s	1099	[Progress] Gen 36: self-play done (49.4s, 13.3MB)
+2204.2s	1100	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2204.2s	1101	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2204.2s	1102	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2204.2s	1103	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2204.2s	1104	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2204.2s	1105	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2204.2s	1106	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2204.2s	1107	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2204.2s	1108	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2204.2s	1109	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2204.2s	1110	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2204.2s	1111	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2204.2s	1112	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2204.2s	1113	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2204.2s	1114	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2204.2s	1115	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2204.2s	1116	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2204.2s	1117	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2204.2s	1118	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2204.2s	1119	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2204.2s	1120	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2204.2s	1121	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2204.2s	1122	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2204.5s	1123	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2204.5s	1124	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2204.5s	1125	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2204.5s	1126	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2204.5s	1127	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2204.5s	1128	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2204.5s	1129	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2204.5s	1130	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2204.5s	1131	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2204.5s	1132	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2204.5s	1133	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2204.5s	1134	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2204.5s	1135	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2204.7s	1136	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2204.7s	1137	[Progress] Gen 36: training 2600 samples
+2206.9s	1138	[Train] epoch=1/4 | policy=0.1876 value=0.0000 | vw=1.5 draw=0.0%
+2209.5s	1139	[Train] epoch=2/4 | policy=0.1823 value=0.0000 | vw=1.5 draw=0.0%
+2212.2s	1140	[Train] epoch=3/4 | policy=0.1812 value=0.0000 | vw=1.5 draw=0.0%
+2214.9s	1141	[Train] epoch=4/4 | policy=0.1821 value=0.0000 | vw=1.5 draw=0.0%
+2216.8s	1142	[Artifacts] ✓ summary gen 36 → /kaggle/working/chess_outputs/model_output_summary_gen_36.json
+2216.8s	1143	[Progress] Gen 36: complete
+2216.8s	1144	
+2216.8s	1145	
+2216.8s	1146	===== Generation 37/300 =====
+2271.0s	1147	[Progress] Gen 37: self-play done (54.3s, 13.3MB)
+2271.2s	1148	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_37.bin: too many values to unpack (expected 3)
+2271.2s	1149	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2271.2s	1150	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2271.2s	1151	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2271.2s	1152	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2271.2s	1153	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2271.2s	1154	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2271.2s	1155	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2271.2s	1156	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2271.2s	1157	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2271.2s	1158	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2271.2s	1159	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2271.2s	1160	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2271.2s	1161	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2271.5s	1162	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2271.5s	1163	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2271.5s	1164	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2271.5s	1165	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2271.5s	1166	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2271.5s	1167	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2271.5s	1168	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2271.5s	1169	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2271.5s	1170	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2271.5s	1171	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2271.5s	1172	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2271.5s	1173	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2271.5s	1174	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2271.5s	1175	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2271.5s	1176	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2271.5s	1177	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2271.5s	1178	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2271.5s	1179	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2271.5s	1180	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2271.5s	1181	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2271.5s	1182	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2271.5s	1183	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2271.5s	1184	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2271.7s	1185	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2271.7s	1186	[Progress] Gen 37: training 2600 samples
+2274.0s	1187	[Train] epoch=1/4 | policy=0.1849 value=0.0000 | vw=1.5 draw=0.0%
+2276.7s	1188	[Train] epoch=2/4 | policy=0.1836 value=0.0000 | vw=1.5 draw=0.0%
+2279.4s	1189	[Train] epoch=3/4 | policy=0.1851 value=0.0000 | vw=1.5 draw=0.0%
+2282.1s	1190	[Train] epoch=4/4 | policy=0.1854 value=0.0000 | vw=1.5 draw=0.0%
+2284.0s	1191	[Artifacts] ✓ summary gen 37 → /kaggle/working/chess_outputs/model_output_summary_gen_37.json
+2284.0s	1192	[Progress] Gen 37: complete
+2284.0s	1193	
+2284.0s	1194	
+2284.0s	1195	===== Generation 38/300 =====
+2334.5s	1196	[Progress] Gen 38: self-play done (50.6s, 13.3MB)
+2334.7s	1197	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_38.bin: too many values to unpack (expected 3)
+2334.7s	1198	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_37.bin: too many values to unpack (expected 3)
+2334.7s	1199	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2334.7s	1200	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2334.7s	1201	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2334.7s	1202	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2334.7s	1203	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2334.7s	1204	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2334.7s	1205	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2334.7s	1206	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2334.7s	1207	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2334.7s	1208	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2334.7s	1209	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2334.7s	1210	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2334.7s	1211	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2334.7s	1212	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2334.7s	1213	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2335.1s	1214	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2335.1s	1215	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2335.1s	1216	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2335.1s	1217	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2335.1s	1218	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2335.1s	1219	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2335.1s	1220	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2335.1s	1221	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2335.1s	1222	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2335.1s	1223	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2335.1s	1224	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2335.1s	1225	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2335.1s	1226	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2335.1s	1227	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2335.1s	1228	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2335.1s	1229	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2335.1s	1230	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2335.1s	1231	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2335.1s	1232	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2335.1s	1233	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2335.1s	1234	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2335.1s	1235	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2335.3s	1236	[Progress] Gen 38: training 2600 samples
+2337.6s	1237	[Train] epoch=1/4 | policy=0.1849 value=0.0000 | vw=1.5 draw=0.0%
+2340.3s	1238	[Train] epoch=2/4 | policy=0.1811 value=0.0000 | vw=1.5 draw=0.0%
+2343.1s	1239	[Train] epoch=3/4 | policy=0.1815 value=0.0000 | vw=1.5 draw=0.0%
+2346.0s	1240	[Train] epoch=4/4 | policy=0.1803 value=0.0000 | vw=1.5 draw=0.0%
+2348.0s	1241	[Artifacts] ✓ summary gen 38 → /kaggle/working/chess_outputs/model_output_summary_gen_38.json
+2348.0s	1242	[Progress] Gen 38: complete
+2348.0s	1243	
+2348.0s	1244	
+2348.0s	1245	===== Generation 39/300 =====
+2403.9s	1246	[Progress] Gen 39: self-play done (56.1s, 13.3MB)
+2404.1s	1247	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_39.bin: too many values to unpack (expected 3)
+2404.1s	1248	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_38.bin: too many values to unpack (expected 3)
+2404.1s	1249	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_37.bin: too many values to unpack (expected 3)
+2404.1s	1250	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2404.1s	1251	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2404.1s	1252	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2404.1s	1253	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2404.1s	1254	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2404.1s	1255	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2404.1s	1256	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2404.1s	1257	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2404.1s	1258	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2404.1s	1259	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2404.1s	1260	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2404.1s	1261	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2404.1s	1262	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2404.1s	1263	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2404.1s	1264	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2404.1s	1265	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2404.1s	1266	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2404.5s	1267	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2404.5s	1268	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2404.5s	1269	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2404.5s	1270	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2404.5s	1271	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2404.5s	1272	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2404.5s	1273	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2404.5s	1274	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2404.5s	1275	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2404.5s	1276	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2404.5s	1277	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2404.5s	1278	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2404.5s	1279	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2404.5s	1280	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2404.5s	1281	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2404.5s	1282	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2404.5s	1283	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2404.5s	1284	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2404.5s	1285	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2404.5s	1286	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2404.7s	1287	[Progress] Gen 39: training 2600 samples
+2407.0s	1288	[Train] epoch=1/4 | policy=0.1835 value=0.0000 | vw=1.5 draw=0.0%
+2409.7s	1289	[Train] epoch=2/4 | policy=0.1820 value=0.0000 | vw=1.5 draw=0.0%
+2412.5s	1290	[Train] epoch=3/4 | policy=0.1807 value=0.0000 | vw=1.5 draw=0.0%
+2415.3s	1291	[Train] epoch=4/4 | policy=0.1803 value=0.0000 | vw=1.5 draw=0.0%
+2417.1s	1292	[Artifacts] ✓ summary gen 39 → /kaggle/working/chess_outputs/model_output_summary_gen_39.json
+2417.1s	1293	[Progress] Gen 39: complete
+2417.1s	1294	
+2417.1s	1295	
+2417.1s	1296	===== Generation 40/300 =====
+2467.1s	1297	[Progress] Gen 40: self-play done (50.2s, 13.3MB)
+2467.3s	1298	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_40.bin: too many values to unpack (expected 3)
+2467.3s	1299	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_39.bin: too many values to unpack (expected 3)
+2467.3s	1300	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_38.bin: too many values to unpack (expected 3)
+2467.3s	1301	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_37.bin: too many values to unpack (expected 3)
+2467.3s	1302	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2467.3s	1303	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2467.3s	1304	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2467.3s	1305	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2467.3s	1306	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2467.3s	1307	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2467.3s	1308	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2467.3s	1309	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2467.3s	1310	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2467.3s	1311	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2467.3s	1312	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2467.3s	1313	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2467.3s	1314	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2467.3s	1315	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2467.3s	1316	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2467.3s	1317	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2467.3s	1318	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2467.7s	1319	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2467.7s	1320	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2467.7s	1321	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2467.7s	1322	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2467.7s	1323	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2467.7s	1324	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2467.7s	1325	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2467.7s	1326	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2467.7s	1327	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2467.7s	1328	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2467.7s	1329	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2467.7s	1330	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2467.7s	1331	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2467.7s	1332	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2467.7s	1333	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2467.7s	1334	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2467.7s	1335	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2467.7s	1336	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2467.7s	1337	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2467.7s	1338	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2467.9s	1339	[Progress] Gen 40: training 2600 samples
+2470.1s	1340	[Train] epoch=1/4 | policy=0.1827 value=0.0000 | vw=1.5 draw=0.0%
+2472.8s	1341	[Train] epoch=2/4 | policy=0.1825 value=0.0000 | vw=1.5 draw=0.0%
+2475.5s	1342	[Train] epoch=3/4 | policy=0.1808 value=0.0000 | vw=1.5 draw=0.0%
+2478.2s	1343	[Train] epoch=4/4 | policy=0.1804 value=0.0000 | vw=1.5 draw=0.0%
+2480.2s	1344	[Artifacts] ✓ summary gen 40 → /kaggle/working/chess_outputs/model_output_summary_gen_40.json
+2480.2s	1345	[Progress] Gen 40: complete
+2480.2s	1346	
+2480.2s	1347	
+2480.2s	1348	===== Generation 41/300 =====
+2528.9s	1349	[Progress] Gen 41: self-play done (48.8s, 13.3MB)
+2529.1s	1350	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_41.bin: too many values to unpack (expected 3)
+2529.1s	1351	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_40.bin: too many values to unpack (expected 3)
+2529.1s	1352	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_39.bin: too many values to unpack (expected 3)
+2529.1s	1353	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_38.bin: too many values to unpack (expected 3)
+2529.1s	1354	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_37.bin: too many values to unpack (expected 3)
+2529.1s	1355	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2529.1s	1356	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2529.1s	1357	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2529.1s	1358	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2529.1s	1359	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2529.1s	1360	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2529.1s	1361	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2529.1s	1362	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2529.1s	1363	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2529.1s	1364	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2529.1s	1365	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2529.1s	1366	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2529.1s	1367	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2529.1s	1368	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2529.1s	1369	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2529.1s	1370	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2529.5s	1371	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2529.5s	1372	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2529.5s	1373	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2529.5s	1374	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2529.5s	1375	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2529.5s	1376	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2529.5s	1377	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2529.5s	1378	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2529.5s	1379	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2529.5s	1380	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2529.5s	1381	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2529.5s	1382	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2529.5s	1383	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2529.5s	1384	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2529.5s	1385	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2529.5s	1386	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2529.5s	1387	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2529.5s	1388	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2529.5s	1389	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2529.5s	1390	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2529.5s	1391	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2529.7s	1392	[Progress] Gen 41: training 2600 samples
+2532.0s	1393	[Train] epoch=1/4 | policy=0.1820 value=0.0000 | vw=1.5 draw=0.0%
+2534.6s	1394	[Train] epoch=2/4 | policy=0.1820 value=0.0000 | vw=1.5 draw=0.0%
+2537.3s	1395	[Train] epoch=3/4 | policy=0.1789 value=0.0000 | vw=1.5 draw=0.0%
+2540.0s	1396	[Train] epoch=4/4 | policy=0.1812 value=0.0000 | vw=1.5 draw=0.0%
+2541.9s	1397	[Artifacts] ✓ summary gen 41 → /kaggle/working/chess_outputs/model_output_summary_gen_41.json
+2541.9s	1398	[Progress] Gen 41: complete
+2541.9s	1399	
+2541.9s	1400	
+2541.9s	1401	===== Generation 42/300 =====
+2596.2s	1402	[Progress] Gen 42: self-play done (54.5s, 13.3MB)
+2596.4s	1403	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_42.bin: too many values to unpack (expected 3)
+2596.4s	1404	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_41.bin: too many values to unpack (expected 3)
+2596.4s	1405	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_40.bin: too many values to unpack (expected 3)
+2596.4s	1406	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_39.bin: too many values to unpack (expected 3)
+2596.4s	1407	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_38.bin: too many values to unpack (expected 3)
+2596.4s	1408	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_37.bin: too many values to unpack (expected 3)
+2596.4s	1409	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2596.4s	1410	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2596.4s	1411	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2596.4s	1412	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2596.4s	1413	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2596.4s	1414	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2596.4s	1415	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2596.4s	1416	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2596.4s	1417	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2596.4s	1418	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2596.4s	1419	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2596.4s	1420	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2596.4s	1421	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2596.4s	1422	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2596.4s	1423	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2596.4s	1424	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2596.4s	1425	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2596.8s	1426	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2596.8s	1427	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2596.8s	1428	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2596.8s	1429	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2596.8s	1430	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2596.8s	1431	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2596.8s	1432	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2596.8s	1433	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2596.8s	1434	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2596.8s	1435	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2596.8s	1436	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2596.8s	1437	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2596.8s	1438	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2596.8s	1439	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2596.8s	1440	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2596.8s	1441	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2596.8s	1442	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2596.8s	1443	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2596.8s	1444	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2596.9s	1445	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2596.9s	1446	[Progress] Gen 42: training 2600 samples
+2599.2s	1447	[Train] epoch=1/4 | policy=0.1824 value=0.0000 | vw=1.5 draw=0.0%
+2601.9s	1448	[Train] epoch=2/4 | policy=0.1811 value=0.0000 | vw=1.5 draw=0.0%
+2604.6s	1449	[Train] epoch=3/4 | policy=0.1798 value=0.0000 | vw=1.5 draw=0.0%
+2607.3s	1450	[Train] epoch=4/4 | policy=0.1784 value=0.0000 | vw=1.5 draw=0.0%
+2609.3s	1451	[Artifacts] ✓ summary gen 42 → /kaggle/working/chess_outputs/model_output_summary_gen_42.json
+2609.3s	1452	[Progress] Gen 42: complete
+2609.3s	1453	
+2609.3s	1454	
+2609.3s	1455	===== Generation 43/300 =====
+2657.5s	1456	[Progress] Gen 43: self-play done (48.4s, 13.3MB)
+2657.7s	1457	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_43.bin: too many values to unpack (expected 3)
+2657.7s	1458	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_42.bin: too many values to unpack (expected 3)
+2657.7s	1459	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_41.bin: too many values to unpack (expected 3)
+2657.7s	1460	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_40.bin: too many values to unpack (expected 3)
+2657.7s	1461	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_39.bin: too many values to unpack (expected 3)
+2657.7s	1462	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_38.bin: too many values to unpack (expected 3)
+2657.7s	1463	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_37.bin: too many values to unpack (expected 3)
+2657.7s	1464	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_36.bin: too many values to unpack (expected 3)
+2657.7s	1465	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_35.bin: too many values to unpack (expected 3)
+2657.7s	1466	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_34.bin: too many values to unpack (expected 3)
+2657.7s	1467	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_33.bin: too many values to unpack (expected 3)
+2657.7s	1468	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_32.bin: too many values to unpack (expected 3)
+2657.7s	1469	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_31.bin: too many values to unpack (expected 3)
+2657.7s	1470	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_30.bin: too many values to unpack (expected 3)
+2657.7s	1471	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_29.bin: too many values to unpack (expected 3)
+2657.7s	1472	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_28.bin: too many values to unpack (expected 3)
+2657.7s	1473	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_27.bin: too many values to unpack (expected 3)
+2657.7s	1474	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_26.bin: too many values to unpack (expected 3)
+2657.7s	1475	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_25.bin: too many values to unpack (expected 3)
+2657.7s	1476	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_24.bin: too many values to unpack (expected 3)
+2657.7s	1477	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_23.bin: too many values to unpack (expected 3)
+2657.7s	1478	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_22.bin: too many values to unpack (expected 3)
+2657.7s	1479	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_21.bin: too many values to unpack (expected 3)
+2657.7s	1480	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_20.bin: too many values to unpack (expected 3)
+2657.7s	1481	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_19.bin: too many values to unpack (expected 3)
+2658.0s	1482	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_18.bin: too many values to unpack (expected 3)
+2658.0s	1483	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_17.bin: too many values to unpack (expected 3)
+2658.0s	1484	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_16.bin: too many values to unpack (expected 3)
+2658.0s	1485	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_15.bin: too many values to unpack (expected 3)
+2658.0s	1486	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_14.bin: too many values to unpack (expected 3)
+2658.0s	1487	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_13.bin: too many values to unpack (expected 3)
+2658.0s	1488	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_12.bin: too many values to unpack (expected 3)
+2658.0s	1489	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_11.bin: too many values to unpack (expected 3)
+2658.0s	1490	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_10.bin: too many values to unpack (expected 3)
+2658.0s	1491	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_9.bin: too many values to unpack (expected 3)
+2658.0s	1492	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_8.bin: too many values to unpack (expected 3)
+2658.0s	1493	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_7.bin: too many values to unpack (expected 3)
+2658.0s	1494	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_6.bin: too many values to unpack (expected 3)
+2658.0s	1495	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_5.bin: too many values to unpack (expected 3)
+2658.0s	1496	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_4.bin: too many values to unpack (expected 3)
+2658.0s	1497	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_3.bin: too many values to unpack (expected 3)
+2658.0s	1498	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_2.bin: too many values to unpack (expected 3)
+2658.0s	1499	[Pipeline] skipping replay /kaggle/working/chess_outputs/selfplay_gen_1.bin: too many values to unpack (expected 3)
+2658.0s	1500	[Validate] ✓ 2600 samples — moves ∈ [0,4288), values ∈ [-1,1]
+2658.2s	1501	[Progress] Gen 43: training 2600 samples
+2660.5s	1502	[Train] epoch=1/4 | policy=0.1909 value=0.0000 | vw=1.5 draw=0.0%
+2663.2s	1503	[Train] epoch=2/4 | policy=0.1803 value=0.0000 | vw=1.5 draw=0.0%
+2666.0s	1504	[Train] epoch=3/4 | policy=0.1788 value=0.0000 | vw=1.5 draw=0.0%
+2668.8s	1505	[Train] epoch=4/4 | policy=0.1774 value=0.0000 | vw=1.5 draw=0.0%
+2670.6s	1506	[Artifacts] ✓ summary gen 43 → /kaggle/working/chess_outputs/model_output_summary_gen_43.json
+2670.6s	1507	[Progress] Gen 43: complete
+2670.6s	1508	
+2670.6s	1509	
+2670.6s	1510	===== Generation 44/300 =====
