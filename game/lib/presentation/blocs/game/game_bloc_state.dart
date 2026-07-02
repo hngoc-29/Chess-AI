@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/board.dart';
 import '../../../domain/entities/game_state.dart';
+import '../../../domain/entities/move_info.dart';
 import '../../../domain/entities/position.dart';
 
 abstract class GameBlocState extends Equatable {
@@ -22,7 +23,7 @@ class GameLoading extends GameBlocState {
 class GameInProgress extends GameBlocState {
   final GameState gameState;
   final Position? selectedSquare;
-  final Set<Position> legalMoves;
+  final Map<Position, MoveType> legalMoves;
   final bool flipped;
   final bool isAIThinking;
 
@@ -39,7 +40,7 @@ class GameInProgress extends GameBlocState {
   GameInProgress copyWith({
     GameState? gameState,
     Position? selectedSquare,
-    Set<Position>? legalMoves,
+    Map<Position, MoveType>? legalMoves,
     bool? flipped,
     bool? isAIThinking,
     bool clearSelection = false,

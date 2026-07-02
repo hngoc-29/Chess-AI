@@ -5,6 +5,8 @@ import '../../../core/config/injection.dart';
 import '../../../core/constants/strings.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
+import '../../../domain/repositories/i_settings_repository.dart';
+import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
 import '../../blocs/game/game_bloc.dart';
@@ -14,7 +16,12 @@ import '../../widgets/board/chess_board_widget.dart';
 import '../../widgets/dialogs/promotion_dialog.dart';
 
 class GameScreen extends StatelessWidget {
-  const GameScreen({super.key});
+  final bool vsAI;
+
+  const GameScreen({
+    super.key,
+    this.vsAI = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,14 +29,18 @@ class GameScreen extends StatelessWidget {
       create: (context) => GameBloc(
         rulesService: getIt<ChessRulesService>(),
         audioService: getIt<AudioService>(),
-      )..add(const StartNewGame(vsAI: true)),
-      child: const _GameView(),
+        aiEngine: getIt<ChessAIEngine>(),
+        settingsRepository: getIt<ISettingsRepository>(),
+      )..add(StartNewGame(vsAI: vsAI)),
+      child: _GameView(vsAI: vsAI),
     );
   }
 }
 
 class _GameView extends StatelessWidget {
-  const _GameView();
+  final bool vsAI;
+
+  const _GameView({required this.vsAI});
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +73,7 @@ class _GameView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              context.read<GameBloc>().add(const StartNewGame(vsAI: true));
+              context.read<GameBloc>().add(StartNewGame(vsAI: vsAI));
             },
             tooltip: AppStrings.newGame,
           ),
@@ -132,59 +143,132 @@ class _GameView extends StatelessWidget {
         : '${currentPlayer.color == PieceColor.white ? AppStrings.white : AppStrings.black} to move';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primaryContainer,
+            Theme.of(context).colorScheme.secondaryContainer,
+          ],
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (state.isAIThinking)
-                Container(
-                  width: 16,
-                  height: 16,
-                  margin: const EdgeInsets.only(right: 12),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.primary,
+              Row(
+                children: [
+                  if (state.isAIThinking)
+                    Container(
+                      width: 20,
+                      height: 20,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: currentPlayer.color == PieceColor.white
+                          ? Colors.white.withOpacity(0.9)
+                          : Colors.grey.shade800,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: currentPlayer.color == PieceColor.white
+                                ? Colors.grey.shade800
+                                : Colors.white,
+                          ),
                     ),
                   ),
-                ),
-              Text(
-                statusText,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                ],
               ),
+              if (state.gameState.isInCheck)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.red.shade400, Colors.red.shade700],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        AppStrings.check,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
-          if (state.gameState.isInCheck)
+          if (state.gameState.moveHistory.isNotEmpty) ...[
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withOpacity(0.5), width: 1.5),
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                AppStrings.check,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.bold,
-                    ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.history,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Move ${state.gameState.moveHistory.length}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ],
               ),
             ),
+          ],
         ],
       ),
     );
@@ -235,7 +319,7 @@ class _GameView extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
-              context.read<GameBloc>().add(const StartNewGame(vsAI: true));
+              context.read<GameBloc>().add(StartNewGame(vsAI: vsAI));
             },
             child: const Text(AppStrings.newGame),
           ),

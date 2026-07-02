@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/entities/board.dart';
+import '../../../domain/entities/move_info.dart';
 import '../../../domain/entities/position.dart';
 import 'piece_widget.dart';
 
@@ -9,7 +10,7 @@ class ChessBoardWidget extends StatefulWidget {
   final bool flipped;
   final Function(Position from, Position to)? onMove;
   final Function(Position position)? onSquareTap;
-  final Set<Position>? legalMoves;
+  final Map<Position, MoveType>? legalMoves;
   final Position? selectedSquare;
 
   const ChessBoardWidget({
@@ -57,7 +58,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
             final position = Position(file: displayFile, rank: displayRank);
             final isLight = (rank + file) % 2 == 0;
             final isSelected = widget.selectedSquare == position;
-            final isLegalMove = widget.legalMoves?.contains(position) ?? false;
+            final moveType = widget.legalMoves?[position];
 
             return DragTarget<Position>(
               onWillAccept: (from) => from != null && from != position,
@@ -73,19 +74,10 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                     width: squareSize,
                     height: squareSize,
                     decoration: BoxDecoration(
-                      color: _getSquareColor(isLight, isSelected, isLegalMove),
+                      color: _getSquareColor(isLight, isSelected, moveType),
                     ),
-                    child: isLegalMove
-                        ? Center(
-                            child: Container(
-                              width: squareSize * 0.25,
-                              height: squareSize * 0.25,
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.15),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          )
+                    child: moveType != null
+                        ? _buildMoveIndicator(squareSize, moveType)
                         : null,
                   ),
                 );
@@ -97,19 +89,80 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
     );
   }
 
-  Color _getSquareColor(bool isLight, bool isSelected, bool isLegalMove) {
+  Color _getSquareColor(bool isLight, bool isSelected, MoveType? moveType) {
     if (isSelected) {
       // Soft yellow highlight for selected piece
       return const Color(0xFFFFDD88);
     }
-    if (isLegalMove) {
-      // Slightly darker shade to indicate legal move destination
-      return isLight
-          ? const Color(0xFFE8D0A8)
-          : const Color(0xFFA57853);
+    if (moveType != null) {
+      // Color based on move type
+      switch (moveType) {
+        case MoveType.capture:
+          // Red tint for capture moves
+          return isLight
+              ? const Color(0xFFFFD4D4)
+              : const Color(0xFFCC8888);
+        case MoveType.safe:
+          // Green tint for safe moves
+          return isLight
+              ? const Color(0xFFD4FFD4)
+              : const Color(0xFF88CC88);
+        case MoveType.dangerous:
+          // Orange tint for dangerous moves
+          return isLight
+              ? const Color(0xFFFFE4CC)
+              : const Color(0xFFCC9966);
+      }
     }
     // Standard chess board colors
     return isLight ? const Color(0xFFF0D9B5) : const Color(0xFFB58863);
+  }
+
+  Widget _buildMoveIndicator(double squareSize, MoveType moveType) {
+    Color indicatorColor;
+    double indicatorSize;
+
+    switch (moveType) {
+      case MoveType.capture:
+        // Larger ring for captures
+        indicatorColor = Colors.red.withOpacity(0.6);
+        indicatorSize = squareSize * 0.8;
+        return Center(
+          child: Container(
+            width: indicatorSize,
+            height: indicatorSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: indicatorColor, width: 3),
+            ),
+          ),
+        );
+      case MoveType.safe:
+        // Small green circle for safe moves
+        indicatorColor = Colors.green.withOpacity(0.5);
+        indicatorSize = squareSize * 0.3;
+        return Center(
+          child: Container(
+            width: indicatorSize,
+            height: indicatorSize,
+            decoration: BoxDecoration(
+              color: indicatorColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
+      case MoveType.dangerous:
+        // Orange triangle for dangerous moves
+        indicatorColor = Colors.orange.withOpacity(0.6);
+        indicatorSize = squareSize * 0.35;
+        return Center(
+          child: Icon(
+            Icons.warning,
+            color: indicatorColor,
+            size: indicatorSize,
+          ),
+        );
+    }
   }
 
   Widget _buildPieces(double squareSize) {
@@ -184,7 +237,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
     if (widget.onSquareTap != null) {
       widget.onSquareTap!(position);
     } else if (widget.selectedSquare != null &&
-               widget.legalMoves?.contains(position) == true &&
+               widget.legalMoves?.containsKey(position) == true &&
                widget.onMove != null) {
       widget.onMove!(widget.selectedSquare!, position);
     }

@@ -20,6 +20,7 @@ import '../../domain/usecases/redo_move.dart';
 import '../../domain/usecases/save_game.dart';
 import '../../domain/usecases/undo_move.dart';
 import '../../services/ai/ai_service.dart';
+import '../../services/ai/chess_ai_engine.dart';
 import '../../services/audio/audio_service.dart';
 import '../../services/engine/chess_engine_service.dart';
 import '../../services/game/chess_rules_service.dart';
@@ -37,13 +38,14 @@ void setupDependencies() {
 }
 
 void _setupServices() {
+  getIt.registerSingleton<ChessRulesService>(ChessRulesService());
   getIt.registerSingleton<ChessEngineService>(ChessEngineService());
   getIt.registerSingleton<AIService>(AIService(getIt<ChessEngineService>()));
+  getIt.registerSingleton<ChessAIEngine>(ChessAIEngine(getIt<ChessRulesService>()));
   getIt.registerSingleton<AudioService>(AudioService());
   getIt.registerSingleton<StorageService>(StorageService());
   getIt.registerSingleton<CacheService>(CacheService());
   getIt.registerSingleton<NavigationService>(NavigationService());
-  getIt.registerSingleton<ChessRulesService>(ChessRulesService());
 }
 
 void _setupDataSources() {

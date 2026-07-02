@@ -1,4 +1,5 @@
 import '../../domain/entities/board.dart';
+import '../../domain/entities/move_info.dart';
 import '../../domain/entities/piece.dart';
 import '../../domain/entities/position.dart';
 
@@ -331,5 +332,60 @@ class ChessRulesService {
     }
 
     return moves;
+  }
+}
+
+  /// Classifies legal moves into capture, safe, or dangerous moves
+  List<MoveInfo> classifyLegalMoves(
+    Board board,
+    Position from,
+    List<Position> legalMoves,
+    PieceColor movingColor,
+  ) {
+    final movingPiece = board.pieceAt(from);
+    if (movingPiece == null) return [];
+    
+    final opponentColor = movingColor == PieceColor.white 
+        ? PieceColor.black 
+        : PieceColor.white;
+    
+    final classifiedMoves = <MoveInfo>[];
+    
+    for (final to in legalMoves) {
+      final targetPiece = board.pieceAt(to);
+      
+      // Check if it's a capture move
+      if (targetPiece != null && targetPiece.color == opponentColor) {
+        classifiedMoves.add(MoveInfo(position: to, type: MoveType.capture));
+        continue;
+      }
+      
+      // Check if the square would be under attack after moving
+      final testBoard = board.movePiece(from, to);
+      final isUnderAttack = _isSquareUnderAttack(testBoard, to, opponentColor);
+      
+      if (isUnderAttack) {
+        classifiedMoves.add(MoveInfo(position: to, type: MoveType.dangerous));
+      } else {
+        classifiedMoves.add(MoveInfo(position: to, type: MoveType.safe));
+      }
+    }
+    
+    return classifiedMoves;
+  }
+
+  /// Checks if a square is under attack by a given color
+  bool _isSquareUnderAttack(Board board, Position square, PieceColor attackingColor) {
+    for (int rank = 0; rank < 8; rank++) {
+      for (int file = 0; file < 8; file++) {
+        final pos = Position(file: file, rank: rank);
+        final piece = board.pieceAt(pos);
+        if (piece != null && piece.color == attackingColor) {
+          final attacks = _getPieceAttacks(board, pos, piece);
+          if (attacks.contains(square)) return true;
+        }
+      }
+    }
+    return false;
   }
 }

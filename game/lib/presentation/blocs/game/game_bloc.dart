@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -9,6 +8,9 @@ import '../../../domain/entities/game_state.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/player.dart';
 import '../../../domain/entities/position.dart';
+import '../../../domain/entities/settings.dart';
+import '../../../domain/repositories/i_settings_repository.dart';
+import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
 import 'game_bloc_state.dart';
@@ -17,14 +19,20 @@ import 'game_event.dart';
 class GameBloc extends Bloc<GameEvent, GameBlocState> {
   final ChessRulesService _rulesService;
   final AudioService _audioService;
+  final ChessAIEngine _aiEngine;
+  final ISettingsRepository _settingsRepository;
   final List<GameState> _history = [];
   final List<GameState> _redoStack = [];
 
   GameBloc({
     required ChessRulesService rulesService,
     required AudioService audioService,
+    required ChessAIEngine aiEngine,
+    required ISettingsRepository settingsRepository,
   })  : _rulesService = rulesService,
         _audioService = audioService,
+        _aiEngine = aiEngine,
+        _settingsRepository = settingsRepository,
         super(const GameInitial()) {
     on<StartNewGame>(_onStartNewGame);
     on<MakeMove>(_onMakeMove);
@@ -81,7 +89,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
 
     if (currentState.selectedSquare == null) {
       if (piece != null && piece.color == currentState.gameState.currentTurn) {
-        final legalMoves = _rulesService.getLegalMoves(
+        final legalMovePositions = _rulesService.getLegalMoves(
           currentState.board,
           position,
           whiteCanCastleKingside: currentState.gameState.whiteCanCastleKingside,
@@ -90,16 +98,26 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           blackCanCastleQueenside: currentState.gameState.blackCanCastleQueenside,
           enPassantSquare: currentState.gameState.enPassantSquare,
         );
+        final classifiedMoves = _rulesService.classifyLegalMoves(
+          currentState.board,
+          position,
+          legalMovePositions,
+          currentState.gameState.currentTurn,
+        );
+        final legalMovesMap = {
+          for (final moveInfo in classifiedMoves)
+            moveInfo.position: moveInfo.type
+        };
         emit(currentState.copyWith(
           selectedSquare: position,
-          legalMoves: legalMoves.toSet(),
+          legalMoves: legalMovesMap,
         ));
       }
     } else {
-      if (currentState.legalMoves.contains(position)) {
+      if (currentState.legalMoves.containsKey(position)) {
         add(MakeMove(from: currentState.selectedSquare!, to: position));
       } else if (piece != null && piece.color == currentState.gameState.currentTurn) {
-        final legalMoves = _rulesService.getLegalMoves(
+        final legalMovePositions = _rulesService.getLegalMoves(
           currentState.board,
           position,
           whiteCanCastleKingside: currentState.gameState.whiteCanCastleKingside,
@@ -108,9 +126,19 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           blackCanCastleQueenside: currentState.gameState.blackCanCastleQueenside,
           enPassantSquare: currentState.gameState.enPassantSquare,
         );
+        final classifiedMoves = _rulesService.classifyLegalMoves(
+          currentState.board,
+          position,
+          legalMovePositions,
+          currentState.gameState.currentTurn,
+        );
+        final legalMovesMap = {
+          for (final moveInfo in classifiedMoves)
+            moveInfo.position: moveInfo.type
+        };
         emit(currentState.copyWith(
           selectedSquare: position,
-          legalMoves: legalMoves.toSet(),
+          legalMoves: legalMovesMap,
         ));
       } else {
         emit(currentState.copyWith(clearSelection: true, legalMoves: {}));
@@ -142,7 +170,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       if (isPromotionRank) {
         emit(currentState.copyWith(
           selectedSquare: event.from,
-          legalMoves: {event.to},
+          legalMoves: {event.to: MoveType.safe},
         ));
         return;
       }
@@ -332,32 +360,43 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     if (state is! GameInProgress) return;
     final currentState = state as GameInProgress;
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      // Get current AI difficulty setting
+      final difficultyResult = await _settingsRepository.getAIDifficulty();
+      final difficultyInt = difficultyResult.fold(
+        (failure) => 1, // Default to medium (index 1) if settings can't be loaded
+        (value) => value,
+      );
 
-    final allMoves = <ChessMove>[];
-    for (int rank = 0; rank < 8; rank++) {
-      for (int file = 0; file < 8; file++) {
-        final from = Position(file: file, rank: rank);
-        final piece = currentState.board.pieceAt(from);
-        if (piece != null && piece.color == currentState.gameState.currentTurn) {
-          final legalMoves = _rulesService.getLegalMoves(currentState.board, from);
-          for (final to in legalMoves) {
-            allMoves.add(ChessMove(from: from, to: to));
-          }
-        }
-      }
-    }
+      // Convert int to AIDifficulty enum
+      final difficulty = _intToAIDifficulty(difficultyInt);
 
-    if (allMoves.isEmpty) {
+      // Use the AI engine to find the best move
+      final bestMove = await _aiEngine.getBestMove(
+        board: currentState.board,
+        color: currentState.gameState.currentTurn,
+        difficulty: difficulty,
+        whiteCanCastleKingside: currentState.gameState.whiteCanCastleKingside,
+        whiteCanCastleQueenside: currentState.gameState.whiteCanCastleQueenside,
+        blackCanCastleKingside: currentState.gameState.blackCanCastleKingside,
+        blackCanCastleQueenside: currentState.gameState.blackCanCastleQueenside,
+        enPassantSquare: currentState.gameState.enPassantSquare,
+      );
+
       emit(currentState.copyWith(isAIThinking: false));
-      return;
+      add(MakeMove(from: bestMove.from, to: bestMove.to, promotion: bestMove.promotion));
+    } catch (e) {
+      // If AI fails, just stop thinking
+      emit(currentState.copyWith(isAIThinking: false));
     }
+  }
 
-    final random = Random();
-    final selectedMove = allMoves[random.nextInt(allMoves.length)];
-
-    emit(currentState.copyWith(isAIThinking: false));
-    add(MakeMove(from: selectedMove.from, to: selectedMove.to));
+  /// Convert integer difficulty to AIDifficulty enum
+  AIDifficulty _intToAIDifficulty(int value) {
+    if (value >= 0 && value < AIDifficulty.values.length) {
+      return AIDifficulty.values[value];
+    }
+    return AIDifficulty.medium; // Default to medium for invalid values
   }
 
   Future<void> _onUndoMove(UndoMove event, Emitter<GameBlocState> emit) async {
@@ -366,18 +405,43 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
 
     if (_history.isEmpty) return;
 
-    // Save current state to redo stack
-    _redoStack.add(currentState.gameState);
+    // Check if we're playing against AI
+    final isVsAI = currentState.gameState.blackPlayer.type == PlayerType.ai ||
+                   currentState.gameState.whitePlayer.type == PlayerType.ai;
 
-    // Restore previous state from history
-    final previousState = _history.removeLast();
+    // For AI games, undo both player's move and AI's response (full turn)
+    if (isVsAI && _history.length >= 2) {
+      // Save current state to redo stack
+      _redoStack.add(currentState.gameState);
 
-    emit(currentState.copyWith(
-      gameState: previousState,
-      clearSelection: true,
-      legalMoves: {},
-      isAIThinking: false,
-    ));
+      // Also save the AI's move to redo stack
+      final aiMove = _history.removeLast();
+      _redoStack.add(aiMove);
+
+      // Restore to the state before player's move
+      final previousState = _history.removeLast();
+
+      emit(currentState.copyWith(
+        gameState: previousState,
+        clearSelection: true,
+        legalMoves: {},
+        isAIThinking: false,
+      ));
+    } else {
+      // For vs human games or when not enough history, undo single move
+      // Save current state to redo stack
+      _redoStack.add(currentState.gameState);
+
+      // Restore previous state from history
+      final previousState = _history.removeLast();
+
+      emit(currentState.copyWith(
+        gameState: previousState,
+        clearSelection: true,
+        legalMoves: {},
+        isAIThinking: false,
+      ));
+    }
   }
 
   Future<void> _onRedoMove(RedoMove event, Emitter<GameBlocState> emit) async {
