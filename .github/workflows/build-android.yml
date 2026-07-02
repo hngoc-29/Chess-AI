@@ -45,25 +45,8 @@ jobs:
         working-directory: ./game
         run: |
           echo "🎯 Generating launcher icons for Chess AI..."
-          BG_COLOR="#22313F"
-          FG_COLOR="#2ECC71"
-          BASE_DIR="android/app/src/main/res"
-
-          for size in 48:mdpi 72:hdpi 96:xhdpi 144:xxhdpi 192:xxxhdpi; do
-            IFS=':' read -r pixels density <<< "$size"
-            output="$BASE_DIR/mipmap-$density/ic_launcher.png"
-
-            convert -size ${pixels}x${pixels} xc:"$BG_COLOR" \
-                    -fill "$FG_COLOR" \
-                    -draw "rectangle $((pixels/4)),$((pixels/4)) $((pixels*3/4)),$((pixels*3/4))" \
-                    -stroke white -strokewidth $((pixels/48 > 0 ? pixels/48 : 1)) \
-                    -draw "rectangle $((pixels/4)),$((pixels/4)) $((pixels*3/4)),$((pixels*3/4))" \
-                    "$output"
-
-            echo "✓ Created $density icon (${pixels}x${pixels})"
-          done
-
-          echo "✅ All launcher icons generated successfully!"
+          pip install Pillow
+          python3 generate_icons.py
 
       - name: Build APK
         working-directory: ./game
