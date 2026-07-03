@@ -17,35 +17,64 @@ class PromotionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
     return AlertDialog(
-      title: const Text('Choose Promotion'),
-      content: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildPieceOption(context, PieceType.queen),
-          _buildPieceOption(context, PieceType.rook),
-          _buildPieceOption(context, PieceType.bishop),
-          _buildPieceOption(context, PieceType.knight),
-        ],
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Center(
+        child: Text(
+          'Phong cấp',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+      ),
+      content: SizedBox(
+        width: screenW * 0.7,
+        child: GridView.count(
+          crossAxisCount: 2,
+          mainAxisExtent: 80,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.2,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          children: [
+            _buildPieceOption(context, PieceType.queen, 'Hậu'),
+            _buildPieceOption(context, PieceType.rook, 'Xe'),
+            _buildPieceOption(context, PieceType.bishop, 'Tượng'),
+            _buildPieceOption(context, PieceType.knight, 'Mã'),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPieceOption(BuildContext context, PieceType type) {
+  Widget _buildPieceOption(BuildContext context, PieceType type, String label) {
     final piece = Piece(type: type, color: color);
-    return InkWell(
-      onTap: () {
-        onSelected(type);
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: SizedBox(
-          width: 60,
-          height: 60,
-          child: SvgPicture.asset(
-            piece.getAssetPath(pieceStyle),
-            fit: BoxFit.contain,
+    return Material(
+      color: const Color(0xFF2D2D44),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => onSelected(type),
+        child: Padding(
+          padding: const EdgeInsets.all(6.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: SvgPicture.asset(
+                  piece.getAssetPath(pieceStyle),
+                  fit: BoxFit.contain,
+                  width: 50,
+                  height: 50,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
+              ),
+            ],
           ),
         ),
       ),

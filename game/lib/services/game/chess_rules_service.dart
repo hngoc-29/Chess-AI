@@ -82,6 +82,42 @@ class ChessRulesService {
     return !_hasLegalMoves(board, color);
   }
 
+  /// Get all squares occupied by pieces of given color that are under attack
+  Set<Position> getEndangeredSquares(Board board, PieceColor color) {
+    final endangered = <Position>{};
+    final opponentColor = color == PieceColor.white ? PieceColor.black : PieceColor.white;
+
+    // Find all pieces of the given color
+    for (int rank = 0; rank < 8; rank++) {
+      for (int file = 0; file < 8; file++) {
+        final pos = Position(file: file, rank: rank);
+        final piece = board.pieceAt(pos);
+        if (piece != null && piece.color == color) {
+          // Check if any opponent piece attacks this position
+          if (_isSquareAttackedBy(board, pos, opponentColor)) {
+            endangered.add(pos);
+          }
+        }
+      }
+    }
+    return endangered;
+  }
+
+  /// Check if a square is attacked by any piece of the given color
+  bool _isSquareAttackedBy(Board board, Position square, PieceColor attackerColor) {
+    for (int rank = 0; rank < 8; rank++) {
+      for (int file = 0; file < 8; file++) {
+        final pos = Position(file: file, rank: rank);
+        final piece = board.pieceAt(pos);
+        if (piece != null && piece.color == attackerColor) {
+          final attacks = _getPieceAttacks(board, pos, piece);
+          if (attacks.contains(square)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   bool _hasLegalMoves(Board board, PieceColor color) {
     for (int rank = 0; rank < 8; rank++) {
       for (int file = 0; file < 8; file++) {

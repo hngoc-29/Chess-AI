@@ -8,6 +8,7 @@ import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
 import '../../../domain/repositories/i_settings_repository.dart';
 import '../../../domain/repositories/i_stats_repository.dart';
+import '../../../domain/usecases/load_game.dart';
 import '../../../domain/usecases/save_game.dart';
 import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
@@ -36,7 +37,8 @@ class GameScreen extends StatelessWidget {
         settingsRepository: getIt<ISettingsRepository>(),
         statsRepository: getIt<IStatsRepository>(),
         saveGameUseCase: getIt<SaveGameUseCase>(),
-      )..add(StartNewGame(vsAI: vsAI)),
+        loadGameUseCase: getIt<LoadGameUseCase>(),
+      ),
       child: _GameView(vsAI: vsAI),
     );
   }
@@ -56,6 +58,10 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<GameBloc>().add(const LoadSavedGame('current_session'));
+    });
   }
 
   @override
@@ -119,6 +125,8 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
         listener: (context, state) {
           if (state is GameOver) {
             _showGameOverDialog(context, state.message);
+          } else if (state is GameError) {
+            context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
           }
         },
         builder: (context, state) {
@@ -156,6 +164,7 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                                 flipped: state.flipped,
                                 selectedSquare: state.selectedSquare,
                                 legalMoves: state.legalMoves,
+                                endangeredSquares: state.endangeredSquares,
                                 pieceStyle: pieceStyle,
                                 onSquareTap: (position) {
                                   _handleSquareTap(context, state, position);

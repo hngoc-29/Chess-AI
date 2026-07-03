@@ -12,6 +12,7 @@ import '../../../domain/entities/position.dart';
 import '../../../domain/entities/settings.dart';
 import '../../../domain/repositories/i_settings_repository.dart';
 import '../../../domain/repositories/i_stats_repository.dart';
+import '../../../domain/usecases/load_game.dart';
 import '../../../domain/usecases/save_game.dart';
 import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
@@ -26,6 +27,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
   final ISettingsRepository _settingsRepository;
   final IStatsRepository _statsRepository;
   final SaveGameUseCase _saveGameUseCase;
+  final LoadGameUseCase _loadGameUseCase;
   final List<GameState> _history = [];
   final List<GameState> _redoStack = [];
 
@@ -36,12 +38,14 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     required ISettingsRepository settingsRepository,
     required IStatsRepository statsRepository,
     required SaveGameUseCase saveGameUseCase,
+    required LoadGameUseCase loadGameUseCase,
   })  : _rulesService = rulesService,
         _audioService = audioService,
         _aiEngine = aiEngine,
         _settingsRepository = settingsRepository,
         _statsRepository = statsRepository,
         _saveGameUseCase = saveGameUseCase,
+        _loadGameUseCase = loadGameUseCase,
         super(const GameInitial()) {
     on<StartNewGame>(_onStartNewGame);
     on<MakeMove>(_onMakeMove);
@@ -51,6 +55,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     on<FlipBoard>(_onFlipBoard);
     on<RequestAIMove>(_onRequestAIMove);
     on<SaveCurrentGame>(_onSaveCurrentGame);
+    on<LoadSavedGame>(_onLoadSavedGame);
   }
 
   Future<void> _onStartNewGame(StartNewGame event, Emitter<GameBlocState> emit) async {
@@ -160,22 +165,32 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     if (state is! GameInProgress) return;
     final currentState = state as GameInProgress;
 
-    // Save current state to history before making move
-    _history.add(currentState.gameState);
-    // Clear redo stack when new move is made
-    _redoStack.clear();
-
-    if (!_rulesService.isMoveLegal(currentState.board, event.from, event.to)) {
+    final movingPiece = currentState.board.pieceAt(event.from);
+    if (movingPiece == null || movingPiece.color != currentState.gameState.currentTurn) {
       _audioService.playSound(SoundEffect.button);
       return;
     }
 
-    final movingPiece = currentState.board.pieceAt(event.from);
+    final legalMoves = _rulesService.getLegalMoves(
+      currentState.board,
+      event.from,
+      whiteCanCastleKingside: currentState.gameState.whiteCanCastleKingside,
+      whiteCanCastleQueenside: currentState.gameState.whiteCanCastleQueenside,
+      blackCanCastleKingside: currentState.gameState.blackCanCastleKingside,
+      blackCanCastleQueenside: currentState.gameState.blackCanCastleQueenside,
+      enPassantSquare: currentState.gameState.enPassantSquare,
+    );
+
+    if (!legalMoves.contains(event.to)) {
+      _audioService.playSound(SoundEffect.button);
+      return;
+    }
+
     final capturedPiece = currentState.board.pieceAt(event.to);
 
     // Check if pawn promotion is needed
-    if (movingPiece?.isPawn == true && event.promotion == null) {
-      final isPromotionRank = (movingPiece!.isWhite && event.to.rank == 7) ||
+    if (movingPiece.isPawn && event.promotion == null) {
+      final isPromotionRank = (movingPiece.isWhite && event.to.rank == 7) ||
                               (movingPiece.isBlack && event.to.rank == 0);
       if (isPromotionRank) {
         emit(currentState.copyWith(
@@ -185,6 +200,10 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         return;
       }
     }
+
+    // Save only valid, complete moves to history
+    _history.add(currentState.gameState);
+    _redoStack.clear();
 
     Board newBoard;
     bool isCastle = false;
@@ -329,16 +348,21 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       blackCanCastleKingside: blackCanCastleKingside,
       blackCanCastleQueenside: blackCanCastleQueenside,
       enPassantSquare: newEnPassantSquare,
+      clearEnPassantSquare: newEnPassantSquare == null,
       updatedAt: DateTime.now(),
     );
 
     // Calculate evaluation score (from White's perspective)
     final evalScore = _aiEngine.evaluatePosition(newBoard, PieceColor.white);
 
+    // Calculate endangered squares for current player
+    final endangeredSquares = _rulesService.getEndangeredSquares(newBoard, nextTurn);
+
     emit(currentState.copyWith(
       gameState: newGameState,
       clearSelection: true,
       legalMoves: {},
+      endangeredSquares: endangeredSquares,
       evaluationScore: evalScore,
     ));
 
@@ -394,11 +418,63 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     }
   }
 
+  Future<void> _onLoadSavedGame(LoadSavedGame event, Emitter<GameBlocState> emit) async {
+    emit(const GameLoading());
+    
+    final result = await _loadGameUseCase.call(event.gameId);
+    result.fold(
+      (failure) {
+        emit(GameError(failure.message));
+      },
+      (gameState) {
+        _history.clear();
+        _redoStack.clear();
+        emit(GameInProgress(gameState: gameState));
+      },
+    );
+  }
+
   Future<void> _onRequestAIMove(RequestAIMove event, Emitter<GameBlocState> emit) async {
     if (state is! GameInProgress) return;
     final currentState = state as GameInProgress;
 
     try {
+      // First check if the game is already over (checkmate/stalemate)
+      final isCheckmate = _rulesService.isCheckmate(
+        currentState.board,
+        currentState.gameState.currentTurn,
+      );
+      final isStalemate = _rulesService.isStalemate(
+        currentState.board,
+        currentState.gameState.currentTurn,
+      );
+
+      if (isCheckmate) {
+        // AI is checkmated, human wins
+        final winnerColor = currentState.gameState.currentTurn == PieceColor.white
+            ? PieceColor.black
+            : PieceColor.white;
+        final winnerName = winnerColor == PieceColor.white ? 'Trắng' : 'Đen';
+        
+        await _statsRepository.recordGame(isWin: true, isDraw: false);
+        
+        emit(GameOver(
+          gameState: currentState.gameState.copyWith(status: GameStatus.checkmate),
+          message: 'Chiếu hết! $winnerName thắng!',
+        ));
+        return;
+      }
+
+      if (isStalemate) {
+        await _statsRepository.recordGame(isWin: false, isDraw: true);
+        
+        emit(GameOver(
+          gameState: currentState.gameState.copyWith(status: GameStatus.stalemate),
+          message: 'Hòa cờ!',
+        ));
+        return;
+      }
+
       // Get current AI difficulty setting
       final difficultyResult = await _settingsRepository.getAIDifficulty();
       final difficultyInt = difficultyResult.fold(
@@ -424,8 +500,39 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       emit(currentState.copyWith(isAIThinking: false));
       add(MakeMove(from: bestMove.from, to: bestMove.to, promotion: bestMove.promotion));
     } catch (e) {
-      // If AI fails, just stop thinking
-      emit(currentState.copyWith(isAIThinking: false));
+      // If AI fails to find a move, check if game is over
+      final isCheckmate = _rulesService.isCheckmate(
+        currentState.board,
+        currentState.gameState.currentTurn,
+      );
+      final isStalemate = _rulesService.isStalemate(
+        currentState.board,
+        currentState.gameState.currentTurn,
+      );
+
+      if (isCheckmate) {
+        final winnerColor = currentState.gameState.currentTurn == PieceColor.white
+            ? PieceColor.black
+            : PieceColor.white;
+        final winnerName = winnerColor == PieceColor.white ? 'Trắng' : 'Đen';
+        
+        await _statsRepository.recordGame(isWin: true, isDraw: false);
+        
+        emit(GameOver(
+          gameState: currentState.gameState.copyWith(status: GameStatus.checkmate),
+          message: 'Chiếu hết! $winnerName thắng!',
+        ));
+      } else if (isStalemate) {
+        await _statsRepository.recordGame(isWin: false, isDraw: true);
+        
+        emit(GameOver(
+          gameState: currentState.gameState.copyWith(status: GameStatus.stalemate),
+          message: 'Hòa cờ!',
+        ));
+      } else {
+        // Unknown error, just stop thinking and log
+        emit(currentState.copyWith(isAIThinking: false));
+      }
     }
   }
 

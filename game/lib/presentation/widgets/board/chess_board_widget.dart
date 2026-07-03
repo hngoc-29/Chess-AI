@@ -11,6 +11,7 @@ class ChessBoardWidget extends StatefulWidget {
   final Function(Position from, Position to)? onMove;
   final Function(Position position)? onSquareTap;
   final Map<Position, MoveType>? legalMoves;
+  final Set<Position> endangeredSquares;
   final Position? selectedSquare;
   final String pieceStyle;
 
@@ -21,6 +22,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.onMove,
     this.onSquareTap,
     this.legalMoves,
+    this.endangeredSquares = const {},
     this.selectedSquare,
     this.pieceStyle = 'cburnett',
   });
@@ -61,6 +63,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
             final isLight = (rank + file) % 2 == 0;
             final isSelected = widget.selectedSquare == position;
             final moveType = widget.legalMoves?[position];
+            final isEndangered = widget.endangeredSquares.contains(position);
 
             return DragTarget<Position>(
               onWillAccept: (from) => from != null && from != position,
@@ -71,12 +74,13 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
               },
               builder: (context, candidateData, rejectedData) {
                 return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => _onSquareTap(position),
                   child: Container(
                     width: squareSize,
                     height: squareSize,
                     decoration: BoxDecoration(
-                      color: _getSquareColor(isLight, isSelected, moveType),
+                      color: _getSquareColor(isLight, isSelected, moveType, isEndangered),
                     ),
                     child: moveType != null
                         ? _buildMoveIndicator(squareSize, moveType)
@@ -91,7 +95,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
     );
   }
 
-  Color _getSquareColor(bool isLight, bool isSelected, MoveType? moveType) {
+  Color _getSquareColor(bool isLight, bool isSelected, MoveType? moveType, bool isEndangered) {
     if (isSelected) {
       // Soft yellow highlight for selected piece
       return const Color(0xFFFFDD88);
@@ -110,11 +114,15 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
               ? const Color(0xFFD4FFD4)
               : const Color(0xFF88CC88);
         case MoveType.dangerous:
-          // Orange tint for dangerous moves
+          // Red underfoot for dangerous destination
           return isLight
-              ? const Color(0xFFFFE4CC)
-              : const Color(0xFFCC9966);
+              ? const Color(0xFFFFB3B3)
+              : const Color(0xFFB85C5C);
       }
+    }
+    if (isEndangered) {
+      // Red underfoot for pieces currently under attack
+      return isLight ? const Color(0xFFFFC0C0) : const Color(0xFFC45F5F);
     }
     // Standard chess board colors
     return isLight ? const Color(0xFFF0D9B5) : const Color(0xFFB58863);

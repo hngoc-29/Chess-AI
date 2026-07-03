@@ -100,7 +100,13 @@ class GameState extends Equatable {
     bool? isInCheck,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool clearEnPassantSquare = false,
   }) {
+    String? finalEnPassantSquare = enPassantSquare;
+    if (clearEnPassantSquare) {
+      finalEnPassantSquare = null;
+    }
+    
     return GameState(
       gameId: gameId ?? this.gameId,
       board: board ?? this.board,
@@ -113,7 +119,7 @@ class GameState extends Equatable {
       whiteCanCastleQueenside: whiteCanCastleQueenside ?? this.whiteCanCastleQueenside,
       blackCanCastleKingside: blackCanCastleKingside ?? this.blackCanCastleKingside,
       blackCanCastleQueenside: blackCanCastleQueenside ?? this.blackCanCastleQueenside,
-      enPassantSquare: enPassantSquare ?? this.enPassantSquare,
+      enPassantSquare: finalEnPassantSquare ?? this.enPassantSquare,
       halfMoveClock: halfMoveClock ?? this.halfMoveClock,
       fullMoveNumber: fullMoveNumber ?? this.fullMoveNumber,
       isInCheck: isInCheck ?? this.isInCheck,

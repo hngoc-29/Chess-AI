@@ -24,6 +24,7 @@ class GameInProgress extends GameBlocState {
   final GameState gameState;
   final Position? selectedSquare;
   final Map<Position, MoveType> legalMoves;
+  final Set<Position> endangeredSquares;
   final bool flipped;
   final bool isAIThinking;
   final double evaluationScore;
@@ -32,6 +33,7 @@ class GameInProgress extends GameBlocState {
     required this.gameState,
     this.selectedSquare,
     this.legalMoves = const {},
+    this.endangeredSquares = const {},
     this.flipped = false,
     this.isAIThinking = false,
     this.evaluationScore = 0.0,
@@ -43,6 +45,7 @@ class GameInProgress extends GameBlocState {
     GameState? gameState,
     Position? selectedSquare,
     Map<Position, MoveType>? legalMoves,
+    Set<Position>? endangeredSquares,
     bool? flipped,
     bool? isAIThinking,
     double? evaluationScore,
@@ -52,6 +55,7 @@ class GameInProgress extends GameBlocState {
       gameState: gameState ?? this.gameState,
       selectedSquare: clearSelection ? null : (selectedSquare ?? this.selectedSquare),
       legalMoves: clearSelection ? const {} : (legalMoves ?? this.legalMoves),
+      endangeredSquares: endangeredSquares ?? this.endangeredSquares,
       flipped: flipped ?? this.flipped,
       isAIThinking: isAIThinking ?? this.isAIThinking,
       evaluationScore: evaluationScore ?? this.evaluationScore,
@@ -59,7 +63,7 @@ class GameInProgress extends GameBlocState {
   }
 
   @override
-  List<Object?> get props => [gameState, selectedSquare, legalMoves, flipped, isAIThinking, evaluationScore];
+  List<Object?> get props => [gameState, selectedSquare, legalMoves, endangeredSquares, flipped, isAIThinking, evaluationScore];
 }
 
 class GameOver extends GameBlocState {

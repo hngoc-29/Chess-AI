@@ -62,3 +62,12 @@ class RequestAIMove extends GameEvent {
 class SaveCurrentGame extends GameEvent {
   const SaveCurrentGame();
 }
+
+class LoadSavedGame extends GameEvent {
+  final String gameId;
+
+  const LoadSavedGame(this.gameId);
+
+  @override
+  List<Object?> get props => [gameId];
+}

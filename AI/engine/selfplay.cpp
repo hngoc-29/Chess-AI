@@ -24,11 +24,9 @@ constexpr int kDefaultLogEvery            = 50;  // Log every 50 games để gi�
 constexpr int kDefaultTemperatureMoves    = 80;   // FIX: increased from 30 → 80 for more exploration   // use T=1 sampling for first N moves
 constexpr unsigned kDefaultSeed          = 42;
 // Resign when MCTS root Q < resign_thresh for current player.
-// FIX: Enable resign to create decisive games and break draw loop.
-// -0.90 means resign when losing with ~10% win probability (AlphaZero standard).
-// -1.0 = disabled; typical value: -0.9.
-// Resign is suppressed for the first kDefaultMinResignPly half-moves.
-constexpr float kDefaultResignThresh     = -0.90f;  // Was: -1.0f (disabled)
+// DISABLED (-1.0f): AI plays until checkmate/stalemate to avoid early resignation.
+// Set to e.g. -0.90f to enable resign (AlphaZero standard).
+constexpr float kDefaultResignThresh     = -1.0f;   // Disabled: play to the end
 constexpr int   kDefaultMinResignPly     = 20;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

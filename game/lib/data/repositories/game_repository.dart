@@ -170,6 +170,7 @@ class GameRepository implements IGameRepository {
     try {
       final json = gameState.toJson();
       await _localDataSource.saveGame(gameState.gameId.toString(), json);
+      await _localDataSource.saveGame('current_session', json);
       return const Right(null);
     } on StorageException catch (e) {
       return Left(StorageFailure(e.message));
