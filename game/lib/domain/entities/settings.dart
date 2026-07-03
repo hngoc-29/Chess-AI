@@ -27,11 +27,16 @@ enum AnimationSpeed {
   slow,
 }
 
+/// AI difficulty tiers. Each maps to a specific Maia (lc0) network trained
+/// on human games at that approximate Elo rating - see
+/// MaiaAIEngine in services/ai/maia_ai_engine.dart for the mapping.
 enum AIDifficulty {
-  easy,
-  medium,
-  hard,
-  expert,
+  beginner, // Maia ~1100 Elo
+  easy, // Maia ~1300 Elo
+  medium, // Maia ~1500 Elo
+  hard, // Maia ~1700 Elo
+  veryHard, // Maia ~1900 Elo
+  expert, // Maia ~1900 Elo net, searched much deeper (less human, stronger)
 }
 
 class Settings extends Equatable {

@@ -69,7 +69,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         (e) => e.name == pieceSet,
         orElse: () => PieceStyle.cburnett,
       );
-      final aiDifficulty = AIDifficulty.values[difficulty.clamp(0, 3)];
+      final aiDifficulty = AIDifficulty.values[difficulty.clamp(0, AIDifficulty.values.length - 1)];
 
       final settings = Settings(
         soundEnabled: soundEnabled,

@@ -192,14 +192,18 @@ class _SettingsView extends StatelessWidget {
 
   String _getAIDifficultyLabel(AIDifficulty difficulty) {
     switch (difficulty) {
+      case AIDifficulty.beginner:
+        return 'Mới bắt đầu (~1100 Elo)';
       case AIDifficulty.easy:
-        return 'Easy';
+        return 'Dễ (~1300 Elo)';
       case AIDifficulty.medium:
-        return 'Medium';
+        return 'Trung bình (~1500 Elo)';
       case AIDifficulty.hard:
-        return 'Hard';
+        return 'Khó (~1700 Elo)';
+      case AIDifficulty.veryHard:
+        return 'Rất khó (~1900 Elo)';
       case AIDifficulty.expert:
-        return 'Expert';
+        return 'Chuyên gia (mạnh hơn 1900 Elo)';
     }
   }
 

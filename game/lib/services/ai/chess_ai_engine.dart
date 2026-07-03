@@ -24,6 +24,11 @@ class ChessAIEngine {
     required bool blackCanCastleKingside,
     required bool blackCanCastleQueenside,
     required String? enPassantSquare,
+    // Unused by this local minimax engine, but part of the shared
+    // interface so callers can pass full FEN context to subclasses
+    // (e.g. MaiaAIEngine) without caring about the runtime type.
+    int halfMoveClock = 0,
+    int fullMoveNumber = 1,
   }) async {
     // Add thinking delay based on difficulty
     final thinkingTime = _getThinkingTime(difficulty);
@@ -349,12 +354,16 @@ class ChessAIEngine {
   /// Get search depth based on difficulty
   int _getSearchDepth(AIDifficulty difficulty) {
     switch (difficulty) {
+      case AIDifficulty.beginner:
+        return 1;
       case AIDifficulty.easy:
         return 1;
       case AIDifficulty.medium:
         return 2;
       case AIDifficulty.hard:
         return 3;
+      case AIDifficulty.veryHard:
+        return 4;
       case AIDifficulty.expert:
         return 4;
     }
@@ -363,12 +372,16 @@ class ChessAIEngine {
   /// Get thinking time based on difficulty
   Duration _getThinkingTime(AIDifficulty difficulty) {
     switch (difficulty) {
+      case AIDifficulty.beginner:
+        return const Duration(milliseconds: 300);
       case AIDifficulty.easy:
         return const Duration(milliseconds: 500);
       case AIDifficulty.medium:
         return const Duration(milliseconds: 1000);
       case AIDifficulty.hard:
         return const Duration(milliseconds: 1500);
+      case AIDifficulty.veryHard:
+        return const Duration(milliseconds: 1800);
       case AIDifficulty.expert:
         return const Duration(milliseconds: 2000);
     }

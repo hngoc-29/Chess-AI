@@ -40,6 +40,9 @@ dependencies:
   share_plus: ^10.0.2
   shared_preferences: ^2.2.2
 
+  # AI Engine (Maia via Leela Chess Zero / lc0)
+  leela_chess_zero: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -60,6 +63,7 @@ flutter:
     - assets/images/boards/
     - assets/sounds/
     - assets/animations/lottie/
+    - assets/weights/
 
   fonts:
     - family: Roboto

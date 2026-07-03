@@ -77,7 +77,8 @@ class PreferencesDataSource {
 
   Future<int> getAIDifficulty() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_aiDifficultyKey) ?? 5;
+    // Default index 2 = AIDifficulty.medium (see domain/entities/settings.dart).
+    return prefs.getInt(_aiDifficultyKey) ?? 2;
   }
 
   Future<void> setAIDifficulty(int difficulty) async {

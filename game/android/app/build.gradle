@@ -42,7 +42,8 @@ android {
 
     defaultConfig {
         applicationId "com.kingsgambit.ai"
-        minSdkVersion 21
+        // Bumped from 21 -> 24: required by the leela_chess_zero (lc0) plugin used for Maia AI.
+        minSdkVersion 24
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
