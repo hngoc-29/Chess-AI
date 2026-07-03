@@ -31,10 +31,9 @@ class PromotionDialog extends StatelessWidget {
         width: screenW * 0.7,
         child: GridView.count(
           crossAxisCount: 2,
-          mainAxisExtent: 80,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.2,
+          childAspectRatio: 1.0,
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
           children: [
