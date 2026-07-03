@@ -2,13 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
-// pub.dev lists the package as lowercase `leela_chess_zero` (pub.dev
-// enforces lowercase package names), but the package's own README shows
-// `import 'package:LeelaChessZero/lc0.dart';`. If this import fails to
-// resolve after `flutter pub get`, try the capitalized form instead -
-// check the installed package's `lib/` folder under
-// .pub-cache/hosted/pub.dev/leela_chess_zero-*/lib/ to see which file
-// actually exists.
 import 'package:leela_chess_zero/lc0.dart';
 import 'package:path_provider/path_provider.dart';
 

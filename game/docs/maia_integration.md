@@ -30,8 +30,8 @@ cross-compile.
 
 | File | Thay đổi |
 |---|---|
-| `pubspec.yaml` | Thêm dependency `leela_chess_zero`, đăng ký `assets/weights/` |
-| `android/app/build.gradle` | `minSdkVersion` 21 → 24 (bắt buộc bởi plugin) |
+| `pubspec.yaml` | Thêm dependency `leela_chess_zero` (git, xem lý do bên dưới), đăng ký `assets/weights/` |
+| `android/app/build.gradle` | `minSdkVersion` 21→24, `compileSdk` 34→36, `ndkVersion` →28.2.13676358 (bắt buộc bởi plugin) |
 | `assets/weights/maia-*.pb.gz` | 9 file trọng số Maia thật (1100–1900 Elo, ~12MB tổng), tải từ [CSSLab/maia-chess](https://github.com/CSSLab/maia-chess) |
 | `lib/services/ai/maia_ai_engine.dart` | **Mới.** Engine nói UCI với lc0, có fallback |
 | `lib/domain/entities/settings.dart` | `AIDifficulty` mở rộng 4 → 6 mức |
@@ -61,22 +61,60 @@ người") sau này, chỉ cần tải thêm 1 mạng lc0 chuẩn (không phải
 lczero.org) vào `assets/weights/` và thêm một dòng vào `_kMaiaProfiles` trong
 `maia_ai_engine.dart`.
 
-## Việc bạn cần tự làm (không thể test trong sandbox này)
+## Vụ build lỗi trên CI (đã tìm ra nguyên nhân + fix)
 
-Mình không có Flutter SDK trong môi trường này nên **chưa build/chạy thử
-được** — cần bạn kiểm tra các bước sau trên máy của bạn:
+Lần build đầu trên GitHub Actions bị lỗi ở bước biên dịch native của
+`leela_chess_zero`:
 
-1. `flutter pub get` trong thư mục `game/`.
-2. Kiểm tra dòng `import 'package:leela_chess_zero/lc0.dart';` trong
-   `maia_ai_engine.dart` có resolve được không. README của package này viết
-   `import 'package:LeelaChessZero/lc0.dart';` (viết hoa) — không khớp với
-   tên package chữ thường trên pub.dev, nhiều khả năng là lỗi đánh máy trong
-   docs của tác giả. Nếu import chữ thường lỗi, thử bản viết hoa.
-3. `flutter analyze` để bắt các lỗi type mà mình không thể tự kiểm tra bằng
-   mắt.
-4. Chạy thử trên thiết bị/emulator Android thật (API ≥ 24) — quan trọng nhất
-   là bấm cho AI đi vài nước ở từng độ khó để chắc `lc0` khởi động và trả
-   `bestmove` đúng như mong đợi.
+```
+fatal error: 'proto/net.pb.h' file not found
+```
+
+**Nguyên nhân** (đã xác nhận bằng cách tự clone source của package về xem):
+`android/CMakeLists.txt` của `leela_chess_zero` include đúng đường dẫn
+`ios/lc0/build` để tìm 3 file protobuf-header đã được generate sẵn
+(`net.pb.h`, `hlo.pb.h`, `onnx.pb.h`). 3 file này **có tồn tại và có commit
+vào git** của package (force-add qua rule `.gitignore` chặn `build/`), nhưng
+khi tác giả `dart pub publish` lên pub.dev, bản đóng gói xuất bản dường như
+đã loại bỏ 3 file này (rất có thể do công cụ publish của Dart tôn trọng rule
+gitignore bất kể file có bị force-track hay không). Kết quả: ai cài
+`leela_chess_zero: ^1.0.0` qua pub.dev cũng sẽ gặp lỗi y hệt — đây là lỗi ở
+package, không phải do code hay cấu hình phía bạn.
+
+**Cách fix** (đã áp vào `pubspec.yaml`): đổi dependency từ bản pub.dev sang
+git dependency, trỏ thẳng vào repo GitHub của package — `git clone` sẽ lấy
+đúng các file đã commit, bỏ qua việc lọc theo gitignore mà quy trình publish
+của pub.dev áp dụng.
+
+```yaml
+leela_chess_zero:
+  git:
+    url: https://github.com/ArjanAswal/LeelaChessZero.git
+    ref: main
+```
+
+Đồng thời log build còn yêu cầu nâng `compileSdk` 34→36 và `ndkVersion`
+25.x→`28.2.13676358` — đã sửa trong `android/app/build.gradle`.
+
+Nếu về sau tác giả package fix lại publish (chạy `dart pub publish` với các
+file đó được include đúng), bạn có thể đổi lại về
+`leela_chess_zero: ^<version-mới>` cho gọn.
+
+## Việc bạn cần tự làm tiếp
+
+Mình không có Flutter SDK trong sandbox này nên vẫn chưa build/chạy thử lại
+được sau fix này — cần bạn:
+
+1. `flutter pub get` lại trong thư mục `game/` để lấy git dependency mới.
+2. Build lại (`flutter build apk` hoặc CI) — với fix này, bước CMake nên qua
+   được. Nếu vẫn lỗi ở chỗ khác trong quá trình build native (đây là package
+   khá non/ít người dùng, 3 file trên có thể không phải vấn đề duy nhất),
+   gửi lại log cho mình, mình sẽ tiếp tục đào sâu vào source của package.
+3. Chạy thử trên thiết bị/emulator Android thật (API ≥ 24) — bấm cho AI đi
+   vài nước ở từng độ khó để chắc `lc0` khởi động và trả `bestmove` đúng.
+4. `import 'package:leela_chess_zero/lc0.dart';` trong `maia_ai_engine.dart`
+   — đã xác nhận đúng 100% (kiểm tra trực tiếp `lib/lc0.dart` trong source
+   của package), không cần đổi.
 
 ## Lưu ý về giấy phép (không phải tư vấn pháp lý)
 

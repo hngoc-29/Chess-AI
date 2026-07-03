@@ -24,8 +24,11 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.kingsgambit.ai"
-    compileSdk 34
-    ndkVersion "25.1.8937393"
+    // Bumped from 34 -> 36 and NDK 25.x -> 28.2.13676358: required by the
+    // leela_chess_zero (lc0) plugin. NDK/SDK versions are backward
+    // compatible so this doesn't affect other plugins.
+    compileSdk 36
+    ndkVersion "28.2.13676358"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

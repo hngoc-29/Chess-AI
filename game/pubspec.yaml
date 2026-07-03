@@ -41,7 +41,20 @@ dependencies:
   shared_preferences: ^2.2.2
 
   # AI Engine (Maia via Leela Chess Zero / lc0)
-  leela_chess_zero: ^1.0.0
+  # NOTE: using a git dependency, not the pub.dev hosted version, on purpose.
+  # The published 1.0.0 package on pub.dev is missing 3 pre-generated
+  # protobuf headers (ios/lc0/build/proto/{net,hlo,onnx}.pb.h) that the
+  # Android CMake build needs (#include "proto/net.pb.h" fails otherwise).
+  # Those files ARE tracked in the package's git repo (force-added past a
+  # `build/` .gitignore rule) but appear to have been dropped when the
+  # package was published to pub.dev. A git dependency pulls the real repo
+  # instead of the pub.dev archive, so the files are present. If a future
+  # pub.dev release fixes this, this can switch back to a normal version
+  # constraint - see game/docs/maia_integration.md for details.
+  leela_chess_zero:
+    git:
+      url: https://github.com/ArjanAswal/LeelaChessZero.git
+      ref: main
 
 dev_dependencies:
   flutter_test:
