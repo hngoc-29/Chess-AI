@@ -2,7 +2,7 @@
 # Script để debug Android app - xem log chi tiết
 
 echo "=========================================="
-echo "Chess AI Android Debug Script"
+echo "King's Gambit AI Android Debug Script"
 echo "=========================================="
 echo ""
 
@@ -29,7 +29,7 @@ echo "Chọn hành động:"
 echo "1) Xóa log cũ và xem log mới (Real-time)"
 echo "2) Xem log đầy đủ"
 echo "3) Xem chỉ ERROR và CRASH"
-echo "4) Xem log của app Chess AI"
+echo "4) Xem log của app King's Gambit AI"
 echo "5) Cài đặt và chạy app, sau đó xem log"
 echo "6) Gỡ cài đặt app"
 echo ""
@@ -42,7 +42,7 @@ case $choice in
         echo "📱 Đang xem log real-time (Ctrl+C để dừng)..."
         echo "➡️  Hãy mở app trên điện thoại ngay bây giờ"
         echo ""
-        adb logcat | grep -E "ChessAI|chess_ai|Flutter|AndroidRuntime|FATAL|ERROR"
+        adb logcat | grep -E "com.kingsgambit.ai|King's Gambit AI|kings_gambit_ai|Flutter|AndroidRuntime|FATAL|ERROR"
         ;;
     2)
         echo "📱 Đang xem log đầy đủ (Ctrl+C để dừng)..."
@@ -53,8 +53,8 @@ case $choice in
         adb logcat *:E
         ;;
     4)
-        echo "📱 Đang xem log của Chess AI (Ctrl+C để dừng)..."
-        adb logcat | grep -E "com.chessai.app|ChessAI|chess_ai"
+        echo "📱 Đang xem log của King's Gambit AI (Ctrl+C để dừng)..."
+        adb logcat | grep -E "com.kingsgambit.ai|King's Gambit AI|kings_gambit_ai|Flutter"
         ;;
     5)
         echo "🔄 Tìm APK file..."
@@ -78,17 +78,17 @@ case $choice in
         adb logcat -c
 
         echo "🚀 Đang chạy app..."
-        adb shell am start -n com.chessai.app/.MainActivity
+        adb shell am start -n com.kingsgambit.ai/.MainActivity
 
         sleep 2
         echo ""
         echo "📱 Log của app:"
         echo "=========================================="
-        adb logcat | grep -E "ChessAI|chess_ai|Flutter|AndroidRuntime|FATAL|ERROR"
+        adb logcat | grep -E "com.kingsgambit.ai|King's Gambit AI|kings_gambit_ai|Flutter|AndroidRuntime|FATAL|ERROR"
         ;;
     6)
         echo "🗑️  Đang gỡ cài đặt app..."
-        adb uninstall com.chessai.app
+        adb uninstall com.kingsgambit.ai
         echo "✅ Hoàn tất"
         ;;
     *)

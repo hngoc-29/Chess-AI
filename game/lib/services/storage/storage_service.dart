@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-import 'package:chess_ai/core/utils/logger.dart';
+import 'package:kings_gambit_ai/core/utils/logger.dart';
 
 class StorageService {
   Future<String> getStoragePath() async {
     final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/chess_ai';
+    return '${directory.path}/kings_gambit_ai';
   }
 
   Future<void> saveGame(String gameId, Map<String, dynamic> data) async {

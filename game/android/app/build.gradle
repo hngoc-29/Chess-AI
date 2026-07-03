@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.chessai.app"
+    namespace "com.kingsgambit.ai"
     compileSdk 34
     ndkVersion "25.1.8937393"
 
@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.chessai.app"
+        applicationId "com.kingsgambit.ai"
         minSdkVersion 21
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()

@@ -1,4 +1,4 @@
-# Chess AI - Flutter Game Client
+# King's Gambit AI - Flutter Game Client
 
 Professional chess game with AI powered by MCTS engine and PyTorch neural network.
 

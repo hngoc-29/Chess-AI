@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 
-import 'package:chess_ai/core/utils/logger.dart';
-import 'package:chess_ai/domain/repositories/i_settings_repository.dart';
+import 'package:kings_gambit_ai/core/utils/logger.dart';
+import 'package:kings_gambit_ai/domain/repositories/i_settings_repository.dart';
 
 enum SoundEffect {
   move,

@@ -1,7 +1,7 @@
-import 'package:chess_ai/domain/entities/board.dart';
-import 'package:chess_ai/domain/entities/move_info.dart';
-import 'package:chess_ai/domain/entities/piece.dart';
-import 'package:chess_ai/domain/entities/position.dart';
+import 'package:kings_gambit_ai/domain/entities/board.dart';
+import 'package:kings_gambit_ai/domain/entities/move_info.dart';
+import 'package:kings_gambit_ai/domain/entities/piece.dart';
+import 'package:kings_gambit_ai/domain/entities/position.dart';
 
 class ChessRulesService {
   List<Position> getLegalMoves(Board board, Position from, {

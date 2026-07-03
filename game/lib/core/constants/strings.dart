@@ -1,7 +1,7 @@
 class AppStrings {
   AppStrings._();
 
-  static const String appName = 'Chess AI';
+  static const String appName = 'King's Gambit AI';
 
   static const String playVsAI = 'Play vs AI';
   static const String playVsHuman = 'Human vs Human';
@@ -13,6 +13,8 @@ class AppStrings {
   static const String replay = 'Replay';
   static const String analysis = 'Analysis';
   static const String exit = 'Exit';
+  static const String home = 'Home';
+  static const String close = 'Close';
 
   static const String undo = 'Undo';
   static const String redo = 'Redo';

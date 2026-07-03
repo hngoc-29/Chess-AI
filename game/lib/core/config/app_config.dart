@@ -1,7 +1,7 @@
 class AppConfig {
   AppConfig._();
 
-  static const String appName = 'Chess AI';
+  static const String appName = 'King's Gambit AI';
   static const String appVersion = '1.0.0';
 
   static const String modelPath = 'models/best_model_traced.pt';

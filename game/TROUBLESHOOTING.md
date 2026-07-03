@@ -44,7 +44,7 @@ Tìm các dòng có:
 - `ERROR` - Lỗi thông thường
 - `FATAL` - Lỗi nghiêm trọng
 - `AndroidRuntime` - App crash
-- `ChessAI` hoặc `chess_ai` - Log từ app của bạn
+- `King's Gambit AI` hoặc `kings_gambit_ai` - Log từ app của bạn
 
 ---
 
@@ -55,9 +55,9 @@ Tìm các dòng có:
 adb logcat *:E
 ```
 
-### Xem log của app Chess AI:
+### Xem log của app King's Gambit AI:
 ```bash
-adb logcat | grep -E "com.chessai.app|ChessAI|chess_ai|Flutter"
+adb logcat | grep -E "com.kingsgambit.ai|King's Gambit AI|kings_gambit_ai|Flutter"
 ```
 
 ### Workflow debug nhanh:
@@ -150,18 +150,18 @@ adb logcat AndroidRuntime:E *:S  # chỉ xem crash log
 
 ### 3. Xem memory usage
 ```bash
-adb shell dumpsys meminfo com.chessai.app
+adb shell dumpsys meminfo com.kingsgambit.ai
 ```
 
 ### 4. Gỡ cài đặt app cũ trước khi cài mới
 ```bash
-adb uninstall com.chessai.app
+adb uninstall com.kingsgambit.ai
 adb install -r app-release.apk
 ```
 
 ### 5. Kiểm tra app có cài đúng không
 ```bash
-adb shell pm list packages | grep chessai
+adb shell pm list packages | grep kingsgambit
 ```
 
 ---

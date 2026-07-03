@@ -1,11 +1,11 @@
 import 'dart:math';
 
-import 'package:chess_ai/domain/entities/board.dart';
-import 'package:chess_ai/domain/entities/chess_move.dart';
-import 'package:chess_ai/domain/entities/piece.dart';
-import 'package:chess_ai/domain/entities/position.dart';
-import 'package:chess_ai/domain/entities/settings.dart';
-import 'package:chess_ai/services/game/chess_rules_service.dart';
+import 'package:kings_gambit_ai/domain/entities/board.dart';
+import 'package:kings_gambit_ai/domain/entities/chess_move.dart';
+import 'package:kings_gambit_ai/domain/entities/piece.dart';
+import 'package:kings_gambit_ai/domain/entities/position.dart';
+import 'package:kings_gambit_ai/domain/entities/settings.dart';
+import 'package:kings_gambit_ai/services/game/chess_rules_service.dart';
 
 /// Advanced Chess AI Engine with Minimax and Alpha-Beta Pruning
 class ChessAIEngine {

@@ -170,7 +170,10 @@ class GameRepository implements IGameRepository {
     try {
       final json = gameState.toJson();
       await _localDataSource.saveGame(gameState.gameId.toString(), json);
-      await _localDataSource.saveGame('current_session', json);
+      // Save a quick-recovery session key depending on whether this game is vs AI or local
+      final hasAI = gameState.whitePlayer.type == PlayerType.ai || gameState.blackPlayer.type == PlayerType.ai;
+      final sessionKey = hasAI ? 'current_session_ai' : 'current_session_local';
+      await _localDataSource.saveGame(sessionKey, json);
       return const Right(null);
     } on StorageException catch (e) {
       return Left(StorageFailure(e.message));

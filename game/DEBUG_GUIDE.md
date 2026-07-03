@@ -2,7 +2,7 @@
 
 ## 📋 Vấn đề đã giải quyết
 
-**Vấn đề ban đầu**: App Chess AI hiển thị màn hình đen khi mở trên Android
+**Vấn đề ban đầu**: App King's Gambit AI hiển thị màn hình đen khi mở trên Android
 
 **Nguyên nhân**: 
 - App crash khi khởi động do lỗi initialization
@@ -90,7 +90,7 @@ git push origin main
 - Khi build xong (màu xanh ✅)
 - Click vào workflow run
 - Scroll xuống phần "Artifacts"
-- Download `chess-ai-release` hoặc `chess-ai-debug`
+- Download `kings-gambit-ai-release` hoặc `kings-gambit-ai-debug`
 
 ### Option 2: Build Locally
 
@@ -116,7 +116,7 @@ flutter build apk --debug
 ## 📱 Cách Xem Logs Trong App
 
 ### Bước 1: Mở app và vào Settings
-1. Mở app Chess AI trên điện thoại
+1. Mở app King's Gambit AI trên điện thoại
 2. Vào **Settings** (⚙️)
 3. Scroll xuống dưới cùng
 4. Tap vào **"Debug Logs"** (🐛)
@@ -145,7 +145,7 @@ Trong màn hình Debug Logs, bạn có thể:
 ### Log File Path
 Log files được lưu tại:
 ```
-/storage/emulated/0/Android/data/com.chessai.app/files/logs/
+/storage/emulated/0/Android/data/com.kingsgambit.ai/files/logs/
 ```
 
 ---
@@ -182,7 +182,7 @@ adb logcat -c
 # Mở app trên điện thoại
 
 # Xem log
-adb logcat | grep -E "ChessAI|ERROR|FATAL|AndroidRuntime"
+adb logcat | grep -E "com.kingsgambit.ai|King's Gambit AI|kings_gambit_ai|ERROR|FATAL|AndroidRuntime"
 ```
 
 ---
@@ -205,7 +205,7 @@ Workflow sẽ tự động:
 
 **Cách hoạt động**:
 1. Khi app khởi động, `AppLogger.initialize()` được gọi
-2. Tạo file log mới với timestamp: `chess_ai_2026-07-02T14-30-45.log`
+2. Tạo file log mới với timestamp: `kings_gambit_ai_2026-07-02T14-30-45.log`
 3. Mọi log (info, error, warning) đều được ghi vào:
    - Console (để dev xem khi debug)
    - File (để user xem sau này)
@@ -220,14 +220,14 @@ Workflow sẽ tự động:
 
 **Ví dụ log file**:
 ```
-📱 Chess AI Logger initialized
-📁 Log file: /storage/.../logs/chess_ai_2026-07-02T14-30-45.log
+📱 King's Gambit AI Logger initialized
+📁 Log file: /storage/.../logs/kings_gambit_ai_2026-07-02T14-30-45.log
 🔧 Build mode: Release
-Initializing Chess AI...
+Initializing King's Gambit AI...
 Chess engine initialization failed (non-critical)
 Audio service initialized
 Cache service initialized
-Chess AI initialization complete
+King's Gambit AI initialization complete
 ```
 
 ### Error Handling

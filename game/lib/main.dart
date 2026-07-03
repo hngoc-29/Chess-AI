@@ -20,7 +20,7 @@ void main() async {
 
   await _initializeApp();
 
-  runApp(const ChessAIApp());
+  runApp(const KingsGambitAIApp());
 }
 
 Future<void> _initializeApp() async {
@@ -28,7 +28,7 @@ Future<void> _initializeApp() async {
     // Initialize logger FIRST để log tất cả các bước tiếp theo
     await AppLogger.initialize();
 
-    AppLogger.info('Initializing Chess AI...');
+    AppLogger.info('Initializing King\'s Gambit AI...');
 
     setupDependencies();
 
@@ -62,7 +62,7 @@ Future<void> _initializeApp() async {
       // Continue without cache
     }
 
-    AppLogger.info('Chess AI initialization complete');
+    AppLogger.info('King\'s Gambit AI initialization complete');
   } catch (e, stackTrace) {
     AppLogger.error('Critical initialization error', e, stackTrace);
     // Don't rethrow - let app start even with errors

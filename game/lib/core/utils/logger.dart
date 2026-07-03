@@ -31,7 +31,7 @@ class AppLogger {
 
       // Tạo log file với timestamp trong tên
       final timestamp = DateTime.now().toIso8601String().split('.')[0].replaceAll(':', '-');
-      _logFile = File('${logsDir.path}/chess_ai_$timestamp.log');
+      _logFile = File('${logsDir.path}/kings_gambit_ai_$timestamp.log');
 
       // Giới hạn số file logs (giữ tối đa 5 file gần nhất)
       await _cleanOldLogs(logsDir);
@@ -55,7 +55,7 @@ class AppLogger {
       _isInitialized = true;
 
       // Ghi log đầu tiên
-      info('📱 Chess AI Logger initialized');
+      info('📱 King's Gambit AI Logger initialized');
       info('📁 Log file: ${_logFile!.path}');
       info('🔧 Build mode: ${kReleaseMode ? "Release" : "Debug"}');
     } catch (e) {

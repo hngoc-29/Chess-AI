@@ -54,7 +54,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: () {
                           showAboutDialog(
                             context: context,
-                            applicationName: 'Chess AI',
+                            applicationName: 'King's Gambit AI',
                             applicationVersion: '1.0.0',
                             applicationIcon: const Icon(Icons.extension, size: 48),
                             children: [
@@ -189,7 +189,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Chess AI',
+            'King\'s Gambit AI',
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,

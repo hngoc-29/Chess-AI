@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:chess_ai/domain/entities/piece.dart';
+import 'package:kings_gambit_ai/domain/entities/piece.dart';
 
 class PieceWidget extends StatelessWidget {
   final Piece piece;

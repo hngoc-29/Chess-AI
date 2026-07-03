@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/config/injection.dart';
 import '../../../core/constants/strings.dart';
+import '../../../core/utils/fen_utils.dart';
 import '../../../core/constants/colors.dart';
+import '../replay/replay_screen.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
 import '../../../domain/repositories/i_settings_repository.dart';
@@ -60,7 +63,8 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<GameBloc>().add(const LoadSavedGame('current_session'));
+      final sessionKey = widget.vsAI ? 'current_session_ai' : 'current_session_local';
+      context.read<GameBloc>().add(LoadSavedGame(sessionKey));
     });
   }
 
@@ -90,9 +94,65 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
             Navigator.of(context).pop();
           },
         ),
-        title: const Text('Chess AI'),
+        title: const Text('King\'s Gambit AI'),
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.fiber_new),
+            tooltip: 'New Game',
+            onPressed: () {
+              context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy_all),
+            tooltip: 'Copy FEN',
+            onPressed: () async {
+              final state = context.read<GameBloc>().state;
+              GameState? gs;
+              if (state is GameInProgress) gs = state.gameState;
+              if (state is GameOver) gs = state.gameState;
+              if (gs != null) {
+                final fen = boardToFen(
+                  gs.board,
+                  gs.currentTurn,
+                  whiteCanCastleK: gs.whiteCanCastleKingside,
+                  whiteCanCastleQ: gs.whiteCanCastleQueenside,
+                  blackCanCastleK: gs.blackCanCastleKingside,
+                  blackCanCastleQ: gs.blackCanCastleQueenside,
+                  enPassant: gs.enPassantSquare,
+                  halfMove: gs.halfMoveClock,
+                  fullMove: gs.fullMoveNumber,
+                );
+                await Clipboard.setData(ClipboardData(text: fen));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('FEN copied')));
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.input),
+            tooltip: 'Load FEN',
+            onPressed: () async {
+              final controller = TextEditingController();
+              final result = await showDialog<String?>(
+                context: context,
+                builder: (dialogCtx) => AlertDialog(
+                  title: const Text('Load FEN'),
+                  content: TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(hintText: 'Enter FEN string'),
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
+                    TextButton(onPressed: () => Navigator.of(dialogCtx).pop(controller.text.trim()), child: const Text('Load')),
+                  ],
+                ),
+              );
+              if (result != null && result.isNotEmpty) {
+                context.read<GameBloc>().add(SetFenPosition(result));
+              }
+            },
+          ),
           BlocBuilder<GameBloc, GameBlocState>(
             builder: (context, state) {
               return IconButton(
@@ -121,7 +181,7 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body: BlocConsumer<GameBloc, GameBlocState>(
+        body: BlocConsumer<GameBloc, GameBlocState>(
         listener: (context, state) {
           if (state is GameOver) {
             _showGameOverDialog(context, state.message);
@@ -133,12 +193,21 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
           if (state is GameLoading) {
             return const Center(child: CircularProgressIndicator());
           }
+          // Show board both for in-progress and game-over so user can inspect and undo
+          if (state is GameInProgress || state is GameOver) {
+            final bool isGameOver = state is GameOver;
+            final GameState gs = state is GameInProgress ? state.gameState : (state as GameOver).gameState;
+            final Position? selected = state is GameInProgress ? state.selectedSquare : null;
+            final legalMoves = state is GameInProgress ? state.legalMoves : <Position, MoveType>{};
+            final endangered = state is GameInProgress ? state.endangeredSquares : <Position>{};
+            final flipped = state is GameInProgress ? state.flipped : false;
+            final isAIThinking = state is GameInProgress ? state.isAIThinking : false;
+            final evaluationScore = state is GameInProgress ? state.evaluationScore : 0.0;
 
-          if (state is GameInProgress) {
             return SafeArea(
               child: Column(
                 children: [
-                  _buildStatusBar(context, state),
+                  _buildStatusBar(context, state is GameInProgress ? state as GameInProgress : GameInProgress(gameState: gs)),
                   Expanded(
                     child: Center(
                       child: Padding(
@@ -160,17 +229,17 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                             builder: (context, snapshot) {
                               final pieceStyle = snapshot.data ?? 'cburnett';
                               return ChessBoardWidget(
-                                board: state.board,
-                                flipped: state.flipped,
-                                selectedSquare: state.selectedSquare,
-                                legalMoves: state.legalMoves,
-                                endangeredSquares: state.endangeredSquares,
+                                board: gs.board,
+                                flipped: flipped,
+                                selectedSquare: selected,
+                                legalMoves: legalMoves,
+                                endangeredSquares: endangered,
                                 pieceStyle: pieceStyle,
-                                onSquareTap: (position) {
-                                  _handleSquareTap(context, state, position);
+                                onSquareTap: isGameOver ? null : (position) {
+                                  if (!isGameOver && state is GameInProgress) _handleSquareTap(context, state as GameInProgress, position);
                                 },
-                                onMove: (from, to) {
-                                  _handleMove(context, state, from, to);
+                                onMove: isGameOver ? null : (from, to) {
+                                  if (!isGameOver && state is GameInProgress) _handleMove(context, state as GameInProgress, from, to);
                                 },
                               );
                             },
@@ -179,8 +248,8 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  _buildActionButtons(context, state),
-                  _buildEvaluation(context, state),
+                  if (state is GameInProgress) _buildActionButtons(context, state as GameInProgress),
+                  if (state is GameInProgress) _buildEvaluation(context, state as GameInProgress),
                 ],
               ),
             );
@@ -377,6 +446,20 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
+              final state = context.read<GameBloc>().state;
+              if (state is GameOver) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ReplayScreen(gameState: state.gameState),
+                  ),
+                );
+              }
+            },
+            child: const Text('View Replay'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
               context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
             },
             child: const Text(AppStrings.newGame),
@@ -386,7 +469,13 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
               Navigator.of(dialogContext).pop();
               Navigator.of(context).pop();
             },
-            child: const Text(AppStrings.exit),
+            child: const Text(AppStrings.home),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text(AppStrings.close),
           ),
         ],
       ),

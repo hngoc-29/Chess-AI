@@ -17,6 +17,7 @@ import '../../../domain/usecases/save_game.dart';
 import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
+import '../../../core/utils/fen_utils.dart';
 import 'game_bloc_state.dart';
 import 'game_event.dart';
 
@@ -54,8 +55,41 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     on<RedoMove>(_onRedoMove);
     on<FlipBoard>(_onFlipBoard);
     on<RequestAIMove>(_onRequestAIMove);
+  on<SetFenPosition>(_onSetFenPosition);
     on<SaveCurrentGame>(_onSaveCurrentGame);
     on<LoadSavedGame>(_onLoadSavedGame);
+  }
+
+  Future<void> _onSetFenPosition(SetFenPosition event, Emitter<GameBlocState> emit) async {
+    if (state is! GameInProgress && state is! GameOver) return;
+    GameState baseState;
+    if (state is GameInProgress) {
+      baseState = (state as GameInProgress).gameState;
+    } else {
+      baseState = (state as GameOver).gameState;
+    }
+
+    try {
+      final parsed = fenToBoard(event.fen);
+      final newGameState = baseState.copyWith(
+        board: parsed.board,
+        currentTurn: parsed.currentTurn,
+        whiteCanCastleKingside: parsed.whiteCanCastleK,
+        whiteCanCastleQueenside: parsed.whiteCanCastleQ,
+        blackCanCastleKingside: parsed.blackCanCastleK,
+        blackCanCastleQueenside: parsed.blackCanCastleQ,
+        enPassantSquare: parsed.enPassant,
+        halfMoveClock: parsed.halfMoveClock,
+        fullMoveNumber: parsed.fullMoveNumber,
+      );
+
+      _history.clear();
+      _redoStack.clear();
+
+      emit(GameInProgress(gameState: newGameState));
+    } catch (e) {
+      // ignore parse errors for now
+    }
   }
 
   Future<void> _onStartNewGame(StartNewGame event, Emitter<GameBlocState> emit) async {
@@ -165,7 +199,12 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     if (state is! GameInProgress) return;
     final currentState = state as GameInProgress;
 
-    final movingPiece = currentState.board.pieceAt(event.from);
+    var movingPiece = currentState.board.pieceAt(event.from);
+    // If piece is missing but a promotion was provided, assume it was the pawn that moved
+    // (handles UI timing where the board or selection may have been cleared)
+    if (movingPiece == null && event.promotion != null) {
+      movingPiece = Piece(type: PieceType.pawn, color: currentState.gameState.currentTurn);
+    }
     if (movingPiece == null || movingPiece.color != currentState.gameState.currentTurn) {
       _audioService.playSound(SoundEffect.button);
       return;

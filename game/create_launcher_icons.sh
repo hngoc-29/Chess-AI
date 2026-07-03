@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🎯 Creating Android launcher icons for Chess AI..."
+echo "🎯 Creating Android launcher icons for King's Gambit AI..."
 
 # Define the base directory
 BASE_DIR="android/app/src/main/res"

@@ -1,4 +1,4 @@
-package com.chessai.app
+package com.kingsgambit.ai
 
 import io.flutter.embedding.android.FlutterActivity
 

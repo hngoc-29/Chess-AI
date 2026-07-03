@@ -1,2 +1,40 @@
 models/*chess-ai.tar
+
+# IDE & Editor
 .claude
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+venv/
+env/
+.venv
+
+# Generated Android launcher icons
+/game/android/app/src/main/res/mipmap-*/ic_launcher.png
+/game/android/app/src/main/res/mipmap-*/ic_launcher_round.png
+
+# Flutter build
+/game/build/
+/game/.dart_tool/
+/game/.flutter-plugins
+/game/.flutter-plugins-dependencies
+/game/.packages
+
+# Android build
+/game/android/.gradle/
+/game/android/local.properties

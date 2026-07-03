@@ -71,3 +71,12 @@ class LoadSavedGame extends GameEvent {
   @override
   List<Object?> get props => [gameId];
 }
+
+class SetFenPosition extends GameEvent {
+  final String fen;
+
+  const SetFenPosition(this.fen);
+
+  @override
+  List<Object?> get props => [fen];
+}

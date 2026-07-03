@@ -1,4 +1,4 @@
-name: chess_ai
+name: kings_gambit_ai
 description: Professional Chess AI Game with MCTS Engine
 publish_to: 'none'
 version: 1.0.0+1

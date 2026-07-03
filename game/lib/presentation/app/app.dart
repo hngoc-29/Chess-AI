@@ -4,13 +4,13 @@ import '../screens/splash/splash_screen.dart';
 import '../themes/app_theme.dart';
 import 'routes.dart';
 
-class ChessAIApp extends StatelessWidget {
-  const ChessAIApp({super.key});
+class KingsGambitAIApp extends StatelessWidget {
+  const KingsGambitAIApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Chess AI',
+      title: 'King\'s Gambit AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

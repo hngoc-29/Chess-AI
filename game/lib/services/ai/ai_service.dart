@@ -1,5 +1,5 @@
-import 'package:chess_ai/core/utils/logger.dart';
-import 'package:chess_ai/services/engine/chess_engine_service.dart';
+import 'package:kings_gambit_ai/core/utils/logger.dart';
+import 'package:kings_gambit_ai/services/engine/chess_engine_service.dart';
 
 class AIMove {
   final String from;

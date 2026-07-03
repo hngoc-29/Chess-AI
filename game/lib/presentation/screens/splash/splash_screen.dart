@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Chess AI',
+              'King\'s Gambit AI',
               style: Theme.of(context).textTheme.displayMedium,
             ),
             const SizedBox(height: 48),
