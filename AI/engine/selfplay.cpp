@@ -276,9 +276,24 @@ int main(int argc, char** argv) {
             if (resign_thresh > -1.0f && ply >= min_resign_ply) {
                 const float root_q = bot.get_last_root_q();
                 if (root_q < resign_thresh) {
-                    // Current player resigns → they lose (terminal_reward = -1.0
-                    // from their perspective; perspectives[] sign flips on assign).
-                    terminal_reward = -1.0f;
+                    // The side to move here is the one resigning → they lose,
+                    // so the OTHER color wins. terminal_reward must stay
+                    // WHITE-PERSPECTIVE ABSOLUTE (+1 white wins / -1 black
+                    // wins / 0 draw) — exactly the convention
+                    // ChessEnv::step()'s `result.reward` uses for checkmate,
+                    // because "samples[i].value = perspectives[i] *
+                    // terminal_reward" below assumes that convention.
+                    //
+                    // BUGFIX: this used to be hardcoded to -1.0f regardless
+                    // of which color resigned. That only happened to be
+                    // correct when White resigned; whenever Black resigned it
+                    // silently flipped the value label of every sample in the
+                    // entire game (White's positions logged as losses instead
+                    // of wins, and vice versa for Black) — a real source of
+                    // mislabeled training data any time resign is enabled.
+                    const bool resigning_side_is_white =
+                        (env.get_board().sideToMove() == chess::Color::WHITE);
+                    terminal_reward = resigning_side_is_white ? -1.0f : 1.0f;
                     ++plies;  // count the resign ply
                     // Debug: uncomment để xem resign details
                     // std::cout << "[SelfPlay] resign at ply=" << ply

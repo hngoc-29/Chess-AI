@@ -11,6 +11,8 @@ import '../../../domain/entities/player.dart';
 import '../../../domain/entities/position.dart';
 import '../../../domain/entities/settings.dart';
 import '../../../domain/repositories/i_settings_repository.dart';
+import '../../../domain/repositories/i_stats_repository.dart';
+import '../../../domain/usecases/save_game.dart';
 import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
@@ -22,6 +24,8 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
   final AudioService _audioService;
   final ChessAIEngine _aiEngine;
   final ISettingsRepository _settingsRepository;
+  final IStatsRepository _statsRepository;
+  final SaveGameUseCase _saveGameUseCase;
   final List<GameState> _history = [];
   final List<GameState> _redoStack = [];
 
@@ -30,10 +34,14 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     required AudioService audioService,
     required ChessAIEngine aiEngine,
     required ISettingsRepository settingsRepository,
+    required IStatsRepository statsRepository,
+    required SaveGameUseCase saveGameUseCase,
   })  : _rulesService = rulesService,
         _audioService = audioService,
         _aiEngine = aiEngine,
         _settingsRepository = settingsRepository,
+        _statsRepository = statsRepository,
+        _saveGameUseCase = saveGameUseCase,
         super(const GameInitial()) {
     on<StartNewGame>(_onStartNewGame);
     on<MakeMove>(_onMakeMove);
@@ -42,6 +50,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     on<RedoMove>(_onRedoMove);
     on<FlipBoard>(_onFlipBoard);
     on<RequestAIMove>(_onRequestAIMove);
+    on<SaveCurrentGame>(_onSaveCurrentGame);
   }
 
   Future<void> _onStartNewGame(StartNewGame event, Emitter<GameBlocState> emit) async {
@@ -323,22 +332,87 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       updatedAt: DateTime.now(),
     );
 
+    // Calculate evaluation score (from White's perspective)
+    final evalScore = _aiEngine.evaluatePosition(newBoard, PieceColor.white);
+
     emit(currentState.copyWith(
       gameState: newGameState,
       clearSelection: true,
       legalMoves: {},
+      evaluationScore: evalScore,
     ));
 
     if (newStatus == GameStatus.checkmate) {
-      final winner = currentState.gameState.currentTurn == PieceColor.white ? 'White' : 'Black';
+      // Determine winner (opposite of current turn since they're checkmated)
+      final winnerColor = currentState.gameState.currentTurn == PieceColor.white 
+          ? PieceColor.black 
+          : PieceColor.white;
+      final winnerName = winnerColor == PieceColor.white ? 'White' : 'Black';
+      
+      // Record stats
+      final isPlayerWhite = currentState.gameState.whitePlayer.type == PlayerType.human;
+      final isPlayerBlack = currentState.gameState.blackPlayer.type == PlayerType.human;
+      
+      if (isPlayerWhite && !isPlayerBlack) {
+        // Player vs AI
+        if (winnerColor == PieceColor.white) {
+          _statsRepository.recordGame(GameResult.win);
+        } else {
+          _statsRepository.recordGame(GameResult.loss);
+        }
+      } else if (!isPlayerWhite && isPlayerBlack) {
+        // AI vs Player
+        if (winnerColor == PieceColor.black) {
+          _statsRepository.recordGame(GameResult.win);
+        } else {
+          _statsRepository.recordGame(GameResult.loss);
+        }
+      }
+      
       emit(GameOver(
         gameState: newGameState,
-        message: 'Checkmate! $winner wins!',
+        winner: winnerName,
+        reason: 'Checkmate',
+      ));
+    } else if (newStatus == GameStatus.stalemate) {
+      _statsRepository.recordGame(GameResult.draw);
+      emit(GameOver(
+        gameState: newGameState,
+        reason: 'Stalemate',
+      ));
+    } else if (newGameState.currentPlayer.type == PlayerType.ai) {
+      add(const RequestAIMove());
+    }
+  }
+
+  Future<void> _onSaveCurrentGame(SaveCurrentGame event, Emitter<GameBlocState> emit) async {
+    if (state is GameInProgress) {
+      final currentState = state as GameInProgress;
+      await _saveGameUseCase.saveState(currentState.gameState);
+    }
+  }
+}
+      
+      // Check if human won (for stats)
+      final humanWon = (winnerColor == PieceColor.white && 
+                        currentState.gameState.whitePlayer.type == PlayerType.human) ||
+                       (winnerColor == PieceColor.black && 
+                        currentState.gameState.blackPlayer.type == PlayerType.human);
+      
+      // Record game statistics
+      await _statsRepository.recordGame(isWin: humanWon, isDraw: false);
+      
+      emit(GameOver(
+        gameState: newGameState,
+        message: 'Checkmate! $winnerName wins!',
       ));
       return;
     }
 
     if (newStatus == GameStatus.stalemate) {
+      // Record game statistics for draw
+      await _statsRepository.recordGame(isWin: false, isDraw: true);
+      
       emit(GameOver(
         gameState: newGameState,
         message: 'Stalemate! Draw.',

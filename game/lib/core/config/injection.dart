@@ -42,7 +42,10 @@ void _setupServices() {
   getIt.registerSingleton<ChessEngineService>(ChessEngineService());
   getIt.registerSingleton<AIService>(AIService(getIt<ChessEngineService>()));
   getIt.registerSingleton<ChessAIEngine>(ChessAIEngine(getIt<ChessRulesService>()));
-  getIt.registerSingleton<AudioService>(AudioService());
+  // AudioService registered lazily after repositories to access ISettingsRepository
+  getIt.registerLazySingleton<AudioService>(
+    () => AudioService(settingsRepository: getIt<ISettingsRepository>()),
+  );
   getIt.registerSingleton<StorageService>(StorageService());
   getIt.registerSingleton<CacheService>(CacheService());
   getIt.registerSingleton<NavigationService>(NavigationService());
@@ -74,7 +77,7 @@ void _setupRepositories() {
   );
   getIt.registerLazySingleton<IStatsRepository>(
     () => StatsRepository(
-      localDataSource: getIt<GameLocalDataSource>(),
+      preferencesDataSource: getIt<PreferencesDataSource>(),
     ),
   );
 }

@@ -51,7 +51,26 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       const SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.info_outline, color: AppColors.textPrimaryDark),
-                        onPressed: () {},
+                        onPressed: () {
+                          showAboutDialog(
+                            context: context,
+                            applicationName: 'Chess AI',
+                            applicationVersion: '1.0.0',
+                            applicationIcon: const Icon(Icons.extension, size: 48),
+                            children: [
+                              const Text(
+                                'A beautiful chess game with AI opponent powered by advanced algorithms.\n\n'
+                                'Features:\n'
+                                '• Play against AI with multiple difficulty levels\n'
+                                '• Beautiful themes and piece styles\n'
+                                '• Move hints and analysis\n'
+                                '• Game statistics tracking\n'
+                                '• Undo/Redo moves\n\n'
+                                'Developed with Flutter',
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),

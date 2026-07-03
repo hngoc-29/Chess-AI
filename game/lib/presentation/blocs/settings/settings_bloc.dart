@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/settings.dart';
 import '../../../domain/repositories/i_settings_repository.dart';
+import '../../../services/audio/audio_service.dart';
+import '../../../core/config/injection.dart';
 import 'settings_event.dart';
 import 'settings_state.dart';
 
@@ -33,6 +35,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     try {
       // Load all settings from repository
       final soundResult = await _repository.getSoundEnabled();
+      final musicResult = await _repository.getMusicEnabled();
       final boardThemeResult = await _repository.getBoardTheme();
       final pieceSetResult = await _repository.getPieceSet();
       final darkModeResult = await _repository.isDarkMode();
@@ -40,6 +43,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
       // Handle any failures
       if (soundResult.isLeft() ||
+          musicResult.isLeft() ||
           boardThemeResult.isLeft() ||
           pieceSetResult.isLeft() ||
           darkModeResult.isLeft() ||
@@ -50,6 +54,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
       // Extract values
       final soundEnabled = soundResult.getOrElse(() => true);
+      final musicEnabled = musicResult.getOrElse(() => true);
       final boardTheme = boardThemeResult.getOrElse(() => 'classic');
       final pieceSet = pieceSetResult.getOrElse(() => 'cburnett');
       final isDark = darkModeResult.getOrElse(() => false);
@@ -68,7 +73,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
       final settings = Settings(
         soundEnabled: soundEnabled,
-        musicEnabled: false, // Not in current repo, default to false
+        musicEnabled: musicEnabled,
         theme: isDark ? AppThemeMode.dark : AppThemeMode.light,
         boardStyle: boardStyle,
         pieceStyle: pieceStyle,
@@ -94,6 +99,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     result.fold(
       (failure) => emit(SettingsError(failure.toString())),
       (_) {
+        // Update audio service
+        getIt<AudioService>().setSoundEnabled(event.enabled);
+        
         final updatedSettings = currentSettings.copyWith(
           soundEnabled: event.enabled,
         );
@@ -109,11 +117,20 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     if (state is! SettingsLoaded) return;
     final currentSettings = (state as SettingsLoaded).settings;
 
-    // Music not in current repo, just update local state
-    final updatedSettings = currentSettings.copyWith(
-      musicEnabled: event.enabled,
+    final result = await _repository.setMusicEnabled(event.enabled);
+
+    result.fold(
+      (failure) => emit(SettingsError(failure.toString())),
+      (_) {
+        // Update audio service
+        getIt<AudioService>().setMusicEnabled(event.enabled);
+        
+        final updatedSettings = currentSettings.copyWith(
+          musicEnabled: event.enabled,
+        );
+        emit(SettingsLoaded(updatedSettings));
+      },
     );
-    emit(SettingsLoaded(updatedSettings));
   }
 
   Future<void> _onUpdateTheme(

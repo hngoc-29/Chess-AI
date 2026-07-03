@@ -122,6 +122,52 @@ class GameState extends Equatable {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'gameId': gameId,
+      'board': board.toJson(),
+      'currentTurn': currentTurn.name,
+      'moveHistory': moveHistory.map((m) => m.toJson()).toList(),
+      'status': status.name,
+      'whitePlayer': whitePlayer.toJson(),
+      'blackPlayer': blackPlayer.toJson(),
+      'whiteCanCastleKingside': whiteCanCastleKingside,
+      'whiteCanCastleQueenside': whiteCanCastleQueenside,
+      'blackCanCastleKingside': blackCanCastleKingside,
+      'blackCanCastleQueenside': blackCanCastleQueenside,
+      'enPassantSquare': enPassantSquare,
+      'halfMoveClock': halfMoveClock,
+      'fullMoveNumber': fullMoveNumber,
+      'isInCheck': isInCheck,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  factory GameState.fromJson(Map<String, dynamic> json) {
+    return GameState(
+      gameId: json['gameId'] as int,
+      board: Board.fromJson(json['board'] as Map<String, dynamic>),
+      currentTurn: PieceColor.values.firstWhere((e) => e.name == json['currentTurn']),
+      moveHistory: (json['moveHistory'] as List)
+          .map((m) => ChessMove.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      status: GameStatus.values.firstWhere((e) => e.name == json['status']),
+      whitePlayer: Player.fromJson(json['whitePlayer'] as Map<String, dynamic>),
+      blackPlayer: Player.fromJson(json['blackPlayer'] as Map<String, dynamic>),
+      whiteCanCastleKingside: json['whiteCanCastleKingside'] as bool? ?? true,
+      whiteCanCastleQueenside: json['whiteCanCastleQueenside'] as bool? ?? true,
+      blackCanCastleKingside: json['blackCanCastleKingside'] as bool? ?? true,
+      blackCanCastleQueenside: json['blackCanCastleQueenside'] as bool? ?? true,
+      enPassantSquare: json['enPassantSquare'] as String?,
+      halfMoveClock: json['halfMoveClock'] as int? ?? 0,
+      fullMoveNumber: json['fullMoveNumber'] as int? ?? 1,
+      isInCheck: json['isInCheck'] as bool? ?? false,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+    );
+  }
+
   @override
   List<Object?> get props => [
         gameId,

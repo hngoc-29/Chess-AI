@@ -65,5 +65,21 @@ target_link_libraries(selfplay PRIVATE
     ${TORCH_LIBRARIES}
 )
 
+# ── arena: head-to-head evaluation match between two models ───────────────────
+# Used by the training pipeline to decide whether a newly trained generation
+# is actually stronger than the current best_model_traced.pt before letting
+# it overwrite it (see run_arena_match() / arena-gating in
+# colab_selfplay_pipeline.py). Reuses the same ChessEnv/MCTS object libraries.
+add_executable(arena arena.cpp)
+target_include_directories(arena PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(arena PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
+target_compile_options(arena PRIVATE -O2)
+
+target_link_libraries(arena PRIVATE
+    $<TARGET_OBJECTS:ChessEnv_obj>
+    $<TARGET_OBJECTS:mcts_obj>
+    ${TORCH_LIBRARIES}
+)
+
 message(STATUS "[cmake] selfplay target configured.")
 message(STATUS "[cmake]   TORCH_LIBRARIES = ${TORCH_LIBRARIES}")

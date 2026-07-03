@@ -193,6 +193,10 @@ MCTS::MCTS(const std::string& m_path, int sims, float c, unsigned seed)
     }
 }
 
+void MCTS::set_dirichlet_enabled(bool enabled) {
+    dirichlet_enabled_ = enabled;
+}
+
 std::vector<float> MCTS::run_nn_inference(const std::vector<float>& planes) {
     std::vector<std::vector<float>> batch_planes;
     batch_planes.emplace_back(planes);
@@ -370,7 +374,7 @@ std::vector<std::pair<int, int>> MCTS::search_with_counts(const ChessEnv& curren
             child_path.push_back(child);
 
             // ── Apply Dirichlet noise to root children after first expansion ──
-            if (!root_dirichlet_applied && node == root && root->has_children()) {
+            if (dirichlet_enabled_ && !root_dirichlet_applied && node == root && root->has_children()) {
                 root_dirichlet_applied = true;
                 const std::size_t n_children = root->children.size();
                 if (n_children > 1) {

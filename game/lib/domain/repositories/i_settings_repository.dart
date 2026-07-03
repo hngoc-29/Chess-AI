@@ -5,6 +5,8 @@ import '../../core/errors/failures.dart';
 abstract class ISettingsRepository {
   Future<Either<Failure, bool>> getSoundEnabled();
   Future<Either<Failure, void>> setSoundEnabled(bool enabled);
+  Future<Either<Failure, bool>> getMusicEnabled();
+  Future<Either<Failure, void>> setMusicEnabled(bool enabled);
   Future<Either<Failure, double>> getVolume();
   Future<Either<Failure, void>> setVolume(double volume);
   Future<Either<Failure, String>> getBoardTheme();

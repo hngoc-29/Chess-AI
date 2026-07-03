@@ -67,7 +67,7 @@ class Piece extends Equatable {
     return Piece(type: type, color: color);
   }
 
-  String get assetPath {
+  String getAssetPath(String style) {
     final colorPrefix = isWhite ? 'w' : 'b';
     final typeChar = {
       PieceType.king: 'K',
@@ -77,7 +77,24 @@ class Piece extends Equatable {
       PieceType.knight: 'N',
       PieceType.pawn: 'P',
     }[type]!;
-    return 'assets/images/pieces/cburnett/$colorPrefix$typeChar.svg';
+    return 'assets/images/pieces/$style/$colorPrefix$typeChar.svg';
+  }
+  
+  // Legacy getter for backward compatibility - defaults to cburnett
+  String get assetPath => getAssetPath('cburnett');
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type.name,
+      'color': color.name,
+    };
+  }
+
+  factory Piece.fromJson(Map<String, dynamic> json) {
+    return Piece(
+      type: PieceType.values.firstWhere((e) => e.name == json['type']),
+      color: PieceColor.values.firstWhere((e) => e.name == json['color']),
+    );
   }
 
   @override

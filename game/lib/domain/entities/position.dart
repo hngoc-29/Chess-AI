@@ -54,6 +54,20 @@ class Position extends Equatable {
     return file == other.file || rank == other.rank;
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'file': file,
+      'rank': rank,
+    };
+  }
+
+  factory Position.fromJson(Map<String, dynamic> json) {
+    return Position(
+      file: json['file'] as int,
+      rank: json['rank'] as int,
+    );
+  }
+
   @override
   List<Object?> get props => [file, rank];
 

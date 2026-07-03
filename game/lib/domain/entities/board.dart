@@ -97,4 +97,24 @@ class Board extends Equatable {
     });
     return Board(newSquares);
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'squares': squares.map((rank) => 
+        rank.map((piece) => piece?.toJson()).toList()
+      ).toList(),
+    };
+  }
+
+  factory Board.fromJson(Map<String, dynamic> json) {
+    final squaresJson = json['squares'] as List;
+    final squares = squaresJson.map((rankJson) {
+      final rank = rankJson as List;
+      return rank.map((pieceJson) {
+        if (pieceJson == null) return null;
+        return Piece.fromJson(pieceJson as Map<String, dynamic>);
+      }).toList();
+    }).toList();
+    return Board(List<List<Piece?>>.from(squares.map((e) => List<Piece?>.from(e))));
+  }
 }

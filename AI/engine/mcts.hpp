@@ -110,6 +110,13 @@ public:
     // the current player concedes immediately, avoiding useless moves.
     float get_last_root_q() const;
 
+    // Enable/disable Dirichlet noise at the search root. Self-play training
+    // wants the noise (it drives exploration in the training data). Head-to-
+    // head evaluation (arena.cpp) wants it OFF so each model plays its
+    // genuinely strongest line instead of a noise-perturbed one. Defaults to
+    // enabled so existing self-play callers are unaffected.
+    void set_dirichlet_enabled(bool enabled);
+
 private:
     // ── NN inference helpers ─────────────────────────────────────────────────
     std::vector<float>
@@ -130,4 +137,8 @@ private:
 
     // Q-value at the root of the most recently completed search.
     float                        last_root_q_  = 0.0f;
+
+    // When false, search_with_counts() skips the Dirichlet-noise injection
+    // at the root (see set_dirichlet_enabled()).
+    bool                         dirichlet_enabled_ = true;
 };

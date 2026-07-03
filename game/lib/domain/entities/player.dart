@@ -45,6 +45,28 @@ class Player extends Equatable {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'color': color.name,
+      'type': type.name,
+      'elo': elo,
+      'avatarUrl': avatarUrl,
+    };
+  }
+
+  factory Player.fromJson(Map<String, dynamic> json) {
+    return Player(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      color: PieceColor.values.firstWhere((e) => e.name == json['color']),
+      type: PlayerType.values.firstWhere((e) => e.name == json['type']),
+      elo: json['elo'] as int?,
+      avatarUrl: json['avatarUrl'] as String?,
+    );
+  }
+
   @override
   List<Object?> get props => [id, name, color, type, elo, avatarUrl];
 

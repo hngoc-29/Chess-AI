@@ -81,6 +81,36 @@ class ChessMove extends Equatable {
     return buffer.toString();
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'from': from.toJson(),
+      'to': to.toJson(),
+      'promotion': promotion?.name,
+      'capturedPiece': capturedPiece?.toJson(),
+      'isCheck': isCheck,
+      'isCheckmate': isCheckmate,
+      'isCastle': isCastle,
+      'isEnPassant': isEnPassant,
+    };
+  }
+
+  factory ChessMove.fromJson(Map<String, dynamic> json) {
+    return ChessMove(
+      from: Position.fromJson(json['from'] as Map<String, dynamic>),
+      to: Position.fromJson(json['to'] as Map<String, dynamic>),
+      promotion: json['promotion'] != null 
+          ? PieceType.values.firstWhere((e) => e.name == json['promotion']) 
+          : null,
+      capturedPiece: json['capturedPiece'] != null 
+          ? Piece.fromJson(json['capturedPiece'] as Map<String, dynamic>) 
+          : null,
+      isCheck: json['isCheck'] as bool? ?? false,
+      isCheckmate: json['isCheckmate'] as bool? ?? false,
+      isCastle: json['isCastle'] as bool? ?? false,
+      isEnPassant: json['isEnPassant'] as bool? ?? false,
+    );
+  }
+
   @override
   List<Object?> get props => [
         from,

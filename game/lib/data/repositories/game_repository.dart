@@ -151,7 +151,25 @@ class GameRepository implements IGameRepository {
   @override
   Future<Either<Failure, void>> saveGame(int gameId) async {
     try {
-      await _localDataSource.saveGame(gameId.toString(), {});
+      // Note: This would need the actual GameState to save
+      // In a real implementation, this should be called with GameState parameter
+      // For now, we'll save an empty placeholder
+      await _localDataSource.saveGame(gameId.toString(), {
+        'gameId': gameId,
+        'savedAt': DateTime.now().toIso8601String(),
+      });
+      return const Right(null);
+    } on StorageException catch (e) {
+      return Left(StorageFailure(e.message));
+    } catch (e) {
+      return Left(StorageFailure(e.toString()));
+    }
+  }
+
+  Future<Either<Failure, void>> saveGameState(GameState gameState) async {
+    try {
+      final json = gameState.toJson();
+      await _localDataSource.saveGame(gameState.gameId.toString(), json);
       return const Right(null);
     } on StorageException catch (e) {
       return Left(StorageFailure(e.message));
@@ -163,7 +181,12 @@ class GameRepository implements IGameRepository {
   @override
   Future<Either<Failure, GameState>> loadGame(String gameId) async {
     try {
-      return newGame();
+      final json = await _localDataSource.loadGame(gameId);
+      if (json == null || json.isEmpty) {
+        return Left(StorageFailure('Game not found'));
+      }
+      final gameState = GameState.fromJson(json);
+      return Right(gameState);
     } on StorageException catch (e) {
       return Left(StorageFailure(e.message));
     } catch (e) {

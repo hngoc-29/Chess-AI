@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/durations.dart';
 import '../../app/routes.dart';
@@ -19,8 +20,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _navigateToMainMenu() async {
     await Future.delayed(AppDurations.splash);
+    
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.mainMenu);
+      if (hasSeenOnboarding) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.mainMenu);
+      } else {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+      }
     }
   }
 

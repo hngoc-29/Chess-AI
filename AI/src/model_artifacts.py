@@ -80,6 +80,7 @@ def write_model_output_summary(
     artifacts: Dict[str, Any],
     replay_path: Optional[Path] = None,
     checkpoint_path: Optional[Path] = None,
+    arena_result: Optional[Dict[str, Any]] = None,
 ) -> Path:
     """Write a JSON summary of all artifacts produced by one self-play generation.
 
@@ -124,6 +125,9 @@ def write_model_output_summary(
             "path": _str(checkpoint_path),
             "size_mb": _size_mb(checkpoint_path),
         }
+
+    if arena_result is not None:
+        summary["arena"] = arena_result
 
     out_path = output_dir / f"model_output_summary_gen_{generation}.json"
     with out_path.open("w", encoding="utf-8") as fh:

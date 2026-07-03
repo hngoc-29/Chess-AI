@@ -14,6 +14,7 @@ abstract class IGameRepository {
   Future<Either<Failure, ChessMove>> getAIMove(int gameId, {int difficulty, Duration? maxTime});
   Future<Either<Failure, double>> evaluatePosition(int gameId);
   Future<Either<Failure, void>> saveGame(int gameId);
+  Future<Either<Failure, void>> saveGameState(GameState gameState);
   Future<Either<Failure, GameState>> loadGame(String gameId);
   Future<Either<Failure, String>> exportPGN(int gameId);
 }

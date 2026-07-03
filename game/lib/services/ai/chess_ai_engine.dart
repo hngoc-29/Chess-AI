@@ -100,7 +100,7 @@ class ChessAIEngine {
   ) {
     // Base case: reached max depth or game over
     if (depth == 0) {
-      return _evaluatePosition(board, color);
+      return evaluatePosition(board, color);
     }
 
     // Check for checkmate or stalemate
@@ -155,7 +155,8 @@ class ChessAIEngine {
   }
 
   /// Evaluate the position from the perspective of the given color
-  double _evaluatePosition(Board board, PieceColor color) {
+  /// Returns a score where positive values favor the given color
+  double evaluatePosition(Board board, PieceColor color) {
     double score = 0.0;
 
     // Material evaluation

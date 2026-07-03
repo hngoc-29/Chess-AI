@@ -7,6 +7,8 @@ import '../../../core/constants/colors.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
 import '../../../domain/repositories/i_settings_repository.dart';
+import '../../../domain/repositories/i_stats_repository.dart';
+import '../../../domain/usecases/save_game.dart';
 import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
@@ -32,16 +34,42 @@ class GameScreen extends StatelessWidget {
         audioService: getIt<AudioService>(),
         aiEngine: getIt<ChessAIEngine>(),
         settingsRepository: getIt<ISettingsRepository>(),
+        statsRepository: getIt<IStatsRepository>(),
+        saveGameUseCase: getIt<SaveGameUseCase>(),
       )..add(StartNewGame(vsAI: vsAI)),
       child: _GameView(vsAI: vsAI),
     );
   }
 }
 
-class _GameView extends StatelessWidget {
+class _GameView extends StatefulWidget {
   final bool vsAI;
 
   const _GameView({required this.vsAI});
+
+  @override
+  State<_GameView> createState() => _GameViewState();
+}
+
+class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      context.read<GameBloc>().add(const SaveCurrentGame());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +79,10 @@ class _GameView extends StatelessWidget {
         backgroundColor: AppColors.backgroundDark,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            context.read<GameBloc>().add(const SaveCurrentGame());
+            Navigator.of(context).pop();
+          },
         ),
         title: const Text('Chess AI'),
         centerTitle: false,
@@ -79,7 +110,7 @@ class _GameView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () {
-              // TODO: Navigate to settings
+              Navigator.of(context).pushNamed('/settings');
             },
           ),
         ],
@@ -114,16 +145,25 @@ class _GameView extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: ChessBoardWidget(
-                            board: state.board,
-                            flipped: state.flipped,
-                            selectedSquare: state.selectedSquare,
-                            legalMoves: state.legalMoves,
-                            onSquareTap: (position) {
-                              _handleSquareTap(context, state, position);
-                            },
-                            onMove: (from, to) {
-                              _handleMove(context, state, from, to);
+                          child: FutureBuilder<String>(
+                            future: getIt<ISettingsRepository>().getPieceSet().then(
+                              (result) => result.getOrElse(() => 'cburnett'),
+                            ),
+                            builder: (context, snapshot) {
+                              final pieceStyle = snapshot.data ?? 'cburnett';
+                              return ChessBoardWidget(
+                                board: state.board,
+                                flipped: state.flipped,
+                                selectedSquare: state.selectedSquare,
+                                legalMoves: state.legalMoves,
+                                pieceStyle: pieceStyle,
+                                onSquareTap: (position) {
+                                  _handleSquareTap(context, state, position);
+                                },
+                                onMove: (from, to) {
+                                  _handleMove(context, state, from, to);
+                                },
+                              );
                             },
                           ),
                         ),
@@ -273,7 +313,13 @@ class _GameView extends StatelessWidget {
   }
 
   void _handleSquareTap(BuildContext context, GameInProgress state, Position position) {
-    context.read<GameBloc>().add(SelectSquare(position));
+    // If a piece is selected and this is a legal move, handle it as a move
+    if (state.selectedSquare != null && state.legalMoves.containsKey(position)) {
+      _handleMove(context, state, state.selectedSquare!, position);
+    } else {
+      // Otherwise, just select the square
+      context.read<GameBloc>().add(SelectSquare(position));
+    }
   }
 
   Future<void> _handleMove(BuildContext context, GameInProgress state, Position from, Position to) async {
@@ -285,12 +331,17 @@ class _GameView extends StatelessWidget {
                               (movingPiece.isBlack && to.rank == 0);
 
       if (isPromotionRank) {
+        // Get piece style from settings
+        final pieceStyleResult = await getIt<ISettingsRepository>().getPieceSet();
+        final pieceStyle = pieceStyleResult.getOrElse(() => 'cburnett');
+        
         // Show promotion dialog
         final promotion = await showDialog<PieceType>(
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) => PromotionDialog(
             color: movingPiece.color,
+            pieceStyle: pieceStyle,
             onSelected: (type) => Navigator.of(dialogContext).pop(type),
           ),
         );
@@ -317,7 +368,7 @@ class _GameView extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
-              context.read<GameBloc>().add(StartNewGame(vsAI: vsAI));
+              context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
             },
             child: const Text(AppStrings.newGame),
           ),
@@ -394,7 +445,7 @@ class _GameView extends StatelessWidget {
                     TextButton(
                       onPressed: () {
                         Navigator.of(dialogContext).pop();
-                        context.read<GameBloc>().add(StartNewGame(vsAI: vsAI));
+                        context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
                       },
                       child: const Text('Đồng ý'),
                     ),
@@ -509,11 +560,15 @@ class _GameView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '+0.32',
+                state.evaluationScore > 0 
+                    ? '+${state.evaluationScore.toStringAsFixed(2)}' 
+                    : state.evaluationScore.toStringAsFixed(2),
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.success,
+                  color: state.evaluationScore > 0 
+                      ? AppColors.success 
+                      : (state.evaluationScore < 0 ? AppColors.error : AppColors.textPrimaryDark),
                 ),
               ),
               const SizedBox(width: 16),

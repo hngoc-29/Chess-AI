@@ -36,6 +36,30 @@ class SettingsRepository implements ISettingsRepository {
   }
 
   @override
+  Future<Either<Failure, bool>> getMusicEnabled() async {
+    try {
+      final result = await _preferencesDataSource.getMusicEnabled();
+      return Right(result);
+    } on StorageException catch (e) {
+      return Left(StorageFailure(e.message));
+    } catch (e) {
+      return Left(StorageFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> setMusicEnabled(bool enabled) async {
+    try {
+      await _preferencesDataSource.setMusicEnabled(enabled);
+      return const Right(null);
+    } on StorageException catch (e) {
+      return Left(StorageFailure(e.message));
+    } catch (e) {
+      return Left(StorageFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, double>> getVolume() async {
     try {
       final result = await _preferencesDataSource.getVolume();

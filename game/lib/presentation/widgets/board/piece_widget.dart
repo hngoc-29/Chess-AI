@@ -7,12 +7,14 @@ class PieceWidget extends StatelessWidget {
   final Piece piece;
   final double size;
   final bool isDragging;
+  final String pieceStyle;
 
   const PieceWidget({
     super.key,
     required this.piece,
     this.size = 60,
     this.isDragging = false,
+    this.pieceStyle = 'cburnett',
   });
 
   @override
@@ -23,7 +25,7 @@ class PieceWidget extends StatelessWidget {
         width: size,
         height: size,
         child: SvgPicture.asset(
-          piece.assetPath,
+          piece.getAssetPath(pieceStyle),
           fit: BoxFit.contain,
         ),
       ),

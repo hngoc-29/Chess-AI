@@ -6,11 +6,13 @@ import '../../../domain/entities/piece.dart';
 class PromotionDialog extends StatelessWidget {
   final PieceColor color;
   final Function(PieceType) onSelected;
+  final String pieceStyle;
 
   const PromotionDialog({
     super.key,
     required this.color,
     required this.onSelected,
+    this.pieceStyle = 'cburnett',
   });
 
   @override
@@ -42,7 +44,7 @@ class PromotionDialog extends StatelessWidget {
           width: 60,
           height: 60,
           child: SvgPicture.asset(
-            piece.assetPath,
+            piece.getAssetPath(pieceStyle),
             fit: BoxFit.contain,
           ),
         ),

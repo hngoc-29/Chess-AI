@@ -12,6 +12,7 @@ class ChessBoardWidget extends StatefulWidget {
   final Function(Position position)? onSquareTap;
   final Map<Position, MoveType>? legalMoves;
   final Position? selectedSquare;
+  final String pieceStyle;
 
   const ChessBoardWidget({
     super.key,
@@ -21,6 +22,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.onSquareTap,
     this.legalMoves,
     this.selectedSquare,
+    this.pieceStyle = 'cburnett',
   });
 
   @override
@@ -194,6 +196,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                       piece: piece,
                       size: squareSize,
                       isDragging: true,
+                      pieceStyle: widget.pieceStyle,
                     ),
                   ),
                   childWhenDragging: const SizedBox.shrink(),
@@ -219,7 +222,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                       }
                     },
                     builder: (context, candidateData, rejectedData) {
-                      return PieceWidget(piece: piece, size: squareSize);
+                      return PieceWidget(
+                        piece: piece,
+                        size: squareSize,
+                        pieceStyle: widget.pieceStyle,
+                      );
                     },
                   ),
                 ),

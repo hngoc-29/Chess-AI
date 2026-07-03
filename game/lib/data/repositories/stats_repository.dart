@@ -3,22 +3,27 @@ import 'package:dartz/dartz.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
 import '../../domain/repositories/i_stats_repository.dart';
-import '../datasources/local/game_local_datasource.dart';
+import '../datasources/local/preferences_datasource.dart';
 
 class StatsRepository implements IStatsRepository {
-  final GameLocalDataSource _localDataSource;
+  final PreferencesDataSource _preferencesDataSource;
 
-  StatsRepository({required GameLocalDataSource localDataSource})
-      : _localDataSource = localDataSource;
+  StatsRepository({required PreferencesDataSource preferencesDataSource})
+      : _preferencesDataSource = preferencesDataSource;
 
   @override
   Future<Either<Failure, GameStats>> getStats() async {
     try {
+      final totalGames = await _preferencesDataSource.getTotalGames();
+      final wins = await _preferencesDataSource.getWins();
+      final losses = await _preferencesDataSource.getLosses();
+      final draws = await _preferencesDataSource.getDraws();
+
       return Right(GameStats(
-        totalGames: 0,
-        wins: 0,
-        losses: 0,
-        draws: 0,
+        totalGames: totalGames,
+        wins: wins,
+        losses: losses,
+        draws: draws,
       ));
     } on StorageException catch (e) {
       return Left(StorageFailure(e.message));
@@ -33,8 +38,19 @@ class StatsRepository implements IStatsRepository {
     required bool isDraw,
   }) async {
     try {
+      await _preferencesDataSource.incrementTotalGames();
+      
+      if (isDraw) {
+        await _preferencesDataSource.incrementDraws();
+      } else if (isWin) {
+        await _preferencesDataSource.incrementWins();
+      } else {
+        await _preferencesDataSource.incrementLosses();
+      }
+      
       return const Right(null);
-    } on StorageException catch (e) {
+    } await _preferencesDataSource.resetStats();
+      on StorageException catch (e) {
       return Left(StorageFailure(e.message));
     } catch (e) {
       return Left(StorageFailure(e.toString()));

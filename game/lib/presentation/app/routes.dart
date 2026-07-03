@@ -9,11 +9,13 @@ import '../screens/replay/replay_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
 
   static const String splash = '/';
+  static const String onboarding = '/onboarding';
   static const String mainMenu = '/main-menu';
   static const String game = '/game';
   static const String settings = '/settings';
@@ -27,6 +29,8 @@ class AppRoutes {
     switch (routeSettings.name) {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
+      case onboarding:
+        return MaterialPageRoute(builder: (_) => const OnboardingScreen());
       case mainMenu:
         return MaterialPageRoute(builder: (_) => const MainMenuScreen());
       case game:

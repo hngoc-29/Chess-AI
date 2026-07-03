@@ -30,7 +30,7 @@ import tarfile
 import threading
 import time
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -389,7 +389,7 @@ def setup_libtorch(project_root: Path, workdir: Path) -> Path:
     return downloaded_cmake
 
 
-def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Path] = None) -> Path:
+def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Path] = None) -> Tuple[Path, Path]:
     import hashlib
 
     engine_dir = project_root / "AI" / "engine"
@@ -405,12 +405,14 @@ def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Pa
     else:
         build_dir = engine_dir / "build"
 
-    binary = build_dir / "selfplay"
+    binary       = build_dir / "selfplay"
+    arena_binary = build_dir / "arena"
 
     # Tính hash của tất cả source files quan trọng
     hash_files = [
         engine_dir / "CMakeLists.txt",
         engine_dir / "selfplay.cpp",
+        engine_dir / "arena.cpp",
         engine_dir / "mcts.cpp",
         engine_dir / "mcts.hpp",
         engine_dir / "ChessEnv.cpp",
@@ -424,11 +426,11 @@ def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Pa
     current_hash = hasher.hexdigest()
 
     hash_file = build_dir / ".build_hash"
-    if binary.exists() and hash_file.exists():
+    if binary.exists() and arena_binary.exists() and hash_file.exists():
         try:
             cached_hash = hash_file.read_text().strip()
             if cached_hash == current_hash:
-                return binary
+                return binary, arena_binary
         except Exception:
             pass
     if build_dir.exists():
@@ -448,9 +450,11 @@ def build_engine(project_root: Path, libtorch_dir: Path, build_base: Optional[Pa
 
     if not binary.exists():
         raise RuntimeError("[ERROR] The self-play binary was not built successfully.")
+    if not arena_binary.exists():
+        print("[WARN] arena binary was not built — arena-gating will be skipped for this run.")
 
     hash_file.write_text(current_hash)
-    return binary
+    return binary, arena_binary
 
 
 def load_generation_samples(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -1040,6 +1044,162 @@ def publish_latest_model(gen_model_path: Path, best_model_path: Path, project_ro
         shutil.copy2(gen_model_path, project_model_path)
 
 
+def _run_single_arena_worker(
+    arena_binary: Path,
+    model_a_path: Path,
+    model_b_path: Path,
+    output_path: Path,
+    games: int,
+    simulations: int,
+    max_moves: int,
+    opening_random_plies: int,
+    resign_thresh: float,
+    seed: int,
+    project_root: Optional[Path],
+    heartbeat_seconds: float,
+    timeout: Optional[float],
+    env: Optional[dict] = None,
+) -> None:
+    """Run one arena worker subprocess (blocking)."""
+    cmd = [
+        str(arena_binary),
+        "--model_a", str(model_a_path),
+        "--model_b", str(model_b_path),
+        "--games", str(games),
+        "--simulations", str(simulations),
+        "--max_moves", str(max_moves),
+        "--opening_random_plies", str(opening_random_plies),
+        "--resign_thresh", str(resign_thresh),
+        "--seed", str(seed),
+        "--output", str(output_path),
+    ]
+    run(cmd, cwd=str(project_root) if project_root is not None else None, env=env,
+        heartbeat_seconds=heartbeat_seconds, timeout=timeout)
+
+
+def run_arena_match(
+    arena_binary: Path,
+    model_a_path: Path,
+    model_b_path: Path,
+    output_path: Path,
+    games: int = 40,
+    simulations: int = 200,
+    max_moves: int = 200,
+    opening_random_plies: int = 6,
+    resign_thresh: float = -1.0,
+    seed: int = 1234,
+    heartbeat_seconds: float = 60.0,
+    timeout: Optional[float] = None,
+    project_root: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Play model_a (candidate) vs model_b (reference) via the `arena` binary.
+
+    On multi-GPU machines (e.g. Kaggle T4x2) the match is split evenly across
+    GPUs — one arena subprocess per GPU, each playing games/num_gpus games —
+    the same pattern run_generation() uses for self-play, so the 2nd GPU
+    isn't sitting idle during the arena step.
+
+    Returns a dict: {model_a_wins, model_b_wins, draws, games, a_score}.
+    a_score = (wins + 0.5*draws) / games, i.e. model_a's match score — the
+    same convention as Elo-style gating (>0.5 means model_a did better).
+
+    Falls back to a_score=0.5 (neutral — behaves like "always promote", same
+    as the old unconditional publish) if the arena binary is missing or the
+    match fails to run, so a broken arena build never blocks training.
+    """
+    neutral_result = {"model_a_wins": 0, "model_b_wins": 0, "draws": 0, "games": 0, "a_score": 0.5}
+
+    if not arena_binary.exists():
+        print(f"[Arena] ⚠ arena binary not found at {arena_binary} — skipping match, treating as neutral.")
+        return neutral_result
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+    num_workers = max(1, min(num_gpus, 2, games))  # never spawn more workers than games
+
+    if num_workers == 1:
+        env = os.environ.copy()
+        if num_gpus >= 1:
+            env["CUDA_VISIBLE_DEVICES"] = "0"
+        try:
+            _run_single_arena_worker(
+                arena_binary=arena_binary, model_a_path=model_a_path, model_b_path=model_b_path,
+                output_path=output_path, games=games, simulations=simulations, max_moves=max_moves,
+                opening_random_plies=opening_random_plies, resign_thresh=resign_thresh, seed=seed,
+                project_root=project_root, heartbeat_seconds=heartbeat_seconds, timeout=timeout, env=env,
+            )
+        except Exception as exc:  # pragma: no cover — defensive: never let arena crash training
+            print(f"[Arena] ⚠ match failed to run ({exc}) — skipping, treating as neutral.")
+            return neutral_result
+
+        try:
+            with output_path.open("r", encoding="utf-8") as fh:
+                result = json.load(fh)
+            result.setdefault("a_score", 0.5)
+            return result
+        except Exception as exc:
+            print(f"[Arena] ⚠ could not read result file {output_path} ({exc}) — treating as neutral.")
+            return neutral_result
+
+    # ── Parallel workers: split games evenly across GPUs ───────────────────────
+    base_games  = games // num_workers
+    extra_games = games % num_workers
+    games_split = [base_games + (1 if i < extra_games else 0) for i in range(num_workers)]
+    partial_outputs = [output_path.with_name(f"{output_path.stem}_worker{i}.json") for i in range(num_workers)]
+
+    errors: List[Exception] = []
+    errors_lock = threading.Lock()
+
+    def run_worker(worker_idx: int) -> None:
+        env = os.environ.copy()
+        env["CUDA_VISIBLE_DEVICES"] = str(worker_idx)
+        try:
+            _run_single_arena_worker(
+                arena_binary=arena_binary, model_a_path=model_a_path, model_b_path=model_b_path,
+                output_path=partial_outputs[worker_idx], games=games_split[worker_idx],
+                simulations=simulations, max_moves=max_moves,
+                opening_random_plies=opening_random_plies, resign_thresh=resign_thresh,
+                seed=seed + worker_idx * 1000, project_root=project_root,
+                heartbeat_seconds=heartbeat_seconds, timeout=timeout, env=env,
+            )
+        except Exception as exc:
+            with errors_lock:
+                errors.append(exc)
+
+    worker_threads = [threading.Thread(target=run_worker, args=(i,), daemon=False) for i in range(num_workers)]
+    for t in worker_threads:
+        t.start()
+    for t in worker_threads:
+        t.join()
+
+    if errors:
+        print(f"[Arena] ⚠ {len(errors)} arena worker(s) failed ({errors[0]}) — treating as neutral.")
+        return neutral_result
+
+    total = {"model_a_wins": 0, "model_b_wins": 0, "draws": 0, "games": 0}
+    for pf in partial_outputs:
+        try:
+            with pf.open("r", encoding="utf-8") as fh:
+                partial = json.load(fh)
+            total["model_a_wins"] += partial.get("model_a_wins", 0)
+            total["model_b_wins"] += partial.get("model_b_wins", 0)
+            total["draws"]        += partial.get("draws", 0)
+            total["games"]        += partial.get("games", 0)
+        except Exception as exc:
+            print(f"[Arena] ⚠ could not read worker result {pf} ({exc})")
+        finally:
+            pf.unlink(missing_ok=True)
+
+    if total["games"] == 0:
+        return neutral_result
+
+    total["a_score"] = (total["model_a_wins"] + 0.5 * total["draws"]) / total["games"]
+    with output_path.open("w", encoding="utf-8") as fh:
+        json.dump(total, fh, indent=2)
+    return total
+
+
 def _run_single_selfplay_worker(
     binary: Path,
     model_path: Path,
@@ -1251,6 +1411,11 @@ def run_pipeline(
     resign_thresh: float = -1.0,
     min_resign_ply: int = 20,
     max_runtime_seconds: Optional[float] = None,  # Time limit when max_generations is None
+    arena_enabled: bool = True,
+    arena_games: int = 40,
+    arena_simulations: int = 200,
+    arena_win_threshold: float = 0.55,
+    arena_max_moves: int = 200,
 ) -> None:
     workdir.mkdir(parents=True, exist_ok=True)
     drive_root.mkdir(parents=True, exist_ok=True)
@@ -1300,7 +1465,7 @@ def run_pipeline(
         except Exception:
             pass
 
-    engine_binary = build_engine(project_root, setup_libtorch(project_root, workdir), build_base=workdir)
+    engine_binary, arena_binary = build_engine(project_root, setup_libtorch(project_root, workdir), build_base=workdir)
 
     generation = 0
     generation_summaries: List[dict] = []
@@ -1351,7 +1516,16 @@ def run_pipeline(
         states, moves, values, draw_masks = load_replay_buffer(replay_files)
         validate_training_inputs(states.tolist(), moves.tolist(), values.tolist())
         print(f"[Progress] Gen {generation}: training {states.shape[0]} samples")
-        checkpoint_path = drive_root / f"checkpoint_gen_{generation}.pt"
+        # NOTE: We intentionally do NOT write a permanent "checkpoint_gen_{generation}.pt"
+        # to drive_root anymore. A training checkpoint contains model_state +
+        # optimizer_state (Adam's exp_avg + exp_avg_sq, same size as the params each)
+        # so it is ~3x the size of the plain traced model (e.g. 44MB model -> ~132MB
+        # checkpoint). Keeping one of these per generation forever silently eats disk
+        # (this is the "44MB -> 133MB" growth) and can trigger the same Kaggle
+        # disk-space crash we already fixed for the PGN pipeline. We only need ONE
+        # rolling checkpoint to resume an interrupted run, so we keep overwriting a
+        # single latest_checkpoint.pt instead of accumulating one per generation.
+        checkpoint_path = None
         latest_checkpoint_path = checkpoint_dir / "latest_checkpoint.pt"
         metrics_output_dir = drive_root / f"metrics_gen_{generation}"
         model, history = train_policy_model(
@@ -1375,7 +1549,43 @@ def run_pipeline(
         save_traced_model(model, gen_model_path, device)
         save_training_summary(history, drive_root / f"training_summary_gen_{generation}.json")
         export_training_metrics(history, metrics_output_dir)
-        publish_latest_model(gen_model_path, best_model_path, project_root)
+
+        # ── Arena gate ──────────────────────────────────────────────────────
+        # Previously every generation unconditionally overwrote
+        # best_model_traced.pt with whatever was just trained — so a bad
+        # generation (overfit epoch, unlucky data, etc.) silently regressed
+        # the model that self-play then kept using. Now the freshly trained
+        # model has to actually beat the current best in head-to-head play
+        # before it gets promoted; otherwise we keep the previous best and
+        # just move on to the next generation.
+        arena_result: Optional[Dict[str, Any]] = None
+        promoted = True
+        if arena_enabled and best_model_path.exists():
+            print(f"[Arena] Gen {generation}: candidate vs current best "
+                  f"({arena_games} games, {arena_simulations} sims/move)...")
+            arena_result = run_arena_match(
+                arena_binary=arena_binary,
+                model_a_path=gen_model_path,
+                model_b_path=best_model_path,
+                output_path=drive_root / f"arena_gen_{generation}.json",
+                games=arena_games,
+                simulations=arena_simulations,
+                max_moves=arena_max_moves,
+                resign_thresh=resign_thresh,
+                seed=1234 + generation,
+                heartbeat_seconds=heartbeat_seconds,
+                project_root=project_root,
+            )
+            a_score = arena_result.get("a_score", 0.5)
+            promoted = a_score >= arena_win_threshold
+            print(f"[Arena] Gen {generation}: candidate score = {a_score:.1%} "
+                  f"(A {arena_result.get('model_a_wins', 0)} / "
+                  f"B {arena_result.get('model_b_wins', 0)} / "
+                  f"D {arena_result.get('draws', 0)}) "
+                  f"→ {'PROMOTED ✓ (new best)' if promoted else 'REJECTED ✗ (kept previous best)'}")
+
+        if promoted:
+            publish_latest_model(gen_model_path, best_model_path, project_root)
 
         write_model_output_summary(
             output_dir=drive_root,
@@ -1386,7 +1596,8 @@ def run_pipeline(
                 "project_model": project_root / "AI" / "data" / "best_model_traced.pt",
             },
             replay_path=generation_file,
-            checkpoint_path=checkpoint_path,
+            checkpoint_path=latest_checkpoint_path,
+            arena_result=arena_result,
         )
 
         generation_summary = {
@@ -1397,10 +1608,12 @@ def run_pipeline(
             "epochs_trained": len(history.get("epochs", [])),
             "final_loss": history["epochs"][-1]["loss"] if history.get("epochs") else float("nan"),
             "final_value_loss": history["epochs"][-1].get("value_loss", 0.0) if history.get("epochs") else 0.0,
+            "arena_promoted": promoted,
+            "arena_a_score": arena_result.get("a_score") if arena_result else None,
         }
         generation_summaries.append(generation_summary)
         export_generation_comparison(generation_summaries, drive_root)
-        save_resume_state(drive_root, generation, checkpoint_path, best_model_path)
+        save_resume_state(drive_root, generation, latest_checkpoint_path, best_model_path)
         print(f"[Progress] Gen {generation}: complete\n")
 
         if max_generations is not None and generation >= max_generations:
@@ -1439,6 +1652,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max_runtime_hours", type=float, default=None,
                         help="Maximum runtime in hours when max_generations is None (default: None = no limit)")
     parser.add_argument("--no_infinite", action="store_true")
+    parser.add_argument("--no_arena", action="store_true",
+                        help="Disable arena gating: always publish the freshly trained model as best (old behavior).")
+    parser.add_argument("--arena_games", type=int, default=40,
+                        help="Number of head-to-head games per generation's arena match (default 40).")
+    parser.add_argument("--arena_simulations", type=int, default=200,
+                        help="MCTS simulations per move during arena matches (default 200; lower than training self-play for speed).")
+    parser.add_argument("--arena_win_threshold", type=float, default=0.55,
+                        help="Candidate model score (wins + 0.5*draws) / games needed to be promoted to best (default 0.55).")
+    parser.add_argument("--arena_max_moves", type=int, default=200,
+                        help="Max plies per arena game before scoring it a draw (default 200).")
     return parser.parse_args()
 
 
@@ -1482,6 +1705,11 @@ def main() -> None:
         resign_thresh=args.resign_thresh,
         min_resign_ply=args.min_resign_ply,
         max_runtime_seconds=max_runtime_seconds,
+        arena_enabled=not args.no_arena,
+        arena_games=args.arena_games,
+        arena_simulations=args.arena_simulations,
+        arena_win_threshold=args.arena_win_threshold,
+        arena_max_moves=args.arena_max_moves,
     )
 
 
