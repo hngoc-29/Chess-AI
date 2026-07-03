@@ -62,13 +62,3 @@ class RequestAIMove extends GameEvent {
 class SaveCurrentGame extends GameEvent {
   const SaveCurrentGame();
 }
-  const RedoMove();
-}
-
-class FlipBoard extends GameEvent {
-  const FlipBoard();
-}
-
-class RequestAIMove extends GameEvent {
-  const RequestAIMove();
-}

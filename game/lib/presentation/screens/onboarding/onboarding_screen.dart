@@ -118,7 +118,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               page.lottieAsset,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.chess_knight, size: 100);
+                return const Icon(Icons.chess_piece, size: 100);
               },
             ),
           ),

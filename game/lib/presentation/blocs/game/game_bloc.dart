@@ -349,50 +349,6 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           : PieceColor.white;
       final winnerName = winnerColor == PieceColor.white ? 'White' : 'Black';
       
-      // Record stats
-      final isPlayerWhite = currentState.gameState.whitePlayer.type == PlayerType.human;
-      final isPlayerBlack = currentState.gameState.blackPlayer.type == PlayerType.human;
-      
-      if (isPlayerWhite && !isPlayerBlack) {
-        // Player vs AI
-        if (winnerColor == PieceColor.white) {
-          _statsRepository.recordGame(GameResult.win);
-        } else {
-          _statsRepository.recordGame(GameResult.loss);
-        }
-      } else if (!isPlayerWhite && isPlayerBlack) {
-        // AI vs Player
-        if (winnerColor == PieceColor.black) {
-          _statsRepository.recordGame(GameResult.win);
-        } else {
-          _statsRepository.recordGame(GameResult.loss);
-        }
-      }
-      
-      emit(GameOver(
-        gameState: newGameState,
-        winner: winnerName,
-        reason: 'Checkmate',
-      ));
-    } else if (newStatus == GameStatus.stalemate) {
-      _statsRepository.recordGame(GameResult.draw);
-      emit(GameOver(
-        gameState: newGameState,
-        reason: 'Stalemate',
-      ));
-    } else if (newGameState.currentPlayer.type == PlayerType.ai) {
-      add(const RequestAIMove());
-    }
-  }
-
-  Future<void> _onSaveCurrentGame(SaveCurrentGame event, Emitter<GameBlocState> emit) async {
-    if (state is GameInProgress) {
-      final currentState = state as GameInProgress;
-      await _saveGameUseCase.saveState(currentState.gameState);
-    }
-  }
-}
-      
       // Check if human won (for stats)
       final humanWon = (winnerColor == PieceColor.white && 
                         currentState.gameState.whitePlayer.type == PlayerType.human) ||
@@ -428,6 +384,15 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         legalMoves: {},
       ));
       add(const RequestAIMove());
+    }
+  }
+
+  Future<void> _onSaveCurrentGame(SaveCurrentGame event, Emitter<GameBlocState> emit) async {
+    if (state is GameInProgress) {
+      final currentState = state as GameInProgress;
+      await _saveGameUseCase.saveState(currentState.gameState);
+    }
+  }
     }
   }
 

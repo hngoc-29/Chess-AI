@@ -49,8 +49,7 @@ class StatsRepository implements IStatsRepository {
       }
       
       return const Right(null);
-    } await _preferencesDataSource.resetStats();
-      on StorageException catch (e) {
+    } on StorageException catch (e) {
       return Left(StorageFailure(e.message));
     } catch (e) {
       return Left(StorageFailure(e.toString()));
@@ -60,6 +59,7 @@ class StatsRepository implements IStatsRepository {
   @override
   Future<Either<Failure, void>> resetStats() async {
     try {
+      await _preferencesDataSource.resetStats();
       return const Right(null);
     } on StorageException catch (e) {
       return Left(StorageFailure(e.message));
