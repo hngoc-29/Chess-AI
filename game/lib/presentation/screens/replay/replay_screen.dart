@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/config/injection.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/strings.dart';
 import '../../../core/utils/fen_utils.dart';
@@ -10,6 +11,7 @@ import '../../../domain/entities/game_state.dart';
 import '../../../domain/entities/move_info.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
+import '../../../domain/repositories/i_settings_repository.dart';
 import '../../widgets/board/chess_board_widget.dart';
 
 class ReplayScreen extends StatefulWidget {
@@ -35,7 +37,6 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
     super.initState();
     currentMoveIndex = -1;
     _autoPlayController = AnimationController(vsync: this);
-    _autoPlayController.addListener(_onAutoPlayTick);
   }
 
   @override
@@ -45,13 +46,20 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
   }
 
   void _onAutoPlayTick() {
-    // Auto-play handler - advance to next move
-    if (isAutoPlaying && currentMoveIndex < widget.gameState.moveHistory.length - 1) {
+    // Auto-play handler - advance to next move only if within bounds
+    if (!isAutoPlaying) return;
+    
+    if (currentMoveIndex < widget.gameState.moveHistory.length - 1) {
       setState(() {
         currentMoveIndex++;
       });
-      _scheduleNextAutoMove();
-    } else if (isAutoPlaying && currentMoveIndex >= widget.gameState.moveHistory.length - 1) {
+      // Schedule next move with delay
+      Future.delayed(Duration(milliseconds: autoPlayDelayMs), () {
+        if (mounted && isAutoPlaying) {
+          _onAutoPlayTick();
+        }
+      });
+    } else {
       // End of moves - stop auto-play
       setState(() {
         isAutoPlaying = false;
@@ -59,26 +67,24 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
     }
   }
 
-  void _scheduleNextAutoMove() {
-    // Schedule next move after delay
-    Future.delayed(Duration(milliseconds: autoPlayDelayMs), () {
-      if (mounted && isAutoPlaying) {
-        _onAutoPlayTick();
-      }
-    });
-  }
-
   void _toggleAutoPlay() {
     setState(() {
-      if (isAutoPlaying) {
-        isAutoPlaying = false;
-        _autoPlayController.stop();
-      } else {
-        isAutoPlaying = true;
-        _autoPlayController.forward();
-        _scheduleNextAutoMove();
-      }
+      isAutoPlaying = !isAutoPlaying;
     });
+    
+    if (isAutoPlaying) {
+      // Start auto-play sequence
+      if (currentMoveIndex < widget.gameState.moveHistory.length - 1) {
+        _onAutoPlayTick();
+      } else {
+        // Reset to start if at end
+        setState(() {
+          currentMoveIndex = 0;
+          isAutoPlaying = true;
+        });
+        _onAutoPlayTick();
+      }
+    }
   }
 
   void _nextMove() {
@@ -87,7 +93,6 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
         currentMoveIndex++;
       }
       isAutoPlaying = false;
-      _autoPlayController.stop();
     });
   }
 
@@ -97,7 +102,6 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
         currentMoveIndex--;
       }
       isAutoPlaying = false;
-      _autoPlayController.stop();
     });
   }
 
@@ -105,7 +109,6 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
     setState(() {
       currentMoveIndex = -1;
       isAutoPlaying = false;
-      _autoPlayController.stop();
     });
   }
 
@@ -113,7 +116,6 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
     setState(() {
       currentMoveIndex = widget.gameState.moveHistory.length - 1;
       isAutoPlaying = false;
-      _autoPlayController.stop();
     });
   }
 
@@ -252,15 +254,23 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: ChessBoardWidget(
-                      board: board,
-                      flipped: false,
-                      selectedSquare: null,
-                      legalMoves: {},
-                      endangeredSquares: {},
-                      pieceStyle: 'cburnett',
-                      onSquareTap: null,
-                      onMove: null,
+                    child: FutureBuilder<String>(
+                      future: getIt<ISettingsRepository>().getPieceSet().then(
+                        (result) => result.getOrElse(() => 'cburnett'),
+                      ),
+                      builder: (context, snapshot) {
+                        final pieceStyle = snapshot.data ?? 'cburnett';
+                        return ChessBoardWidget(
+                          board: board,
+                          flipped: false,
+                          selectedSquare: null,
+                          legalMoves: {},
+                          endangeredSquares: {},
+                          pieceStyle: pieceStyle,
+                          onSquareTap: null,
+                          onMove: null,
+                        );
+                      },
                     ),
                   ),
                 ),

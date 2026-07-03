@@ -28,6 +28,7 @@ class GameInProgress extends GameBlocState {
   final bool flipped;
   final bool isAIThinking;
   final double evaluationScore;
+  final bool canRedo;
 
   const GameInProgress({
     required this.gameState,
@@ -37,6 +38,7 @@ class GameInProgress extends GameBlocState {
     this.flipped = false,
     this.isAIThinking = false,
     this.evaluationScore = 0.0,
+    this.canRedo = false,
   });
 
   Board get board => gameState.board;
@@ -49,6 +51,7 @@ class GameInProgress extends GameBlocState {
     bool? flipped,
     bool? isAIThinking,
     double? evaluationScore,
+    bool? canRedo,
     bool clearSelection = false,
   }) {
     return GameInProgress(
@@ -59,11 +62,12 @@ class GameInProgress extends GameBlocState {
       flipped: flipped ?? this.flipped,
       isAIThinking: isAIThinking ?? this.isAIThinking,
       evaluationScore: evaluationScore ?? this.evaluationScore,
+      canRedo: canRedo ?? this.canRedo,
     );
   }
 
   @override
-  List<Object?> get props => [gameState, selectedSquare, legalMoves, endangeredSquares, flipped, isAIThinking, evaluationScore];
+  List<Object?> get props => [gameState, selectedSquare, legalMoves, endangeredSquares, flipped, isAIThinking, evaluationScore, canRedo];
 }
 
 class GameOver extends GameBlocState {

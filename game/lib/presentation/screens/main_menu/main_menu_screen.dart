@@ -119,6 +119,17 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     const SizedBox(height: 16),
                     _buildMenuItem(
                       context,
+                      title: 'Training',
+                      subtitle: 'Load FEN and practice positions',
+                      icon: Icons.school,
+                      iconColor: AppColors.secondary,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.training);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMenuItem(
+                      context,
                       title: 'Statistics',
                       subtitle: 'View your games & performance',
                       icon: Icons.bar_chart,

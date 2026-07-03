@@ -10,6 +10,7 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
+import '../screens/training/training_screen.dart';
 import '../../domain/entities/game_state.dart';
 
 class AppRoutes {
@@ -24,6 +25,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String replay = '/replay';
   static const String analysis = '/analysis';
+  static const String training = '/training';
   static const String debugLogs = '/debug-logs';
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
@@ -54,6 +56,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => ReplayScreen(gameState: gameState));
       case analysis:
         return MaterialPageRoute(builder: (_) => const AnalysisScreen());
+      case training:
+        return MaterialPageRoute(builder: (_) => const TrainingScreen());
       case debugLogs:
         return MaterialPageRoute(builder: (_) => const DebugLogsScreen());
       default:

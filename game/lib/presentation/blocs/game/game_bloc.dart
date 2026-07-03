@@ -88,7 +88,8 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
 
       emit(GameInProgress(gameState: newGameState));
     } catch (e) {
-      // ignore parse errors for now
+      AppLogger.warning('Invalid FEN position: ${event.fen}', e);
+      emit(GameError('Invalid FEN string: ${e.toString()}'));
     }
   }
 
@@ -200,12 +201,15 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     final currentState = state as GameInProgress;
 
     var movingPiece = currentState.board.pieceAt(event.from);
-    // If piece is missing but a promotion was provided, assume it was the pawn that moved
-    // (handles UI timing where the board or selection may have been cleared)
-    if (movingPiece == null && event.promotion != null) {
-      movingPiece = Piece(type: PieceType.pawn, color: currentState.gameState.currentTurn);
+    
+    // If there's no piece at the source square, the move is invalid
+    if (movingPiece == null) {
+      _audioService.playSound(SoundEffect.button);
+      return;
     }
-    if (movingPiece == null || movingPiece.color != currentState.gameState.currentTurn) {
+    
+    // Validate piece belongs to current player
+    if (movingPiece.color != currentState.gameState.currentTurn) {
       _audioService.playSound(SoundEffect.button);
       return;
     }
@@ -539,6 +543,8 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       emit(currentState.copyWith(isAIThinking: false));
       add(MakeMove(from: bestMove.from, to: bestMove.to, promotion: bestMove.promotion));
     } catch (e) {
+      AppLogger.error('AI move request failed', e);
+      
       // If AI fails to find a move, check if game is over
       final isCheckmate = _rulesService.isCheckmate(
         currentState.board,
@@ -569,8 +575,36 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           message: 'Hòa cờ!',
         ));
       } else {
-        // Unknown error, just stop thinking and log
-        emit(currentState.copyWith(isAIThinking: false));
+        // Try to make any legal move to recover from error
+        try {
+          final piece = currentState.gameState.currentPlayer;
+          for (int file = 0; file < 8; file++) {
+            for (int rank = 0; rank < 8; rank++) {
+              final pos = Position(file: file, rank: rank);
+              final p = currentState.board.pieceAt(pos);
+              if (p != null && p.color == piece.color) {
+                final legalMoves = _rulesService.getLegalMoves(
+                  currentState.board,
+                  pos,
+                  whiteCanCastleKingside: currentState.gameState.whiteCanCastleKingside,
+                  whiteCanCastleQueenside: currentState.gameState.whiteCanCastleQueenside,
+                  blackCanCastleKingside: currentState.gameState.blackCanCastleKingside,
+                  blackCanCastleQueenside: currentState.gameState.blackCanCastleQueenside,
+                  enPassantSquare: currentState.gameState.enPassantSquare,
+                );
+                if (legalMoves.isNotEmpty) {
+                  add(MakeMove(from: pos, to: legalMoves.first));
+                  return;
+                }
+              }
+            }
+          }
+          // If no legal move found, emit error state
+          emit(GameError('AI could not find a valid move'));
+        } catch (fallbackError) {
+          AppLogger.error('AI fallback move failed', fallbackError);
+          emit(GameError('AI error - Please start a new game'));
+        }
       }
     }
   }
@@ -593,30 +627,25 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     final isVsAI = currentState.gameState.blackPlayer.type == PlayerType.ai ||
                    currentState.gameState.whitePlayer.type == PlayerType.ai;
 
-    // For AI games, undo both player's move and AI's response (full turn)
+    // Save current game state to redo stack
+    _redoStack.add(currentState.gameState);
+
     if (isVsAI && _history.length >= 2) {
-      // Save current state to redo stack
-      _redoStack.add(currentState.gameState);
-
-      // Also save the AI's move to redo stack
-      final aiMove = _history.removeLast();
-      _redoStack.add(aiMove);
-
-      // Restore to the state before player's move
-      final previousState = _history.removeLast();
-
-      emit(currentState.copyWith(
-        gameState: previousState,
-        clearSelection: true,
-        legalMoves: {},
-        isAIThinking: false,
-      ));
+      // For AI games, undo both player's move and AI's response
+      // Pop the last state (which was the state before AI's last move)
+      _history.removeLast();
+      // If there's a state before that (before player's move), go back to it
+      if (_history.isNotEmpty) {
+        final previousState = _history.removeLast();
+        emit(currentState.copyWith(
+          gameState: previousState,
+          clearSelection: true,
+          legalMoves: {},
+          isAIThinking: false,
+        ));
+      }
     } else {
       // For vs human games or when not enough history, undo single move
-      // Save current state to redo stack
-      _redoStack.add(currentState.gameState);
-
-      // Restore previous state from history
       final previousState = _history.removeLast();
 
       emit(currentState.copyWith(

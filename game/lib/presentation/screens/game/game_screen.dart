@@ -26,10 +26,12 @@ import '../../widgets/dialogs/promotion_dialog.dart';
 
 class GameScreen extends StatelessWidget {
   final bool vsAI;
+  final String? initialFEN;
 
   const GameScreen({
     super.key,
     this.vsAI = true,
+    this.initialFEN,
   });
 
   @override
@@ -44,15 +46,19 @@ class GameScreen extends StatelessWidget {
         saveGameUseCase: getIt<SaveGameUseCase>(),
         loadGameUseCase: getIt<LoadGameUseCase>(),
       ),
-      child: _GameView(vsAI: vsAI),
+      child: _GameView(vsAI: vsAI, initialFEN: initialFEN),
     );
   }
 }
 
 class _GameView extends StatefulWidget {
   final bool vsAI;
+  final String? initialFEN;
 
-  const _GameView({required this.vsAI});
+  const _GameView({
+    required this.vsAI,
+    this.initialFEN,
+  });
 
   @override
   State<_GameView> createState() => _GameViewState();
@@ -65,8 +71,20 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final sessionKey = widget.vsAI ? 'current_session_ai' : 'current_session_local';
-      context.read<GameBloc>().add(LoadSavedGame(sessionKey));
+      
+      // If initialFEN is provided, load the FEN position
+      if (widget.initialFEN != null && widget.initialFEN!.isNotEmpty) {
+        context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            context.read<GameBloc>().add(SetFenPosition(widget.initialFEN!));
+          }
+        });
+      } else {
+        // Otherwise, load the saved game session
+        final sessionKey = widget.vsAI ? 'current_session_ai' : 'current_session_local';
+        context.read<GameBloc>().add(LoadSavedGame(sessionKey));
+      }
     });
   }
 
@@ -136,22 +154,26 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
             tooltip: 'Load FEN',
             onPressed: () async {
               final controller = TextEditingController();
-              final result = await showDialog<String?>(
-                context: context,
-                builder: (dialogCtx) => AlertDialog(
-                  title: const Text('Load FEN'),
-                  content: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(hintText: 'Enter FEN string'),
+              try {
+                final result = await showDialog<String?>(
+                  context: context,
+                  builder: (dialogCtx) => AlertDialog(
+                    title: const Text('Load FEN'),
+                    content: TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(hintText: 'Enter FEN string'),
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.of(dialogCtx).pop(controller.text.trim()), child: const Text('Load')),
+                    ],
                   ),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.of(dialogCtx).pop(controller.text.trim()), child: const Text('Load')),
-                  ],
-                ),
-              );
-              if (result != null && result.isNotEmpty) {
-                context.read<GameBloc>().add(SetFenPosition(result));
+                );
+                if (result != null && result.isNotEmpty) {
+                  context.read<GameBloc>().add(SetFenPosition(result));
+                }
+              } finally {
+                controller.dispose();
               }
             },
           ),
@@ -251,7 +273,7 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                     ),
                   ),
                   if (state is GameInProgress) _buildActionButtons(context, state as GameInProgress),
-                  if (state is GameInProgress) _buildEvaluation(context, state as GameInProgress),
+                  if (state is GameInProgress && widget.vsAI) _buildEvaluation(context, state as GameInProgress),
                 ],
               ),
             );
@@ -485,46 +507,53 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
   }
 
   Widget _buildActionButtons(BuildContext context, GameInProgress state) {
+    // Hide hints and analysis for human vs human games
+    final isHumanVsHuman = !widget.vsAI;
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildActionButton(
-            context,
-            icon: Icons.lightbulb_outline,
-            label: 'Gợi ý',
-            onTap: state.legalMoves.isNotEmpty
-                ? () {
-                    // Show hint: highlight a random legal move
-                    final moves = state.legalMoves.keys.toList();
-                    if (moves.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Gợi ý: Hãy thử nước đi tới ${moves.first.toString()}'),
-                          duration: const Duration(seconds: 2),
-                          backgroundColor: AppColors.primary,
-                        ),
-                      );
+          // Only show Hint button for AI games
+          if (!isHumanVsHuman)
+            _buildActionButton(
+              context,
+              icon: Icons.lightbulb_outline,
+              label: 'Gợi ý',
+              onTap: state.legalMoves.isNotEmpty
+                  ? () {
+                      // Show hint: highlight a random legal move
+                      final moves = state.legalMoves.keys.toList();
+                      if (moves.isNotEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Gợi ý: Hãy thử nước đi tới ${moves.first.toString()}'),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: AppColors.primary,
+                          ),
+                        );
+                      }
                     }
-                  }
-                : null,
-          ),
-          _buildActionButton(
-            context,
-            icon: Icons.search,
-            label: 'Phân tích',
-            onTap: () {
-              // Show analysis info
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Tính năng phân tích đang được phát triển'),
-                  duration: const Duration(seconds: 2),
-                  backgroundColor: AppColors.info,
-                ),
-              );
-            },
-          ),
+                  : null,
+            ),
+          // Only show Analysis button for AI games
+          if (!isHumanVsHuman)
+            _buildActionButton(
+              context,
+              icon: Icons.search,
+              label: 'Phân tích',
+              onTap: () {
+                // Show analysis info
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Tính năng phân tích đang được phát triển'),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: AppColors.info,
+                  ),
+                );
+              },
+            ),
           _buildActionButton(
             context,
             icon: Icons.refresh,

@@ -37,13 +37,18 @@ class AudioService {
   }
 
   Future<void> _initMusic() async {
-    await _musicPlayer.setReleaseMode(ReleaseMode.loop);
-    if (_settingsRepository != null) {
-      final result = await _settingsRepository.getMusicEnabled();
-      _musicEnabled = result.getOrElse(() => true);
-    }
-    if (_musicEnabled) {
-      await playMusic();
+    try {
+      await _musicPlayer.setReleaseMode(ReleaseMode.loop);
+      if (_settingsRepository != null) {
+        final result = await _settingsRepository.getMusicEnabled();
+        _musicEnabled = result.getOrElse(() => true);
+      }
+      if (_musicEnabled) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        await playMusic();
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to initialize music', e);
     }
   }
 
@@ -95,7 +100,15 @@ class AudioService {
 
   Future<void> playMusic() async {
     try {
+      if (!_musicEnabled) return;
+      // Try to stop first to ensure clean state
+      try {
+        await _musicPlayer.stop();
+      } catch (_) {}
+      // Small delay to ensure player is ready
+      await Future.delayed(const Duration(milliseconds: 100));
       await _musicPlayer.play(AssetSource('sounds/background_music.mp3'));
+      AppLogger.info('Background music started');
     } catch (e) {
       AppLogger.warning('Failed to play background music', e);
     }

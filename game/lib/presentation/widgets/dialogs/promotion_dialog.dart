@@ -54,7 +54,10 @@ class PromotionDialog extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => onSelected(type),
+        onTap: () {
+          onSelected(type);
+          Navigator.of(context).pop();
+        },
         child: Padding(
           padding: const EdgeInsets.all(6.0),
           child: Column(
