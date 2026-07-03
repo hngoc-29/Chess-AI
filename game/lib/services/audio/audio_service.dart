@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 
-import '../../core/utils/logger.dart';
-import '../../domain/repositories/i_settings_repository.dart';
+import 'package:chess_ai/core/utils/logger.dart';
+import 'package:chess_ai/domain/repositories/i_settings_repository.dart';
 
 enum SoundEffect {
   move,
@@ -31,17 +33,17 @@ class AudioService {
 
   AudioService({ISettingsRepository? settingsRepository})
       : _settingsRepository = settingsRepository {
-    _initMusic();
+    unawaited(_initMusic());
   }
 
   Future<void> _initMusic() async {
-    _musicPlayer.setReleaseMode(ReleaseMode.loop);
+    await _musicPlayer.setReleaseMode(ReleaseMode.loop);
     if (_settingsRepository != null) {
-      final result = await _settingsRepository!.getMusicEnabled();
+      final result = await _settingsRepository.getMusicEnabled();
       _musicEnabled = result.getOrElse(() => true);
     }
     if (_musicEnabled) {
-      playMusic();
+      await playMusic();
     }
   }
 
@@ -85,9 +87,9 @@ class AudioService {
   Future<void> setMusicEnabled(bool enabled) async {
     _musicEnabled = enabled;
     if (enabled) {
-      playMusic();
+      await playMusic();
     } else {
-      stopMusic();
+      await stopMusic();
     }
   }
 

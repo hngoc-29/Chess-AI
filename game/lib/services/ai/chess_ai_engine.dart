@@ -1,11 +1,11 @@
 import 'dart:math';
 
-import '../../domain/entities/board.dart';
-import '../../domain/entities/chess_move.dart';
-import '../../domain/entities/piece.dart';
-import '../../domain/entities/position.dart';
-import '../../domain/entities/settings.dart';
-import '../game/chess_rules_service.dart';
+import 'package:chess_ai/domain/entities/board.dart';
+import 'package:chess_ai/domain/entities/chess_move.dart';
+import 'package:chess_ai/domain/entities/piece.dart';
+import 'package:chess_ai/domain/entities/position.dart';
+import 'package:chess_ai/domain/entities/settings.dart';
+import 'package:chess_ai/services/game/chess_rules_service.dart';
 
 /// Advanced Chess AI Engine with Minimax and Alpha-Beta Pruning
 class ChessAIEngine {
@@ -19,11 +19,11 @@ class ChessAIEngine {
     required Board board,
     required PieceColor color,
     required AIDifficulty difficulty,
-    bool whiteCanCastleKingside = true,
-    bool whiteCanCastleQueenside = true,
-    bool blackCanCastleKingside = true,
-    bool blackCanCastleQueenside = true,
-    String? enPassantSquare,
+    required bool whiteCanCastleKingside,
+    required bool whiteCanCastleQueenside,
+    required bool blackCanCastleKingside,
+    required bool blackCanCastleQueenside,
+    required String? enPassantSquare,
   }) async {
     // Add thinking delay based on difficulty
     final thinkingTime = _getThinkingTime(difficulty);

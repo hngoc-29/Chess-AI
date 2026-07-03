@@ -1,4 +1,4 @@
-import '../../core/utils/logger.dart';
+import 'package:chess_ai/core/utils/logger.dart';
 
 /// Chess Engine Service - Android Only
 /// Provides chess engine functionality for Android platform

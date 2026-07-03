@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/utils/logger.dart';
+import 'package:chess_ai/core/utils/logger.dart';
 
 class CacheService {
   final Map<String, dynamic> _cache = {};

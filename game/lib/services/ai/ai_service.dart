@@ -1,5 +1,5 @@
-import '../../core/utils/logger.dart';
-import '../engine/chess_engine_service.dart';
+import 'package:chess_ai/core/utils/logger.dart';
+import 'package:chess_ai/services/engine/chess_engine_service.dart';
 
 class AIMove {
   final String from;
@@ -12,10 +12,10 @@ class AIMove {
   const AIMove({
     required this.from,
     required this.to,
-    this.promotion,
     required this.nodesSearched,
     required this.depth,
     required this.evaluation,
+    this.promotion,
   });
 }
 
@@ -32,6 +32,7 @@ class AIService {
     try {
       AppLogger.info('AI thinking... (difficulty: $difficulty)');
 
+      await _engineService.setPosition(gameId, '');
       await Future.delayed(maxTime ?? const Duration(seconds: 2));
 
       return const AIMove(

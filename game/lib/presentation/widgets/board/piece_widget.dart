@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../../domain/entities/piece.dart';
+import 'package:chess_ai/domain/entities/piece.dart';
 
 class PieceWidget extends StatelessWidget {
   final Piece piece;
@@ -12,7 +12,7 @@ class PieceWidget extends StatelessWidget {
   const PieceWidget({
     super.key,
     required this.piece,
-    this.size = 60,
+    required this.size,
     this.isDragging = false,
     this.pieceStyle = 'cburnett',
   });

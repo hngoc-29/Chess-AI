@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-import '../../core/utils/logger.dart';
+import 'package:chess_ai/core/utils/logger.dart';
 
 class StorageService {
   Future<String> getStoragePath() async {
@@ -15,8 +15,8 @@ class StorageService {
     try {
       final path = await getStoragePath();
       final directory = Directory(path);
-      if (!await directory.exists()) {
-        await directory.create(recursive: true);
+      if (!directory.existsSync()) {
+        directory.createSync(recursive: true);
       }
 
       final file = File('$path/game_$gameId.json');
@@ -33,7 +33,7 @@ class StorageService {
       final path = await getStoragePath();
       final file = File('$path/game_$gameId.json');
 
-      if (!await file.exists()) {
+      if (!file.existsSync()) {
         return null;
       }
 
@@ -50,7 +50,7 @@ class StorageService {
       final path = await getStoragePath();
       final directory = Directory(path);
 
-      if (!await directory.exists()) {
+      if (!directory.existsSync()) {
         return [];
       }
 
@@ -70,8 +70,8 @@ class StorageService {
       final path = await getStoragePath();
       final file = File('$path/game_$gameId.json');
 
-      if (await file.exists()) {
-        await file.delete();
+      if (file.existsSync()) {
+        file.deleteSync();
         AppLogger.info('Game deleted: $gameId');
       }
     } catch (e, stackTrace) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../../domain/entities/piece.dart';
+import 'package:chess_ai/domain/entities/piece.dart';
 
 class PromotionDialog extends StatelessWidget {
   final PieceColor color;
@@ -12,7 +12,7 @@ class PromotionDialog extends StatelessWidget {
     super.key,
     required this.color,
     required this.onSelected,
-    this.pieceStyle = 'cburnett',
+    required this.pieceStyle,
   });
 
   @override

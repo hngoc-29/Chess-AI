@@ -64,9 +64,9 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
             return DragTarget<Position>(
               onWillAccept: (from) => from != null && from != position,
-              onAccept: (from) {
+              onAcceptWithDetails: (details) {
                 if (widget.onMove != null) {
-                  widget.onMove!(from, position);
+                  widget.onMove!(details.data, position);
                 }
               },
               builder: (context, candidateData, rejectedData) {
@@ -216,9 +216,9 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                   },
                   child: DragTarget<Position>(
                     onWillAccept: (from) => from != null && from != position,
-                    onAccept: (from) {
+                    onAcceptWithDetails: (details) {
                       if (widget.onMove != null) {
-                        widget.onMove!(from, position);
+                        widget.onMove!(details.data, position);
                       }
                     },
                     builder: (context, candidateData, rejectedData) {

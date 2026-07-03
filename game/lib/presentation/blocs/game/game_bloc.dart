@@ -393,8 +393,6 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       await _saveGameUseCase.saveState(currentState.gameState);
     }
   }
-    }
-  }
 
   Future<void> _onRequestAIMove(RequestAIMove event, Emitter<GameBlocState> emit) async {
     if (state is! GameInProgress) return;
