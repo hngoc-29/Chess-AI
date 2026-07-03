@@ -878,6 +878,8 @@ def export_generation_comparison(summaries: List[dict], output_dir: Path) -> Non
                 "epochs_trained",
                 "final_loss",
                 "final_value_loss",
+                "arena_promoted",
+                "arena_a_score",
             ],
         )
         writer.writeheader()
@@ -886,11 +888,15 @@ def export_generation_comparison(summaries: List[dict], output_dir: Path) -> Non
 
     with md_path.open("w", encoding="utf-8") as handle:
         handle.write("# Generation comparison\n\n")
-        handle.write("| Generation | Samples | Epochs | Final Loss | Final Value Loss |\n")
-        handle.write("| --- | ---: | ---: | ---: | ---: |\n")
+        handle.write("| Generation | Samples | Epochs | Final Loss | Final Value Loss | Arena | Score |\n")
+        handle.write("| --- | ---: | ---: | ---: | ---: | :---: | ---: |\n")
         for summary in summaries:
+            promoted = summary.get("arena_promoted")
+            arena_col = "—" if promoted is None else ("✓ promoted" if promoted else "✗ rejected")
+            score = summary.get("arena_a_score")
+            score_col = "—" if score is None else f"{score:.1%}"
             handle.write(
-                f"| {summary['generation']} | {summary['samples']} | {summary['epochs_trained']} | {summary['final_loss']:.4f} | {summary['final_value_loss']:.4f} |\n"
+                f"| {summary['generation']} | {summary['samples']} | {summary['epochs_trained']} | {summary['final_loss']:.4f} | {summary['final_value_loss']:.4f} | {arena_col} | {score_col} |\n"
             )
 
 
