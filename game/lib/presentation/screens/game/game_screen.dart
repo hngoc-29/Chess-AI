@@ -7,6 +7,8 @@ import '../../../core/constants/strings.dart';
 import '../../../core/utils/fen_utils.dart';
 import '../../../core/constants/colors.dart';
 import '../replay/replay_screen.dart';
+import '../../../domain/entities/game_state.dart';
+import '../../../domain/entities/move_info.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
 import '../../../domain/repositories/i_settings_repository.dart';

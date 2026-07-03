@@ -10,6 +10,7 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
+import '../../domain/entities/game_state.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -42,7 +43,15 @@ class AppRoutes {
       case profile:
         return MaterialPageRoute(builder: (_) => const ProfileScreen());
       case replay:
-        return MaterialPageRoute(builder: (_) => const ReplayScreen());
+        final gameState = routeSettings.arguments as GameState?;
+        if (gameState == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('No game state provided for replay')),
+            ),
+          );
+        }
+        return MaterialPageRoute(builder: (_) => ReplayScreen(gameState: gameState));
       case analysis:
         return MaterialPageRoute(builder: (_) => const AnalysisScreen());
       case debugLogs:
