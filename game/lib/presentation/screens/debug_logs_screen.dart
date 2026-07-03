@@ -59,8 +59,8 @@ class _DebugLogsScreenState extends State<DebugLogsScreen> {
     try {
       await Share.shareXFiles(
         [XFile(file.path)],
-        subject: 'King's Gambit AI Log - ${_getFileName(file)}',
-        text: 'Log file từ King's Gambit AI app',
+        subject: "King's Gambit AI Log - ${_getFileName(file)}",
+        text: "Log file từ King's Gambit AI app",
       );
     } catch (e) {
       _showError('Failed to share log: $e');

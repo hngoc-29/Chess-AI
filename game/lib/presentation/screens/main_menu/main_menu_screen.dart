@@ -54,7 +54,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: () {
                           showAboutDialog(
                             context: context,
-                            applicationName: 'King's Gambit AI',
+                            applicationName: "King's Gambit AI",
                             applicationVersion: '1.0.0',
                             applicationIcon: const Icon(Icons.extension, size: 48),
                             children: [

@@ -17,7 +17,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      title: 'Welcome to King's Gambit AI',
+      title: "Welcome to King's Gambit AI",
       description: 'Play against a powerful AI or challenge your friends locally.',
       lottieAsset: 'assets/animations/lottie/victory.json',
     ),

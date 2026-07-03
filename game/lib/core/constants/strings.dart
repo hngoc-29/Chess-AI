@@ -1,7 +1,7 @@
 class AppStrings {
   AppStrings._();
 
-  static const String appName = 'King's Gambit AI';
+  static const String appName = "King's Gambit AI";
 
   static const String playVsAI = 'Play vs AI';
   static const String playVsHuman = 'Human vs Human';

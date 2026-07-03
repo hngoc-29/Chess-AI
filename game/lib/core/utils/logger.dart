@@ -55,7 +55,7 @@ class AppLogger {
       _isInitialized = true;
 
       // Ghi log đầu tiên
-      info('📱 King's Gambit AI Logger initialized');
+      info('📱 King\'s Gambit AI Logger initialized');
       info('📁 Log file: ${_logFile!.path}');
       info('🔧 Build mode: ${kReleaseMode ? "Release" : "Debug"}');
     } catch (e) {
