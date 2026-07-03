@@ -18,6 +18,7 @@ import '../../../services/ai/chess_ai_engine.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
 import '../../../core/utils/fen_utils.dart';
+import '../../../core/utils/logger.dart';
 import 'game_bloc_state.dart';
 import 'game_event.dart';
 
