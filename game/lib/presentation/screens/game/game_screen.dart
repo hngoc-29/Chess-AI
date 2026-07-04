@@ -65,6 +65,14 @@ class _GameView extends StatefulWidget {
 }
 
 class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
+  // Guards against a second showDialog() being pushed while the promotion
+  // dialog from an earlier tap is still awaiting a response. Without this,
+  // rapidly tapping the promotion square twice stacks two dialog routes;
+  // picking a piece only pops the top one, leaving the first dialog's
+  // invisible modal barrier over the board, silently swallowing every tap
+  // afterwards (looks exactly like "board is stuck").
+  bool _isShowingPromotionDialog = false;
+
   @override
   void initState() {
     super.initState();
@@ -433,20 +441,35 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                               (movingPiece.isBlack && to.rank == 0);
 
       if (isPromotionRank) {
+        // Prevent stacking a second dialog on top of one that's already
+        // awaiting a response (see field doc comment above).
+        if (_isShowingPromotionDialog) return;
+        _isShowingPromotionDialog = true;
+
         // Get piece style from settings
         final pieceStyleResult = await getIt<ISettingsRepository>().getPieceSet();
         final pieceStyle = pieceStyleResult.getOrElse(() => 'cburnett');
-        
-        // Show promotion dialog
-        final promotion = await showDialog<PieceType>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) => PromotionDialog(
-            color: movingPiece.color,
-            pieceStyle: pieceStyle,
-            onSelected: (type) => Navigator.of(dialogContext).pop(type),
-          ),
-        );
+
+        PieceType? promotion;
+        try {
+          // Show promotion dialog. PopScope blocks the system/gesture back
+          // button from dismissing it - the player must pick a piece so a
+          // validated move can never be silently dropped.
+          promotion = await showDialog<PieceType>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => PopScope(
+              canPop: false,
+              child: PromotionDialog(
+                color: movingPiece.color,
+                pieceStyle: pieceStyle,
+                onSelected: (type) => Navigator.of(dialogContext).pop(type),
+              ),
+            ),
+          );
+        } finally {
+          _isShowingPromotionDialog = false;
+        }
 
         if (promotion != null) {
           context.read<GameBloc>().add(MakeMove(from: from, to: to, promotion: promotion));

@@ -53,23 +53,40 @@ class MaiaAIEngine extends ChessAIEngine {
   Lc0? _engine;
   Future<Lc0>? _engineStartup;
   String? _loadedWeightsAsset;
-  bool _permanentlyUnavailable = false;
 
-  Future<Lc0> _ensureEngine() {
-    if (_permanentlyUnavailable) {
-      throw StateError('Maia engine marked unavailable on this device');
+  // If Maia fails, don't retry on literally the next move (that would add
+  // the full timeout delay to every single move if something is
+  // persistently broken) but don't give up for the rest of the game
+  // either - a transient hiccup (one slow GC pause, one dropped isolate
+  // message, ...) shouldn't permanently downgrade the whole game.
+  DateTime? _lastFailureAt;
+  static const _retryCooldown = Duration(seconds: 20);
+
+  Future<Lc0> _ensureEngine() async {
+    // Reuse the cached engine only if it's actually still alive. lc0's
+    // wrapper sets its own state to error/disposed if the native process
+    // exits for any reason (crash, fatal error, etc.) - if we don't check
+    // this, we keep handing out a dead reference forever after a crash.
+    final cached = _engine;
+    if (cached != null) {
+      if (cached.state.value == Lc0State.ready) return cached;
+      AppLogger.warning('Maia engine no longer ready (${cached.state.value}), restarting');
+      _engine = null;
+      _engineStartup = null;
+      _loadedWeightsAsset = null;
     }
-    if (_engine != null) return Future.value(_engine!);
     return _engineStartup ??= _startEngine();
   }
 
   Future<Lc0> _startEngine() async {
+    AppLogger.info('Starting Maia (lc0) engine...');
     final engine = await lc0Async().timeout(
       const Duration(seconds: 10),
       onTimeout: () => throw TimeoutException('lc0 engine did not start in time'),
     );
     engine.stdin = 'uci';
     _engine = engine;
+    AppLogger.info('Maia (lc0) engine started');
     return engine;
   }
 
@@ -104,50 +121,66 @@ class MaiaAIEngine extends ChessAIEngine {
     int halfMoveClock = 0,
     int fullMoveNumber = 1,
   }) async {
-    try {
-      final profile = _kMaiaProfiles[difficulty] ?? _kMaiaProfiles[AIDifficulty.medium]!;
-      final engine = await _ensureEngine();
+    final lastFailure = _lastFailureAt;
+    final onCooldown = lastFailure != null &&
+        DateTime.now().difference(lastFailure) < _retryCooldown;
 
-      if (_loadedWeightsAsset != profile.weightsAsset) {
-        final weightsPath = await _weightsPathFor(profile.weightsAsset);
-        engine.stdin = 'setoption name WeightsFile value $weightsPath';
-        await _waitForReadyOk(engine);
-        _loadedWeightsAsset = profile.weightsAsset;
+    if (!onCooldown) {
+      try {
+        final profile = _kMaiaProfiles[difficulty] ?? _kMaiaProfiles[AIDifficulty.medium]!;
+        final engine = await _ensureEngine();
+
+        if (_loadedWeightsAsset != profile.weightsAsset) {
+          final weightsPath = await _weightsPathFor(profile.weightsAsset);
+          AppLogger.info('Loading Maia weights: ${profile.weightsAsset}');
+          engine.stdin = 'setoption name WeightsFile value $weightsPath';
+          await _waitForReadyOk(engine);
+          _loadedWeightsAsset = profile.weightsAsset;
+        }
+
+        final fen = boardToFen(
+          board,
+          color,
+          whiteCanCastleK: whiteCanCastleKingside,
+          whiteCanCastleQ: whiteCanCastleQueenside,
+          blackCanCastleK: blackCanCastleKingside,
+          blackCanCastleQ: blackCanCastleQueenside,
+          enPassant: enPassantSquare,
+          halfMove: halfMoveClock,
+          fullMove: fullMoveNumber,
+        );
+
+        final bestMoveUci = await _requestBestMove(engine, fen, profile.nodes);
+        _lastFailureAt = null; // fully recovered
+        return _parseUciMove(bestMoveUci);
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Maia engine failed, falling back to local AI for now (will retry in '
+          '${_retryCooldown.inSeconds}s)',
+          e,
+          stackTrace,
+        );
+        _lastFailureAt = DateTime.now();
       }
-
-      final fen = boardToFen(
-        board,
-        color,
-        whiteCanCastleK: whiteCanCastleKingside,
-        whiteCanCastleQ: whiteCanCastleQueenside,
-        blackCanCastleK: blackCanCastleKingside,
-        blackCanCastleQ: blackCanCastleQueenside,
-        enPassant: enPassantSquare,
-        halfMove: halfMoveClock,
-        fullMove: fullMoveNumber,
-      );
-
-      final bestMoveUci = await _requestBestMove(engine, fen, profile.nodes);
-      return _parseUciMove(bestMoveUci);
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        'Maia engine unavailable, falling back to local minimax AI',
-        e,
-        stackTrace,
-      );
-      // Avoid retrying a broken native engine on every single move.
-      _permanentlyUnavailable = true;
-      return super.getBestMove(
-        board: board,
-        color: color,
-        difficulty: difficulty,
-        whiteCanCastleKingside: whiteCanCastleKingside,
-        whiteCanCastleQueenside: whiteCanCastleQueenside,
-        blackCanCastleKingside: blackCanCastleKingside,
-        blackCanCastleQueenside: blackCanCastleQueenside,
-        enPassantSquare: enPassantSquare,
-      );
     }
+
+    // Fallback: prioritize getting a move out quickly and reliably over
+    // matching the exact requested strength. The plain minimax engine at
+    // higher depths (searched in pure Dart, no bitboards) can be very slow
+    // on a phone - using it as a "keep the game moving" safety net only
+    // makes sense if it's actually fast, so cap it at an easy/medium depth
+    // regardless of what difficulty was requested.
+    const fallbackDifficulty = AIDifficulty.easy;
+    return super.getBestMove(
+      board: board,
+      color: color,
+      difficulty: fallbackDifficulty,
+      whiteCanCastleKingside: whiteCanCastleKingside,
+      whiteCanCastleQueenside: whiteCanCastleQueenside,
+      blackCanCastleKingside: blackCanCastleKingside,
+      blackCanCastleQueenside: blackCanCastleQueenside,
+      enPassantSquare: enPassantSquare,
+    );
   }
 
   /// UCI handshake: confirms the engine has actually finished loading the
