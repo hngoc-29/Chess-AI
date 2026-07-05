@@ -12,6 +12,9 @@ enum SoundEffect {
   checkmate,
   castle,
   button,
+  draw,
+  victory,
+  defeat,
 }
 
 class AudioService {
@@ -25,6 +28,9 @@ class AudioService {
     SoundEffect.checkmate: 'assets/sounds/Checkmate.mp3',
     SoundEffect.castle: 'assets/sounds/Move.mp3',
     SoundEffect.button: 'assets/sounds/Select.mp3',
+    SoundEffect.draw: 'assets/sounds/Draw.mp3',
+    SoundEffect.victory: 'assets/sounds/Victory.mp3',
+    SoundEffect.defeat: 'assets/sounds/Defeat.mp3',
   };
 
   bool _soundEnabled = true;
@@ -33,7 +39,16 @@ class AudioService {
 
   AudioService({ISettingsRepository? settingsRepository})
       : _settingsRepository = settingsRepository {
+    unawaited(_player.setPlayerMode(PlayerMode.lowLatency));
     unawaited(_initMusic());
+    if (_settingsRepository != null) {
+      unawaited(_refreshSoundEnabledCache());
+    }
+  }
+
+  Future<void> _refreshSoundEnabledCache() async {
+    final result = await _settingsRepository!.getSoundEnabled();
+    _soundEnabled = result.getOrElse(() => _soundEnabled);
   }
 
   Future<void> _initMusic() async {
@@ -66,14 +81,7 @@ class AudioService {
   }
 
   Future<void> playSound(SoundEffect effect) async {
-    // Check current settings from repository if available
-    bool soundEnabled = _soundEnabled;
-    if (_settingsRepository != null) {
-      final result = await _settingsRepository.getSoundEnabled();
-      soundEnabled = result.getOrElse(() => _soundEnabled);
-    }
-    
-    if (!soundEnabled) return;
+    if (!_soundEnabled) return;
 
     try {
       final path = _soundPaths[effect];

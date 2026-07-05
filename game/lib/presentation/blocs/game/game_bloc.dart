@@ -203,6 +203,30 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     if (state is! GameInProgress) return;
     final currentState = state as GameInProgress;
 
+    try {
+      await _applyMove(event, currentState, emit);
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'MakeMove crashed (from=${event.from.toAlgebraic()}, '
+        'to=${event.to.toAlgebraic()}, promotion=${event.promotion}) - '
+        'recovering instead of taking down the match',
+        e,
+        stackTrace,
+      );
+      emit(GameError(
+        'Đã xảy ra lỗi khi thực hiện nước đi. Bạn có thể tiếp tục ván đấu.',
+      ));
+      // Re-emit the pre-move state so the game is still playable afterwards
+      // instead of being stuck on the error state.
+      emit(currentState);
+    }
+  }
+
+  Future<void> _applyMove(
+    MakeMove event,
+    GameInProgress currentState,
+    Emitter<GameBlocState> emit,
+  ) async {
     var movingPiece = currentState.board.pieceAt(event.from);
     
     // If there's no piece at the source square, the move is invalid
@@ -310,7 +334,9 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       }
     }
 
-    if (capturedPiece != null) {
+    if (isCastle) {
+      _audioService.playSound(SoundEffect.castle);
+    } else if (capturedPiece != null) {
       _audioService.playSound(SoundEffect.capture);
     } else {
       _audioService.playSound(SoundEffect.move);
@@ -424,7 +450,16 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
                         currentState.gameState.whitePlayer.type == PlayerType.human) ||
                        (winnerColor == PieceColor.black && 
                         currentState.gameState.blackPlayer.type == PlayerType.human);
-      
+
+      // Only play a victory/defeat fanfare in human-vs-AI games, where "who
+      // won" is meaningful; in local 2-player games either side is "the
+      // player", so the neutral checkmate sound played above is enough.
+      final isVsAI = currentState.gameState.whitePlayer.type == PlayerType.ai ||
+          currentState.gameState.blackPlayer.type == PlayerType.ai;
+      if (isVsAI) {
+        _audioService.playSound(humanWon ? SoundEffect.victory : SoundEffect.defeat);
+      }
+
       // Record game statistics
       await _statsRepository.recordGame(isWin: humanWon, isDraw: false);
       
@@ -436,6 +471,8 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     }
 
     if (newStatus == GameStatus.stalemate) {
+      _audioService.playSound(SoundEffect.draw);
+
       // Record game statistics for draw
       await _statsRepository.recordGame(isWin: false, isDraw: true);
       
