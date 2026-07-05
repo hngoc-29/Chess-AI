@@ -1,0 +1,13 @@
+diff --git a/.github/workflows/build-android.yml b/.github/workflows/build-android.yml
+index 2f52288..34cc3f5 100644
+--- a/.github/workflows/build-android.yml
++++ b/.github/workflows/build-android.yml
+@@ -31,7 +31,7 @@ jobs:
+       - name: Setup Flutter
+         uses: subosito/flutter-action@v2
+         with:
+-          flutter-version: '3.24.0'
++          flutter-version: '3.44.4'
+           channel: 'stable'
+           cache: true
+ 
