@@ -6,3 +6,6 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 -dontwarn io.flutter.embedding.**
+
+## flutter_onnxruntime (required by the plugin's own docs)
+-keep class ai.onnxruntime.** { *; }

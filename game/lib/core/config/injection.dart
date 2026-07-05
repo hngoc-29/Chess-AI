@@ -21,7 +21,7 @@ import '../../domain/usecases/save_game.dart';
 import '../../domain/usecases/undo_move.dart';
 import '../../services/ai/ai_service.dart';
 import '../../services/ai/chess_ai_engine.dart';
-import '../../services/ai/maia_ai_engine.dart';
+import '../../services/ai/maia_onnx_engine.dart';
 import '../../services/audio/audio_service.dart';
 import '../../services/engine/chess_engine_service.dart';
 import '../../services/game/chess_rules_service.dart';
@@ -42,10 +42,10 @@ void _setupServices() {
   getIt.registerSingleton<ChessRulesService>(ChessRulesService());
   getIt.registerSingleton<ChessEngineService>(ChessEngineService());
   getIt.registerSingleton<AIService>(AIService(getIt<ChessEngineService>()));
-  // MaiaAIEngine extends ChessAIEngine: plays via the bundled lc0 + Maia
-  // networks, and transparently falls back to the original minimax engine
-  // if the native engine can't start on a given device.
-  getIt.registerSingleton<ChessAIEngine>(MaiaAIEngine(getIt<ChessRulesService>()));
+  // MaiaOnnxEngine extends ChessAIEngine: plays via Maia neural nets run
+  // directly through ONNX Runtime, and transparently falls back to the
+  // original minimax engine if a model fails to load or run.
+  getIt.registerSingleton<ChessAIEngine>(MaiaOnnxEngine(getIt<ChessRulesService>()));
   // AudioService registered lazily after repositories to access ISettingsRepository
   getIt.registerLazySingleton<AudioService>(
     () => AudioService(settingsRepository: getIt<ISettingsRepository>()),

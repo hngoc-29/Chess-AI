@@ -15,7 +15,8 @@ import '../../../domain/repositories/i_stats_repository.dart';
 import '../../../domain/usecases/load_game.dart';
 import '../../../domain/usecases/save_game.dart';
 import '../../../services/ai/chess_ai_engine.dart';
-import '../../../services/ai/maia_ai_engine.dart';
+import '../../../services/ai/maia_onnx_engine.dart';
+import '../../../services/ai/maia/maia_position_snapshot.dart';
 import '../../../services/audio/audio_service.dart';
 import '../../../services/game/chess_rules_service.dart';
 import '../../../core/utils/fen_utils.dart';
@@ -530,6 +531,14 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       // Convert int to AIDifficulty enum
       final difficulty = _intToAIDifficulty(difficultyInt);
 
+      // Maia's input encoding uses up to 8 plies of history (most recent
+      // first); `_history` is chronological oldest-first and doesn't
+      // include the current position, so prepend that and reverse.
+      final maiaHistory = <MaiaPositionSnapshot>[
+        MaiaPositionSnapshot.fromGameState(currentState.gameState),
+        ..._history.reversed.take(7).map(MaiaPositionSnapshot.fromGameState),
+      ];
+
       // Use the AI engine to find the best move
       final bestMove = await _aiEngine.getBestMove(
         board: currentState.board,
@@ -542,6 +551,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         enPassantSquare: currentState.gameState.enPassantSquare,
         halfMoveClock: currentState.gameState.halfMoveClock,
         fullMoveNumber: currentState.gameState.fullMoveNumber,
+        history: maiaHistory,
       );
 
       emit(currentState.copyWith(isAIThinking: false));
@@ -691,7 +701,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
   @override
   Future<void> close() {
     final engine = _aiEngine;
-    if (engine is MaiaAIEngine) {
+    if (engine is MaiaOnnxEngine) {
       engine.dispose();
     }
     return super.close();

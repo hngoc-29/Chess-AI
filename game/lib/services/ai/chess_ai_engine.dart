@@ -5,6 +5,7 @@ import 'package:kings_gambit_ai/domain/entities/chess_move.dart';
 import 'package:kings_gambit_ai/domain/entities/piece.dart';
 import 'package:kings_gambit_ai/domain/entities/position.dart';
 import 'package:kings_gambit_ai/domain/entities/settings.dart';
+import 'package:kings_gambit_ai/services/ai/maia/maia_position_snapshot.dart';
 import 'package:kings_gambit_ai/services/game/chess_rules_service.dart';
 
 /// Advanced Chess AI Engine with Minimax and Alpha-Beta Pruning
@@ -26,9 +27,10 @@ class ChessAIEngine {
     required String? enPassantSquare,
     // Unused by this local minimax engine, but part of the shared
     // interface so callers can pass full FEN context to subclasses
-    // (e.g. MaiaAIEngine) without caring about the runtime type.
+    // (e.g. MaiaOnnxEngine) without caring about the runtime type.
     int halfMoveClock = 0,
     int fullMoveNumber = 1,
+    List<MaiaPositionSnapshot>? history,
   }) async {
     // Add thinking delay based on difficulty
     final thinkingTime = _getThinkingTime(difficulty);

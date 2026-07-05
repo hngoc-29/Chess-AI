@@ -1,124 +1,129 @@
-# Tích hợp Maia Chess làm đối thủ AI
+# Tích hợp Maia Chess làm đối thủ AI (bản ONNX Runtime)
 
-Tài liệu này ghi lại những gì đã được thêm vào để game dùng các mạng **Maia**
-(chơi giống người, theo từng mức Elo) thay vì (hoặc cùng với) engine minimax
-tự viết trước đó.
+> Đây là bản viết lại hoàn toàn. Cách làm đầu tiên (bundle engine `lc0` thật
+> qua gói `leela_chess_zero`) đã bị bỏ sau khi gặp 2 vấn đề nghiêm trọng: bản
+> pub.dev thiếu file cần thiết để build Android, và có dấu hiệu treo/crash ở
+> tầng native khi chơi thực tế (log không ghi được lỗi nào sau một điểm cụ
+> thể — dấu hiệu của crash tiến trình, không phải lỗi Dart bình thường).
+> Xem lịch sử trò chuyện nếu cần biết chi tiết quá trình debug đó.
 
-## Tóm tắt kiến trúc
+## Ý tưởng cốt lõi
 
-- **Trước đây**: `GameBloc` gọi `ChessAIEngine.getBestMove()` — một minimax +
-  alpha-beta thuần Dart, chạy ngay trong app, không cần model gì cả. Các file
-  `services/ai/ai_service.dart` và `services/engine/chess_engine_service.dart`
-  là code khung cho một cầu nối FFI C++/LibTorch **chưa từng được xây dựng**
-  (không có file `.cpp` bridge nào, không dùng `dart:ffi`) — đây là code chết,
-  không đụng tới.
-- **Bây giờ**: `MaiaAIEngine` (kế thừa `ChessAIEngine`) thay thế vị trí đó
-  trong DI container (`injection.dart`). Nó nói chuyện UCI với engine `lc0`
-  thật (được đóng gói sẵn qua gói Flutter `leela_chess_zero`), nạp 1 trong 9
-  file trọng số Maia tuỳ theo độ khó, rồi xin nước đi tốt nhất.
-- Nếu engine native không khởi động được vì bất kỳ lý do gì (thiết bị lạ,
-  plugin cài lỗi, ...), `MaiaAIEngine` tự động rơi về lại minimax gốc — game
-  không bao giờ bị "đứng" vì thiếu đối thủ.
+Maia, về bản chất, chỉ là một mạng neural network (giống các mạng AlphaZero
+khác). Việc `lc0` làm chỉ là: (1) mã hoá bàn cờ → tensor đầu vào, (2) chạy
+qua mạng, (3) đọc tensor đầu ra → nước đi. Với `go nodes 1` (cách Maia được
+thiết kế để dùng — **không search**), lc0 chỉ chạy đúng 1 lần forward pass.
 
-Maia không phải file `.pt`/TorchScript như model bạn tự train trong `/AI` —
-nó là 9 file `.pb.gz` định dạng lc0, **chỉ chạy được qua binary `lc0`**, nên
-không thể nạp thẳng vào MCTS C++ hiện có của bạn. Đây là lý do dùng
-`leela_chess_zero` (đã đóng gói sẵn `lc0` cho Android/iOS) thay vì tự
-cross-compile.
+Vậy có thể bỏ hẳn `lc0`/UCI/subprocess, chuyển thẳng 9 file `.pb.gz` sang
+`.onnx`, rồi chạy qua **ONNX Runtime** ngay trong Dart. Không còn tiến trình
+native riêng, không còn pipe, không còn giao thức UCI — chỉ còn 1 lời gọi
+hàm suy luận (inference) bình thường.
 
-## Các file đã thay đổi/thêm mới
+## Cái giá phải trả
 
-| File | Thay đổi |
+Đổi lại, phải tự viết bằng Dart 2 phần mà `lc0` trước đây lo hộ:
+1. **Encode bàn cờ → tensor đầu vào** đúng định dạng mà mạng Maia mong đợi.
+2. **Decode tensor đầu ra → nước đi thật.**
+
+Đây là 2 phần dễ sai nhất trong toàn bộ việc này, vì sai một chi tiết nhỏ
+(thứ tự plane, quy ước lật bàn cờ khi đến lượt Đen, cách map UCI→index...)
+sẽ khiến mạng chạy ra kết quả vô nghĩa mà **không hề có lỗi hay crash nào cả**
+— im lặng cho nước đi sai, khó phát hiện hơn cả một crash rõ ràng.
+
+**Vì vậy toàn bộ logic encode/decode đã được viết và kiểm chứng bằng Python
+thật trong sandbox trước khi chuyển sang Dart** (điều không thể làm được với
+hướng `lc0` cũ, vì sandbox không có Flutter để chạy thử):
+- Build `lc0` (bản Linux, chỉ để lấy công cụ `leela2onnx` có sẵn trong mã
+  nguồn của chính lc0) → convert cả 9 file Maia sang `.onnx`.
+- Dùng `lczero-tools` (thư viện Python tham chiếu, nguồn mở) để tạo dữ liệu
+  input/output "đúng" cho nhiều thế cờ khác nhau.
+- Chạy thử: mạng Maia dự đoán đúng y hệt các nước mở màn phổ biến nhất của
+  con người (1.e4 ~65%, 1.d4 ~21%, ...) — xác nhận toàn bộ pipeline hoạt
+  động đúng.
+- Viết lại logic encode bằng Python **giống hệt cấu trúc code Dart sẽ viết**
+  (cùng vòng lặp, cùng công thức index), so khớp byte-từng-byte với dữ liệu
+  tham chiếu ở trên cho nhiều thế cờ (bao gồm cả trường hợp khó: đến lượt
+  Đen, có phong cấp, có bắt tốt qua đường, halfmove/fullmove tuỳ ý) — khớp
+  tuyệt đối trước khi viết bản Dart thật.
+- Trích xuất trực tiếp bảng tra cứu UCI↔index (~7400 dòng) bằng code, không
+  chép tay, để không có lỗi đánh máy.
+
+## Kiến trúc
+
+| File | Vai trò |
 |---|---|
-| `pubspec.yaml` | Thêm dependency `leela_chess_zero` (git, xem lý do bên dưới), đăng ký `assets/weights/` |
-| `android/app/build.gradle` | `minSdkVersion` 21→24, `compileSdk` 34→36, `ndkVersion` →28.2.13676358 (bắt buộc bởi plugin) |
-| `assets/weights/maia-*.pb.gz` | 9 file trọng số Maia thật (1100–1900 Elo, ~12MB tổng), tải từ [CSSLab/maia-chess](https://github.com/CSSLab/maia-chess) |
-| `lib/services/ai/maia_ai_engine.dart` | **Mới.** Engine nói UCI với lc0, có fallback |
-| `lib/domain/entities/settings.dart` | `AIDifficulty` mở rộng 4 → 6 mức |
-| `lib/services/ai/chess_ai_engine.dart` | Thêm case cho 2 mức mới; thêm tham số `halfMoveClock`/`fullMoveNumber` (không bắt buộc) vào interface chung |
-| `lib/core/config/injection.dart` | Đăng ký `MaiaAIEngine` thay cho `ChessAIEngine` trần |
-| `lib/presentation/blocs/game/game_bloc.dart` | Truyền thêm half-move/full-move cho FEN chuẩn; giải phóng engine lúc `close()` |
-| `lib/presentation/blocs/settings/settings_bloc.dart` | Sửa `clamp(0,3)` → theo đúng độ dài enum mới |
-| `lib/data/datasources/local/preferences_datasource.dart` | Sửa giá trị mặc định `5` (rác, không khớp enum cũ) → `2` (medium) |
-| `lib/presentation/screens/settings/settings_screen.dart` | Nhãn tiếng Việt cho 6 mức, kèm Elo tham khảo |
+| `assets/onnx/maia-{1100..1900}.onnx` | 9 mạng Maia đã convert (~3.5MB/file, ~31MB tổng) |
+| `assets/onnx/uci_to_idx.json` | Bảng tra UCI→index cho 4 biến thể (trắng/đen × có/không quyền nhập thành) |
+| `lib/services/ai/maia/maia_board_encoder.dart` | Bàn cờ + lịch sử → tensor input 112x8x8 |
+| `lib/services/ai/maia/maia_move_index.dart` | Load bảng tra cứu, map nước đi hợp lệ → index trong vector policy 1858 chiều |
+| `lib/services/ai/maia/maia_position_snapshot.dart` | Kiểu dữ liệu gọn (board+turn+castling+en passant+halfmove) dùng riêng cho encoder, tách khỏi `GameState` đầy đủ |
+| `lib/services/ai/maia_onnx_engine.dart` | **Engine chính.** Load model, chạy inference, chọn nước đi, có fallback |
 
-`lib/core/utils/fen_utils.dart` (đã có sẵn từ trước, không cần sửa) cung cấp
-`boardToFen()` — dùng lại nguyên bản để sinh FEN gửi cho lc0.
+### Định dạng input (112 plane, đã verify)
 
-## Bảng ánh xạ độ khó → mạng Maia
+- 8 bước lịch sử (mới nhất trước) × 13 plane = 104 plane: 6 plane quân "ta" +
+  6 plane quân "địch" (thứ tự Tốt,Mã,Tượng,Xe,Hậu,Vua) + 1 plane lặp thế.
+  Thiếu lịch sử (đầu game) thì các plane còn lại để 0 — đúng như lc0 làm.
+- 8 plane hằng số: quyền nhập thành ta/địch (2 bên), bên đi (0=trắng,
+  1=đen), số nước không ăn/không đi tốt (giá trị thô, không chuẩn hoá), toàn
+  0, toàn 1.
+- **Điểm dễ nhầm nhất**: khi đến lượt Đen, bàn cờ chỉ lật theo **hàng**
+  (rank), **cột (file) giữ nguyên** — không phải lật 180 độ như trực giác
+  thông thường. Đã verify thực nghiệm bằng nhiều thế cờ đơn giản.
+- En passant **không có plane riêng** — không phải thiếu sót, định dạng
+  gốc của lc0 (classical 112-plane) đơn giản là không mã hoá thông tin này.
+- Lặp thế được tính đơn giản hoá: chỉ so trong 8 nước gần nhất, không phải
+  toàn bộ ván (tránh phải giữ bảng transposition suốt ván), đủ dùng cho đa
+  số trường hợp thực tế (đi lại 1 quân qua lại).
 
-| AIDifficulty | Mạng | Nodes | Ghi chú |
-|---|---|---|---|
-| `beginner` | maia-1100 | 1 | không search, đúng tinh thần Maia |
-| `easy` | maia-1300 | 1 | |
-| `medium` | maia-1500 | 1 | mặc định |
-| `hard` | maia-1700 | 1 | |
-| `veryHard` | maia-1900 | 1 | mạng "người" mạnh nhất hiện có |
-| `expert` | maia-1900 | 800 | search sâu hơn nhiều → mạnh hơn 1900 thật sự, nhưng bớt "giống người" |
+### Định dạng output
 
-Muốn có một mức thật sự siêu mạnh (engine-strength, không phải "giống
-người") sau này, chỉ cần tải thêm 1 mạng lc0 chuẩn (không phải Maia, ví dụ từ
-lczero.org) vào `assets/weights/` và thêm một dòng vào `_kMaiaProfiles` trong
-`maia_ai_engine.dart`.
+- `/output/policy`: 1858 giá trị. Lọc ra đúng các nước hợp lệ (qua bảng
+  UCI→index) rồi softmax **chỉ trên các nước đó** (không softmax cả 1858).
+- `/output/wdl`: 3 giá trị (Thắng/Hoà/Thua) — mạng Maia dùng đầu ra WDL,
+  không phải 1 giá trị scalar đơn như nhiều tài liệu cũ mô tả (đã verify
+  bằng `lc0 describenet`), hiện chưa dùng đến số này (chỉ chọn theo policy).
 
-## Vụ build lỗi trên CI (đã tìm ra nguyên nhân + fix)
+### Chọn nước đi
 
-Lần build đầu trên GitHub Actions bị lỗi ở bước biên dịch native của
-`leela_chess_zero`:
+Mặc định **sample có trọng số** theo đúng phân phối xác suất mà Maia dự
+đoán (giống cách con người ở mức Elo đó thực sự chơi — có thể chọn nước tốt
+nhất theo policy, nhưng cũng có thể chọn nước phổ biến thứ 2, 3...), không
+lấy máy móc nước cao nhất mỗi lần. Riêng mức "Chuyên gia" hạ "nhiệt độ"
+(temperature) sampling xuống 0.3 để nhất quán chọn nước top hơn — bù một
+phần cho việc không còn search sâu như bản `lc0` cũ (xem hạn chế bên dưới).
 
-```
-fatal error: 'proto/net.pb.h' file not found
-```
+## Hạn chế đã biết
 
-**Nguyên nhân** (đã xác nhận bằng cách tự clone source của package về xem):
-`android/CMakeLists.txt` của `leela_chess_zero` include đúng đường dẫn
-`ios/lc0/build` để tìm 3 file protobuf-header đã được generate sẵn
-(`net.pb.h`, `hlo.pb.h`, `onnx.pb.h`). 3 file này **có tồn tại và có commit
-vào git** của package (force-add qua rule `.gitignore` chặn `build/`), nhưng
-khi tác giả `dart pub publish` lên pub.dev, bản đóng gói xuất bản dường như
-đã loại bỏ 3 file này (rất có thể do công cụ publish của Dart tôn trọng rule
-gitignore bất kể file có bị force-track hay không). Kết quả: ai cài
-`leela_chess_zero: ^1.0.0` qua pub.dev cũng sẽ gặp lỗi y hệt — đây là lỗi ở
-package, không phải do code hay cấu hình phía bạn.
+- **Không còn mức "search sâu hơn"**: bản `lc0` cũ có thể tăng `nodes` để
+  tìm sâu hơn ở mức "Chuyên gia". Chạy ONNX thuần không có search — mức
+  "Chuyên gia" hiện chỉ là mạng 1900 Elo với nhiệt độ sampling thấp hơn,
+  không phải deep search thật. Muốn có mức thật sự mạnh (engine-strength,
+  không phải "giống người") sau này, hướng khả thi là viết thêm 1 minimax
+  nông (2-3 ply) dùng đầu ra WDL để đánh giá lá, đặt lên trên policy Maia để
+  sắp thứ tự nước đi — chưa làm trong bản này.
+- Lặp thế chỉ xét trong cửa sổ 8 nước gần nhất (xem trên).
+- En passant không được mạng "nhìn thấy" trực tiếp (hạn chế của chính định
+  dạng input classical của lc0, không phải lỗi của bản port này).
 
-**Cách fix** (đã áp vào `pubspec.yaml`): đổi dependency từ bản pub.dev sang
-git dependency, trỏ thẳng vào repo GitHub của package — `git clone` sẽ lấy
-đúng các file đã commit, bỏ qua việc lọc theo gitignore mà quy trình publish
-của pub.dev áp dụng.
+## Việc bạn cần tự làm
 
-```yaml
-leela_chess_zero:
-  git:
-    url: https://github.com/ArjanAswal/LeelaChessZero.git
-    ref: main
-```
+Mình không có Flutter SDK trong sandbox nên chưa build/chạy thử được bước
+cuối (chỉ verify được phần thuật toán encode bằng Python, không verify được
+việc gọi gói `flutter_onnxruntime` thật trong Flutter). Cần bạn:
 
-Đồng thời log build còn yêu cầu nâng `compileSdk` 34→36 và `ndkVersion`
-25.x→`28.2.13676358` — đã sửa trong `android/app/build.gradle`.
+1. `flutter pub get` trong `game/`.
+2. `flutter analyze` — bắt các lỗi type mình không tự kiểm tra bằng mắt được.
+3. Build & chạy thử trên thiết bị/emulator Android thật, đánh vài nước ở
+   từng độ khó, xem AI có phản hồi hợp lý không (nước đi có vẻ hợp lý cho
+   mức Elo đã chọn, không bị đứng).
+4. Nếu AI vẫn có vấn đề, vào Settings → xem log debug, tái hiện lỗi, gửi log
+   lại — do dùng gói mới (được verify publisher, cập nhật gần đây, MIT
+   license) nên hy vọng ổn định hơn nhiều so với bản `lc0` trước, nhưng vẫn
+   nên kiểm tra thực tế.
 
-Nếu về sau tác giả package fix lại publish (chạy `dart pub publish` với các
-file đó được include đúng), bạn có thể đổi lại về
-`leela_chess_zero: ^<version-mới>` cho gọn.
+## Ghi chú giấy phép
 
-## Việc bạn cần tự làm tiếp
-
-Mình không có Flutter SDK trong sandbox này nên vẫn chưa build/chạy thử lại
-được sau fix này — cần bạn:
-
-1. `flutter pub get` lại trong thư mục `game/` để lấy git dependency mới.
-2. Build lại (`flutter build apk` hoặc CI) — với fix này, bước CMake nên qua
-   được. Nếu vẫn lỗi ở chỗ khác trong quá trình build native (đây là package
-   khá non/ít người dùng, 3 file trên có thể không phải vấn đề duy nhất),
-   gửi lại log cho mình, mình sẽ tiếp tục đào sâu vào source của package.
-3. Chạy thử trên thiết bị/emulator Android thật (API ≥ 24) — bấm cho AI đi
-   vài nước ở từng độ khó để chắc `lc0` khởi động và trả `bestmove` đúng.
-4. `import 'package:leela_chess_zero/lc0.dart';` trong `maia_ai_engine.dart`
-   — đã xác nhận đúng 100% (kiểm tra trực tiếp `lib/lc0.dart` trong source
-   của package), không cần đổi.
-
-## Lưu ý về giấy phép (không phải tư vấn pháp lý)
-
-`leela_chess_zero` nhúng binary `lc0`, phát hành theo **GPL-3.0**. Nếu bạn
-định phát hành app (đặc biệt là closed-source/lên store), nên tìm hiểu kỹ
-nghĩa vụ copyleft của GPL-3.0 áp dụng thế nào cho phần này, hoặc hỏi người
-có chuyên môn pháp lý nếu bạn cần app giữ mã nguồn đóng.
+`flutter_onnxruntime` là MIT license — không còn vướng nghĩa vụ GPL-3.0 như
+gói `leela_chess_zero` cũ. Các file `.onnx` (chuyển từ trọng số Maia gốc)
+vẫn theo giấy phép gốc của Maia Chess (xem repo CSSLab/maia-chess).

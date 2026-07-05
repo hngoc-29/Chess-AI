@@ -24,8 +24,8 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.kingsgambit.ai"
-    // Bumped from 34 -> 36 and NDK 25.x -> 28.2.13676358: required by the
-    // leela_chess_zero (lc0) plugin. NDK/SDK versions are backward
+    // Bumped from 34 -> 36 and NDK 25.x -> 28.2.13676358 for the Maia AI
+    // integration (ONNX Runtime). NDK/SDK versions are backward
     // compatible so this doesn't affect other plugins.
     compileSdk 36
     ndkVersion "28.2.13676358"
@@ -45,7 +45,7 @@ android {
 
     defaultConfig {
         applicationId "com.kingsgambit.ai"
-        // Bumped from 21 -> 24: required by the leela_chess_zero (lc0) plugin used for Maia AI.
+        // Bumped from 21 -> 24 for the Maia AI integration (ONNX Runtime).
         minSdkVersion 24
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()

@@ -203,7 +203,7 @@ class _SettingsView extends StatelessWidget {
       case AIDifficulty.veryHard:
         return 'Rất khó (~1900 Elo)';
       case AIDifficulty.expert:
-        return 'Chuyên gia (mạnh hơn 1900 Elo)';
+        return 'Chuyên gia (~1900 Elo, ít ngẫu nhiên hơn)';
     }
   }
 

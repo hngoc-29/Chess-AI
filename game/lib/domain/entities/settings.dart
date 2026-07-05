@@ -29,7 +29,7 @@ enum AnimationSpeed {
 
 /// AI difficulty tiers. Each maps to a specific Maia (lc0) network trained
 /// on human games at that approximate Elo rating - see
-/// MaiaAIEngine in services/ai/maia_ai_engine.dart for the mapping.
+/// MaiaOnnxEngine in services/ai/maia_onnx_engine.dart for the mapping.
 enum AIDifficulty {
   beginner, // Maia ~1100 Elo
   easy, // Maia ~1300 Elo
