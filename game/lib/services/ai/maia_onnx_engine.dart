@@ -2,14 +2,14 @@ import 'dart:math';
 
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
-import '../../../domain/entities/board.dart';
-import '../../../domain/entities/chess_move.dart';
-import '../../../domain/entities/piece.dart';
-import '../../../domain/entities/position.dart';
-import '../../../domain/entities/settings.dart';
-import '../../../core/utils/logger.dart';
-import '../../game/chess_rules_service.dart';
-import '../chess_ai_engine.dart';
+import '../../domain/entities/board.dart';
+import '../../domain/entities/chess_move.dart';
+import '../../domain/entities/piece.dart';
+import '../../domain/entities/position.dart';
+import '../../domain/entities/settings.dart';
+import '../../core/utils/logger.dart';
+import '../game/chess_rules_service.dart';
+import 'chess_ai_engine.dart';
 import 'maia/maia_board_encoder.dart';
 import 'maia/maia_move_index.dart';
 import 'maia/maia_position_snapshot.dart';
