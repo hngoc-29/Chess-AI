@@ -213,8 +213,10 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         e,
         stackTrace,
       );
+      _audioService.playSound(SoundEffect.button);
       emit(GameError(
         'Đã xảy ra lỗi khi thực hiện nước đi. Bạn có thể tiếp tục ván đấu.',
+        recoverable: true,
       ));
       // Re-emit the pre-move state so the game is still playable afterwards
       // instead of being stuck on the error state.
@@ -304,13 +306,9 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           newBoard = newBoard.setPiece(rookTo, rook);
         }
       } else {
-        if (event.promotion != null && movingPiece?.isPawn == true) {
-          newBoard = currentState.board.setPiece(event.from, null);
-          final promotedPiece = Piece(type: event.promotion!, color: movingPiece!.color);
-          newBoard = newBoard.setPiece(event.to, promotedPiece);
-        } else {
-          newBoard = currentState.board.movePiece(event.from, event.to);
-        }
+        // A normal (non-castling) king move - promotion is impossible here
+        // since a king can never also be a pawn.
+        newBoard = currentState.board.movePiece(event.from, event.to);
       }
     } else if (movingPiece?.isPawn == true &&
                capturedPiece == null &&
@@ -430,11 +428,19 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     // Calculate endangered squares for current player
     final endangeredSquares = _rulesService.getEndangeredSquares(newBoard, nextTurn);
 
+    // When the side to move is in check, highlight which of their pieces
+    // can actually respond to it (any legal move already excludes staying
+    // in check, so a non-empty result here means "this piece can help").
+    final movablePiecesInCheck = isInCheck
+        ? _rulesService.getMovablePieces(newBoard, nextTurn)
+        : <Position>{};
+
     emit(currentState.copyWith(
       gameState: newGameState,
       clearSelection: true,
       legalMoves: {},
       endangeredSquares: endangeredSquares,
+      movablePiecesInCheck: movablePiecesInCheck,
       evaluationScore: evalScore,
     ));
 
@@ -668,6 +674,18 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     return AIDifficulty.medium; // Default to medium for invalid values
   }
 
+  /// (Re)computes the endangered-squares and in-check "which pieces can
+  /// respond" highlight sets for an arbitrary [gameState] - used whenever
+  /// we jump straight to a board position (undo/redo) rather than deriving
+  /// it incrementally from a move that was just applied.
+  ({Set<Position> endangered, Set<Position> movableInCheck}) _computeHighlights(GameState gameState) {
+    final endangered = _rulesService.getEndangeredSquares(gameState.board, gameState.currentTurn);
+    final movableInCheck = gameState.isInCheck
+        ? _rulesService.getMovablePieces(gameState.board, gameState.currentTurn)
+        : <Position>{};
+    return (endangered: endangered, movableInCheck: movableInCheck);
+  }
+
   Future<void> _onUndoMove(UndoMove event, Emitter<GameBlocState> emit) async {
     if (state is! GameInProgress) return;
     final currentState = state as GameInProgress;
@@ -688,22 +706,28 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       // If there's a state before that (before player's move), go back to it
       if (_history.isNotEmpty) {
         final previousState = _history.removeLast();
+        final highlights = _computeHighlights(previousState);
         emit(currentState.copyWith(
           gameState: previousState,
           clearSelection: true,
           legalMoves: {},
           isAIThinking: false,
+          endangeredSquares: highlights.endangered,
+          movablePiecesInCheck: highlights.movableInCheck,
         ));
       }
     } else {
       // For vs human games or when not enough history, undo single move
       final previousState = _history.removeLast();
+      final highlights = _computeHighlights(previousState);
 
       emit(currentState.copyWith(
         gameState: previousState,
         clearSelection: true,
         legalMoves: {},
         isAIThinking: false,
+        endangeredSquares: highlights.endangered,
+        movablePiecesInCheck: highlights.movableInCheck,
       ));
     }
   }
@@ -719,12 +743,15 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
 
     // Restore next state from redo stack
     final nextState = _redoStack.removeLast();
+    final highlights = _computeHighlights(nextState);
 
     emit(currentState.copyWith(
       gameState: nextState,
       clearSelection: true,
       legalMoves: {},
       isAIThinking: false,
+      endangeredSquares: highlights.endangered,
+      movablePiecesInCheck: highlights.movableInCheck,
     ));
   }
 

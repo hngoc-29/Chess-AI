@@ -51,6 +51,21 @@ const Map<AIDifficulty, double> _kSamplingTemperature = {
   AIDifficulty.expert: 0.3,
 };
 
+/// Minimum "thinking" time before the AI's chosen move is handed back.
+/// Raw ONNX inference on a phone is often well under 100ms, which reads as
+/// robotic rather than human - especially at low Elo, where an instant
+/// reply feels completely unnatural. Weaker levels get a longer floor;
+/// stronger levels get a shorter one since a snappier reply reads more
+/// like a confident, stronger player.
+const Map<AIDifficulty, Duration> _kMinThinkingTime = {
+  AIDifficulty.beginner: Duration(milliseconds: 900),
+  AIDifficulty.easy: Duration(milliseconds: 800),
+  AIDifficulty.medium: Duration(milliseconds: 650),
+  AIDifficulty.hard: Duration(milliseconds: 500),
+  AIDifficulty.veryHard: Duration(milliseconds: 400),
+  AIDifficulty.expert: Duration(milliseconds: 300),
+};
+
 /// Drop-in replacement for [ChessAIEngine] that plays using the Maia
 /// human-like neural networks, run directly via ONNX Runtime (no external
 /// engine process, no UCI, no native subprocess).
@@ -94,6 +109,7 @@ class MaiaOnnxEngine extends ChessAIEngine {
     int fullMoveNumber = 1,
     List<MaiaPositionSnapshot>? history,
   }) async {
+    final stopwatch = Stopwatch()..start();
     try {
       final effectiveHistory = (history != null && history.isNotEmpty)
           ? history
@@ -158,7 +174,9 @@ class MaiaOnnxEngine extends ChessAIEngine {
       final probabilities = MaiaMoveIndex.softmax(logits);
 
       final chosenIndex = _sampleFromDistribution(probabilities);
-      return legalMoves[chosenIndex];
+      final chosenMove = legalMoves[chosenIndex];
+      await _waitForNaturalThinkingTime(stopwatch, difficulty);
+      return chosenMove;
     } catch (e, stackTrace) {
       AppLogger.error(
         'Maia ONNX inference failed, falling back to local minimax AI',
@@ -186,6 +204,21 @@ class MaiaOnnxEngine extends ChessAIEngine {
       if (r <= cumulative) return i;
     }
     return probabilities.length - 1; // floating point safety net
+  }
+
+  /// Tops up [stopwatch]'s already-elapsed time to a natural-feeling
+  /// minimum for [difficulty], never adding delay beyond what's needed
+  /// (a slow device that already took a while to run inference isn't
+  /// delayed further, only a fast one that answered "too fast").
+  Future<void> _waitForNaturalThinkingTime(Stopwatch stopwatch, AIDifficulty difficulty) async {
+    final minTime = _kMinThinkingTime[difficulty] ?? _kMinThinkingTime[AIDifficulty.medium]!;
+    // Small random jitter so every move at a given level doesn't land at
+    // the exact same duration, which would itself look robotic.
+    final target = minTime + Duration(milliseconds: _random.nextInt(350));
+    final remaining = target - stopwatch.elapsed;
+    if (remaining > Duration.zero) {
+      await Future.delayed(remaining);
+    }
   }
 
   /// Enumerates every legal move for [color], expanding pawn promotions

@@ -103,6 +103,28 @@ class ChessRulesService {
     return endangered;
   }
 
+  /// Positions of every piece of [color] that currently has at least one
+  /// legal move. Intended for use when [color]'s king is in check: since
+  /// [getLegalMoves] already excludes any move that would leave (or keep)
+  /// that king in check, a non-empty result for a piece means it has some
+  /// way to help - the UI highlights these squares so the player can see
+  /// at a glance which of their pieces can actually respond to the check.
+  Set<Position> getMovablePieces(Board board, PieceColor color) {
+    final movable = <Position>{};
+    for (int rank = 0; rank < 8; rank++) {
+      for (int file = 0; file < 8; file++) {
+        final pos = Position(file: file, rank: rank);
+        final piece = board.pieceAt(pos);
+        if (piece != null && piece.color == color) {
+          if (getLegalMoves(board, pos).isNotEmpty) {
+            movable.add(pos);
+          }
+        }
+      }
+    }
+    return movable;
+  }
+
   /// Check if a square is attacked by any piece of the given color
   bool _isSquareAttackedBy(Board board, Position square, PieceColor attackerColor) {
     for (int rank = 0; rank < 8; rank++) {

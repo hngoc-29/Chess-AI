@@ -25,6 +25,7 @@ class GameInProgress extends GameBlocState {
   final Position? selectedSquare;
   final Map<Position, MoveType> legalMoves;
   final Set<Position> endangeredSquares;
+  final Set<Position> movablePiecesInCheck;
   final bool flipped;
   final bool isAIThinking;
   final double evaluationScore;
@@ -35,6 +36,7 @@ class GameInProgress extends GameBlocState {
     this.selectedSquare,
     this.legalMoves = const {},
     this.endangeredSquares = const {},
+    this.movablePiecesInCheck = const {},
     this.flipped = false,
     this.isAIThinking = false,
     this.evaluationScore = 0.0,
@@ -48,6 +50,7 @@ class GameInProgress extends GameBlocState {
     Position? selectedSquare,
     Map<Position, MoveType>? legalMoves,
     Set<Position>? endangeredSquares,
+    Set<Position>? movablePiecesInCheck,
     bool? flipped,
     bool? isAIThinking,
     double? evaluationScore,
@@ -59,6 +62,7 @@ class GameInProgress extends GameBlocState {
       selectedSquare: clearSelection ? null : (selectedSquare ?? this.selectedSquare),
       legalMoves: clearSelection ? const {} : (legalMoves ?? this.legalMoves),
       endangeredSquares: endangeredSquares ?? this.endangeredSquares,
+      movablePiecesInCheck: movablePiecesInCheck ?? this.movablePiecesInCheck,
       flipped: flipped ?? this.flipped,
       isAIThinking: isAIThinking ?? this.isAIThinking,
       evaluationScore: evaluationScore ?? this.evaluationScore,
@@ -67,7 +71,7 @@ class GameInProgress extends GameBlocState {
   }
 
   @override
-  List<Object?> get props => [gameState, selectedSquare, legalMoves, endangeredSquares, flipped, isAIThinking, evaluationScore, canRedo];
+  List<Object?> get props => [gameState, selectedSquare, legalMoves, endangeredSquares, movablePiecesInCheck, flipped, isAIThinking, evaluationScore, canRedo];
 }
 
 class GameOver extends GameBlocState {
@@ -86,8 +90,16 @@ class GameOver extends GameBlocState {
 class GameError extends GameBlocState {
   final String message;
 
-  const GameError(this.message);
+  /// True when the current match is still perfectly playable and the UI
+  /// should just surface [message] (e.g. a toast) - for example a single
+  /// move application that hit an unexpected exception but was safely
+  /// rolled back. False (default) means the error is unrecoverable (e.g.
+  /// the AI could not produce any move at all) and starting a new game is
+  /// the only sane option.
+  final bool recoverable;
+
+  const GameError(this.message, {this.recoverable = false});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, recoverable];
 }

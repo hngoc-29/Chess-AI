@@ -218,7 +218,16 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
           if (state is GameOver) {
             _showGameOverDialog(context, state.message);
           } else if (state is GameError) {
-            context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
+            if (state.recoverable) {
+              // The match itself is still intact (the bloc already rolled
+              // back to a valid state) - just let the player know, don't
+              // throw away their game.
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), duration: const Duration(seconds: 2)),
+              );
+            } else {
+              context.read<GameBloc>().add(StartNewGame(vsAI: widget.vsAI));
+            }
           }
         },
         builder: (context, state) {
@@ -232,6 +241,7 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
             final Position? selected = state is GameInProgress ? state.selectedSquare : null;
             final legalMoves = state is GameInProgress ? state.legalMoves : <Position, MoveType>{};
             final endangered = state is GameInProgress ? state.endangeredSquares : <Position>{};
+            final movableInCheck = state is GameInProgress ? state.movablePiecesInCheck : <Position>{};
             final flipped = state is GameInProgress ? state.flipped : false;
             final isAIThinking = state is GameInProgress ? state.isAIThinking : false;
             final evaluationScore = state is GameInProgress ? state.evaluationScore : 0.0;
@@ -266,6 +276,7 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                                 selectedSquare: selected,
                                 legalMoves: legalMoves,
                                 endangeredSquares: endangered,
+                                movablePiecesInCheck: movableInCheck,
                                 pieceStyle: pieceStyle,
                                 onSquareTap: isGameOver ? null : (position) {
                                   if (!isGameOver && state is GameInProgress) _handleSquareTap(context, state as GameInProgress, position);
