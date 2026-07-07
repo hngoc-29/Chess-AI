@@ -15,6 +15,8 @@ class ChessBoardWidget extends StatefulWidget {
   final Set<Position> movablePiecesInCheck;
   final Position? selectedSquare;
   final String pieceStyle;
+  final Color lightSquareColor;
+  final Color darkSquareColor;
 
   const ChessBoardWidget({
     super.key,
@@ -27,6 +29,8 @@ class ChessBoardWidget extends StatefulWidget {
     this.movablePiecesInCheck = const {},
     this.selectedSquare,
     this.pieceStyle = 'cburnett',
+    this.lightSquareColor = const Color(0xFFF0D9B5),
+    this.darkSquareColor = const Color(0xFFB58863),
   });
 
   @override
@@ -133,8 +137,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
       // Red underfoot for pieces currently under attack
       return isLight ? const Color(0xFFFFC0C0) : const Color(0xFFC45F5F);
     }
-    // Standard chess board colors
-    return isLight ? const Color(0xFFF0D9B5) : const Color(0xFFB58863);
+    // Board-style square colors (Settings > Board Style)
+    return isLight ? widget.lightSquareColor : widget.darkSquareColor;
   }
 
   Widget _buildMoveIndicator(double squareSize, MoveType moveType) {

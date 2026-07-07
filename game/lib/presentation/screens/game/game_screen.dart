@@ -6,6 +6,7 @@ import '../../../core/config/injection.dart';
 import '../../../core/constants/strings.dart';
 import '../../../core/utils/fen_utils.dart';
 import '../../../core/constants/colors.dart';
+import '../../../domain/entities/settings.dart' show BoardStyle;
 import '../replay/replay_screen.dart';
 import '../../../domain/entities/game_state.dart';
 import '../../../domain/entities/move_info.dart';
@@ -264,12 +265,22 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                               ),
                             ],
                           ),
-                          child: FutureBuilder<String>(
-                            future: getIt<ISettingsRepository>().getPieceSet().then(
-                              (result) => result.getOrElse(() => 'cburnett'),
-                            ),
+                          child: FutureBuilder<List<String>>(
+                            future: Future.wait([
+                              getIt<ISettingsRepository>().getPieceSet().then(
+                                (result) => result.getOrElse(() => 'cburnett'),
+                              ),
+                              getIt<ISettingsRepository>().getBoardTheme().then(
+                                (result) => result.getOrElse(() => 'classic'),
+                              ),
+                            ]),
                             builder: (context, snapshot) {
-                              final pieceStyle = snapshot.data ?? 'cburnett';
+                              final pieceStyle = snapshot.data?[0] ?? 'cburnett';
+                              final boardStyle = BoardStyle.values.firstWhere(
+                                (e) => e.name == (snapshot.data?[1] ?? 'classic'),
+                                orElse: () => BoardStyle.classic,
+                              );
+                              final boardColors = AppColors.boardStyleColors[boardStyle]!;
                               return ChessBoardWidget(
                                 board: gs.board,
                                 flipped: flipped,
@@ -278,6 +289,8 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                                 endangeredSquares: endangered,
                                 movablePiecesInCheck: movableInCheck,
                                 pieceStyle: pieceStyle,
+                                lightSquareColor: boardColors.lightSquare,
+                                darkSquareColor: boardColors.darkSquare,
                                 onSquareTap: isGameOver ? null : (position) {
                                   if (!isGameOver && state is GameInProgress) _handleSquareTap(context, state as GameInProgress, position);
                                 },

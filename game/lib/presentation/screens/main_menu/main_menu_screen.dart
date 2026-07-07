@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/constants/strings.dart';
 import '../../../core/constants/colors.dart';
@@ -28,16 +29,27 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceDark,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.checkroom,
-                      color: AppColors.secondary,
-                      size: 28,
+                  InkWell(
+                    onTap: () => _showAboutDialog(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.primaryDark,
+                            AppColors.backgroundDark,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: SizedBox(
+                        width: 28,
+                        height: 22,
+                        child: SvgPicture.asset('assets/images/branding/king_mark.svg'),
+                      ),
                     ),
                   ),
                   Row(
@@ -51,26 +63,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       const SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.info_outline, color: AppColors.textPrimaryDark),
-                        onPressed: () {
-                          showAboutDialog(
-                            context: context,
-                            applicationName: "King's Gambit AI",
-                            applicationVersion: '1.0.0',
-                            applicationIcon: const Icon(Icons.extension, size: 48),
-                            children: [
-                              const Text(
-                                'A beautiful chess game with AI opponent powered by advanced algorithms.\n\n'
-                                'Features:\n'
-                                '• Play against AI with multiple difficulty levels\n'
-                                '• Beautiful themes and piece styles\n'
-                                '• Move hints and analysis\n'
-                                '• Game statistics tracking\n'
-                                '• Undo/Redo moves\n\n'
-                                'Developed with Flutter',
-                              ),
-                            ],
-                          );
-                        },
+                        onPressed: () => _showAboutDialog(context),
                       ),
                     ],
                   ),
@@ -161,6 +154,31 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     );
   }
 
+  void _showAboutDialog(BuildContext context) {
+    showAboutDialog(
+      context: context,
+      applicationName: "King's Gambit AI",
+      applicationVersion: '1.0.0',
+      applicationIcon: SizedBox(
+        width: 48,
+        height: 38,
+        child: SvgPicture.asset('assets/images/branding/king_mark.svg'),
+      ),
+      children: [
+        const Text(
+          'A beautiful chess game with AI opponent powered by advanced algorithms.\n\n'
+          'Features:\n'
+          '• Play against AI with multiple difficulty levels\n'
+          '• Beautiful themes and piece styles\n'
+          '• Move hints and analysis\n'
+          '• Game statistics tracking\n'
+          '• Undo/Redo moves\n\n'
+          'Developed with Flutter',
+        ),
+      ],
+    );
+  }
+
   Widget _buildHeroCard(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -187,15 +205,15 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              Icons.emoji_events,
-              color: AppColors.secondary,
-              size: 40,
+            child: SizedBox(
+              width: 40,
+              height: 32,
+              child: SvgPicture.asset('assets/images/branding/king_mark.svg'),
             ),
           ),
           const SizedBox(height: 24),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/routes.dart';
+import '../../widgets/onboarding/onboarding_illustration.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,17 +19,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     OnboardingPage(
       title: "Welcome to King's Gambit AI",
       description: 'Play against a powerful AI or challenge your friends locally.',
-      lottieAsset: 'assets/animations/lottie/victory.json',
+      illustrationType: OnboardingIllustrationType.welcome,
     ),
     OnboardingPage(
       title: 'Advanced AI Engine',
       description: 'Our AI uses Monte Carlo Tree Search to find the best moves.',
-      lottieAsset: 'assets/animations/lottie/thinking.json',
+      illustrationType: OnboardingIllustrationType.thinking,
     ),
     OnboardingPage(
       title: 'Analyze Your Games',
       description: 'Review your matches and improve your chess skills.',
-      lottieAsset: 'assets/animations/lottie/loading.json',
+      illustrationType: OnboardingIllustrationType.analysis,
     ),
   ];
 
@@ -114,13 +114,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Expanded(
-            child: Lottie.asset(
-              page.lottieAsset,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.error_outline, size: 100);
-              },
-            ),
+            child: OnboardingIllustration(type: page.illustrationType),
           ),
           const SizedBox(height: 40),
           Text(
@@ -160,11 +154,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class OnboardingPage {
   final String title;
   final String description;
-  final String lottieAsset;
+  final OnboardingIllustrationType illustrationType;
 
   OnboardingPage({
     required this.title,
     required this.description,
-    required this.lottieAsset,
+    required this.illustrationType,
   });
 }

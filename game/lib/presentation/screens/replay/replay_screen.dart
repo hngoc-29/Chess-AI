@@ -11,6 +11,7 @@ import '../../../domain/entities/game_state.dart';
 import '../../../domain/entities/move_info.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
+import '../../../domain/entities/settings.dart' show BoardStyle;
 import '../../../domain/repositories/i_settings_repository.dart';
 import '../../widgets/board/chess_board_widget.dart';
 
@@ -254,12 +255,22 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: FutureBuilder<String>(
-                      future: getIt<ISettingsRepository>().getPieceSet().then(
-                        (result) => result.getOrElse(() => 'cburnett'),
-                      ),
+                    child: FutureBuilder<List<String>>(
+                      future: Future.wait([
+                        getIt<ISettingsRepository>().getPieceSet().then(
+                          (result) => result.getOrElse(() => 'cburnett'),
+                        ),
+                        getIt<ISettingsRepository>().getBoardTheme().then(
+                          (result) => result.getOrElse(() => 'classic'),
+                        ),
+                      ]),
                       builder: (context, snapshot) {
-                        final pieceStyle = snapshot.data ?? 'cburnett';
+                        final pieceStyle = snapshot.data?[0] ?? 'cburnett';
+                        final boardStyle = BoardStyle.values.firstWhere(
+                          (e) => e.name == (snapshot.data?[1] ?? 'classic'),
+                          orElse: () => BoardStyle.classic,
+                        );
+                        final boardColors = AppColors.boardStyleColors[boardStyle]!;
                         return ChessBoardWidget(
                           board: board,
                           flipped: false,
@@ -267,6 +278,8 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
                           legalMoves: {},
                           endangeredSquares: {},
                           pieceStyle: pieceStyle,
+                          lightSquareColor: boardColors.lightSquare,
+                          darkSquareColor: boardColors.darkSquare,
                           onSquareTap: null,
                           onMove: null,
                         );

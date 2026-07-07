@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches AppColors.backgroundDark in Dart, since the app always runs
+         in dark theme (see ThemeMode.dark in app.dart). Keeps the native
+         pre-Flutter splash the same color as the Dart splash screen instead
+         of flashing plain white/black first. -->
+    <color name="launch_background">#0F172A</color>
+</resources>

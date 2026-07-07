@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/entities/settings.dart';
+
 class AppColors {
   AppColors._();
 
@@ -43,30 +45,26 @@ class AppColors {
   static const Color highlightCheck = Color(0x80FF0000);
   static const Color highlightLastMove = Color(0x60FFFF00);
 
-  static final Map<String, BoardColors> boardThemes = {
-    'brown': BoardColors(
+  /// Square colors for each real, user-selectable board style (see
+  /// Settings.boardStyle). "modern" and "wooden" reuse hex values that used
+  /// to live in a string-keyed map here that nothing in the app actually
+  /// read - this is the version that's wired up to the board widget.
+  static final Map<BoardStyle, BoardColors> boardStyleColors = {
+    BoardStyle.classic: BoardColors(
       lightSquare: const Color(0xFFF0D9B5),
       darkSquare: const Color(0xFFB58863),
     ),
-    'blue': BoardColors(
+    BoardStyle.modern: BoardColors(
       lightSquare: const Color(0xFFDEE3E6),
       darkSquare: const Color(0xFF8CA2AD),
     ),
-    'green': BoardColors(
-      lightSquare: const Color(0xFFFFFFDD),
-      darkSquare: const Color(0xFF86A666),
-    ),
-    'purple': BoardColors(
-      lightSquare: const Color(0xFFE8E9B7),
-      darkSquare: const Color(0xFF9F90B0),
-    ),
-    'wood': BoardColors(
+    BoardStyle.wooden: BoardColors(
       lightSquare: const Color(0xFFD5A574),
       darkSquare: const Color(0xFF946F51),
     ),
-    'dark': BoardColors(
-      lightSquare: const Color(0xFF5A5A5A),
-      darkSquare: const Color(0xFF3A3A3A),
+    BoardStyle.marble: BoardColors(
+      lightSquare: const Color(0xFFF2F1ED),
+      darkSquare: const Color(0xFFA5A199),
     ),
   };
 }

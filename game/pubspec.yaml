@@ -33,7 +33,6 @@ dependencies:
   intl: ^0.18.1
   json_annotation: ^4.8.1
   logger: ^2.0.2
-  lottie: ^3.0.0
 
   # Storage & Files
   path_provider: ^2.1.1
@@ -63,8 +62,8 @@ flutter:
     - assets/images/pieces/alpha/
     - assets/images/pieces/pixel/
     - assets/images/boards/
+    - assets/images/branding/
     - assets/sounds/
-    - assets/animations/lottie/
     - assets/onnx/
 
   fonts:
