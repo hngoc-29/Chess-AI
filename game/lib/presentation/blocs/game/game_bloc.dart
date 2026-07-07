@@ -123,6 +123,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     _history.clear();
     _redoStack.clear();
 
+    _audioService.playSound(SoundEffect.notification);
     emit(GameInProgress(gameState: gameState));
   }
 
@@ -213,7 +214,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         e,
         stackTrace,
       );
-      _audioService.playSound(SoundEffect.button);
+      _audioService.playSound(SoundEffect.error);
       emit(GameError(
         'Đã xảy ra lỗi khi thực hiện nước đi. Bạn có thể tiếp tục ván đấu.',
         recoverable: true,
@@ -233,13 +234,13 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     
     // If there's no piece at the source square, the move is invalid
     if (movingPiece == null) {
-      _audioService.playSound(SoundEffect.button);
+      _audioService.playSound(SoundEffect.error);
       return;
     }
     
     // Validate piece belongs to current player
     if (movingPiece.color != currentState.gameState.currentTurn) {
-      _audioService.playSound(SoundEffect.button);
+      _audioService.playSound(SoundEffect.error);
       return;
     }
 
@@ -254,7 +255,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     );
 
     if (!legalMoves.contains(event.to)) {
-      _audioService.playSound(SoundEffect.button);
+      _audioService.playSound(SoundEffect.error);
       return;
     }
 
@@ -445,10 +446,13 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     ));
 
     if (newStatus == GameStatus.checkmate) {
-      // Determine winner (opposite of current turn since they're checkmated)
-      final winnerColor = currentState.gameState.currentTurn == PieceColor.white 
-          ? PieceColor.black 
-          : PieceColor.white;
+      // The side that just moved (currentState.gameState.currentTurn, i.e.
+      // whose turn it was *before* this move was applied) delivered the
+      // checkmate, so they are the winner - nextTurn is the side now
+      // checkmated. (Not to be confused with the winner calculation in
+      // _onRequestAIMove below, where currentTurn is the side *about to
+      // move* and already checkmated - opposite meaning, opposite formula.)
+      final winnerColor = currentState.gameState.currentTurn;
       final winnerName = winnerColor == PieceColor.white ? 'White' : 'Black';
       
       // Check if human won (for stats)

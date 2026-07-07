@@ -15,6 +15,8 @@ enum SoundEffect {
   draw,
   victory,
   defeat,
+  error,
+  notification,
 }
 
 class AudioService {
@@ -31,6 +33,8 @@ class AudioService {
     SoundEffect.draw: 'assets/sounds/Draw.mp3',
     SoundEffect.victory: 'assets/sounds/Victory.mp3',
     SoundEffect.defeat: 'assets/sounds/Defeat.mp3',
+    SoundEffect.error: 'assets/sounds/Error.mp3',
+    SoundEffect.notification: 'assets/sounds/Confirmation.mp3',
   };
 
   bool _soundEnabled = true;
