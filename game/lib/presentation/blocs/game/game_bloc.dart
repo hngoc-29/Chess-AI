@@ -24,6 +24,16 @@ import '../../../core/utils/logger.dart';
 import 'game_bloc_state.dart';
 import 'game_event.dart';
 
+/// Ensures events are handled strictly one at a time, in the order they
+/// were added. Without this, flutter_bloc's default transformer allows
+/// events of the same type to be processed concurrently - e.g. two rapid
+/// taps could start two overlapping MakeMove handlers that each read the
+/// board before either one has applied its move, corrupting game state or
+/// silently losing a move.
+Stream<E> _sequential<E>(Stream<E> events, Stream<E> Function(E) mapper) {
+  return events.asyncExpand(mapper);
+}
+
 class GameBloc extends Bloc<GameEvent, GameBlocState> {
   final ChessRulesService _rulesService;
   final AudioService _audioService;
@@ -51,16 +61,16 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         _saveGameUseCase = saveGameUseCase,
         _loadGameUseCase = loadGameUseCase,
         super(const GameInitial()) {
-    on<StartNewGame>(_onStartNewGame);
-    on<MakeMove>(_onMakeMove);
-    on<SelectSquare>(_onSelectSquare);
-    on<UndoMove>(_onUndoMove);
-    on<RedoMove>(_onRedoMove);
-    on<FlipBoard>(_onFlipBoard);
-    on<RequestAIMove>(_onRequestAIMove);
-  on<SetFenPosition>(_onSetFenPosition);
-    on<SaveCurrentGame>(_onSaveCurrentGame);
-    on<LoadSavedGame>(_onLoadSavedGame);
+    on<StartNewGame>(_onStartNewGame, transformer: _sequential);
+    on<MakeMove>(_onMakeMove, transformer: _sequential);
+    on<SelectSquare>(_onSelectSquare, transformer: _sequential);
+    on<UndoMove>(_onUndoMove, transformer: _sequential);
+    on<RedoMove>(_onRedoMove, transformer: _sequential);
+    on<FlipBoard>(_onFlipBoard, transformer: _sequential);
+    on<RequestAIMove>(_onRequestAIMove, transformer: _sequential);
+    on<SetFenPosition>(_onSetFenPosition, transformer: _sequential);
+    on<SaveCurrentGame>(_onSaveCurrentGame, transformer: _sequential);
+    on<LoadSavedGame>(_onLoadSavedGame, transformer: _sequential);
   }
 
   Future<void> _onSetFenPosition(SetFenPosition event, Emitter<GameBlocState> emit) async {
@@ -74,9 +84,12 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
 
     try {
       final parsed = fenToBoard(event.fen);
+      final isInCheck = _rulesService.isInCheck(parsed.board, parsed.currentTurn);
       final newGameState = baseState.copyWith(
         board: parsed.board,
         currentTurn: parsed.currentTurn,
+        status: GameStatus.ongoing,
+        isInCheck: isInCheck,
         whiteCanCastleKingside: parsed.whiteCanCastleK,
         whiteCanCastleQueenside: parsed.whiteCanCastleQ,
         blackCanCastleKingside: parsed.blackCanCastleK,
@@ -85,11 +98,16 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         halfMoveClock: parsed.halfMoveClock,
         fullMoveNumber: parsed.fullMoveNumber,
       );
+      final highlights = _computeHighlights(newGameState);
 
       _history.clear();
       _redoStack.clear();
 
-      emit(GameInProgress(gameState: newGameState));
+      emit(GameInProgress(
+        gameState: newGameState,
+        endangeredSquares: highlights.endangered,
+        movablePiecesInCheck: highlights.movableInCheck,
+      ));
     } catch (e) {
       AppLogger.warning('Invalid FEN position: ${event.fen}', e);
       emit(GameError('Invalid FEN string: ${e.toString()}'));

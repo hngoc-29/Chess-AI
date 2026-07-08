@@ -169,7 +169,13 @@ class _ReplayScreenState extends State<ReplayScreen> with SingleTickerProviderSt
 
   String _getCurrentFen() {
     final board = _getBoardAtMove(currentMoveIndex);
-    final turn = currentMoveIndex % 2 == 0 ? PieceColor.white : PieceColor.black;
+    // currentMoveIndex + 1 = number of moves played so far. White moves
+    // first, so White is to move again once an even number of moves have
+    // been played (0, 2, 4...) - using currentMoveIndex directly here
+    // (instead of +1) had it exactly backwards for every position,
+    // including the initial one.
+    final movesPlayed = currentMoveIndex + 1;
+    final turn = movesPlayed % 2 == 0 ? PieceColor.white : PieceColor.black;
     
     return boardToFen(
       board,

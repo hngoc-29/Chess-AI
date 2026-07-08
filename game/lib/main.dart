@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -8,19 +10,39 @@ import 'services/audio/audio_service.dart';
 import 'services/engine/chess_engine_service.dart';
 import 'services/storage/cache_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
 
-  await _initializeApp();
+    await _initializeApp();
 
-  runApp(const KingsGambitAIApp());
+    // Catch every uncaught Flutter framework/widget error (build, layout,
+    // gesture callbacks, etc.) from here on. Previously these only showed
+    // the red error screen / got silently swallowed in release mode -
+    // nothing was written to the log file, so a widget-layer crash (as
+    // opposed to one inside GameBloc's own try-catch) was invisible to us.
+    FlutterError.onError = (FlutterErrorDetails details) {
+      AppLogger.error(
+        'Uncaught Flutter error: ${details.exceptionAsString()}',
+        details.exception,
+        details.stack,
+      );
+      FlutterError.presentError(details);
+    };
+
+    runApp(const KingsGambitAIApp());
+  }, (error, stackTrace) {
+    // Catches anything FlutterError.onError doesn't (e.g. errors thrown
+    // from async gaps / microtasks outside the widget tree).
+    AppLogger.error('Uncaught zone error', error, stackTrace);
+  });
 }
 
 Future<void> _initializeApp() async {
