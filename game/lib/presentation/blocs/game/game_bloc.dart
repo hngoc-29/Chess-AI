@@ -71,6 +71,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     on<SetFenPosition>(_onSetFenPosition, transformer: _sequential);
     on<SaveCurrentGame>(_onSaveCurrentGame, transformer: _sequential);
     on<LoadSavedGame>(_onLoadSavedGame, transformer: _sequential);
+    on<RequestHint>(_onRequestHint, transformer: _sequential);
   }
 
   Future<void> _onSetFenPosition(SetFenPosition event, Emitter<GameBlocState> emit) async {
@@ -461,6 +462,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       endangeredSquares: endangeredSquares,
       movablePiecesInCheck: movablePiecesInCheck,
       evaluationScore: evalScore,
+      clearHint: true,
     ));
 
     if (newStatus == GameStatus.checkmate) {
@@ -696,6 +698,56 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
     return AIDifficulty.medium; // Default to medium for invalid values
   }
 
+  Future<void> _onRequestHint(RequestHint event, Emitter<GameBlocState> emit) async {
+    if (state is! GameInProgress) return;
+    final currentState = state as GameInProgress;
+
+    // Only meaningful on the human's own turn - if it's the AI's turn (or
+    // it's already mid-think), there's nothing for a hint to help with.
+    if (currentState.gameState.currentPlayer.type != PlayerType.human) return;
+    if (currentState.isAIThinking) return;
+
+    emit(currentState.copyWith(isHintLoading: true, clearHint: true));
+
+    try {
+      // Hints always use a strong, fixed difficulty - a hint should be a
+      // genuinely good suggestion regardless of what difficulty the
+      // opponent is currently set to.
+      final maiaHistory = <MaiaPositionSnapshot>[
+        MaiaPositionSnapshot.fromGameState(currentState.gameState),
+        ..._history.reversed.take(7).map(MaiaPositionSnapshot.fromGameState),
+      ];
+
+      final suggestion = await _aiEngine.getBestMove(
+        board: currentState.board,
+        color: currentState.gameState.currentTurn,
+        difficulty: AIDifficulty.hard,
+        whiteCanCastleKingside: currentState.gameState.whiteCanCastleKingside,
+        whiteCanCastleQueenside: currentState.gameState.whiteCanCastleQueenside,
+        blackCanCastleKingside: currentState.gameState.blackCanCastleKingside,
+        blackCanCastleQueenside: currentState.gameState.blackCanCastleQueenside,
+        enPassantSquare: currentState.gameState.enPassantSquare,
+        halfMoveClock: currentState.gameState.halfMoveClock,
+        fullMoveNumber: currentState.gameState.fullMoveNumber,
+        history: maiaHistory,
+      );
+
+      // Bail out quietly if the board has moved on since we started (e.g.
+      // the player made their own move while the hint was computing).
+      if (state is! GameInProgress) return;
+      final latestState = state as GameInProgress;
+      if (latestState.gameState.board != currentState.gameState.board) return;
+
+      _audioService.playSound(SoundEffect.notification);
+      emit(latestState.copyWith(hintMove: suggestion, isHintLoading: false));
+    } catch (e, stackTrace) {
+      AppLogger.error('Hint request failed', e, stackTrace);
+      if (state is GameInProgress) {
+        emit((state as GameInProgress).copyWith(isHintLoading: false));
+      }
+    }
+  }
+
   /// (Re)computes the endangered-squares and in-check "which pieces can
   /// respond" highlight sets for an arbitrary [gameState] - used whenever
   /// we jump straight to a board position (undo/redo) rather than deriving
@@ -736,6 +788,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
           isAIThinking: false,
           endangeredSquares: highlights.endangered,
           movablePiecesInCheck: highlights.movableInCheck,
+          clearHint: true,
         ));
       }
     } else {
@@ -750,6 +803,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
         isAIThinking: false,
         endangeredSquares: highlights.endangered,
         movablePiecesInCheck: highlights.movableInCheck,
+        clearHint: true,
       ));
     }
   }
@@ -774,6 +828,7 @@ class GameBloc extends Bloc<GameEvent, GameBlocState> {
       isAIThinking: false,
       endangeredSquares: highlights.endangered,
       movablePiecesInCheck: highlights.movableInCheck,
+      clearHint: true,
     ));
   }
 

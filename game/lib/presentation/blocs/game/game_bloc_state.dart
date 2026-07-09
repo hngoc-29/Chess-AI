@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/board.dart';
+import '../../../domain/entities/chess_move.dart';
 import '../../../domain/entities/game_state.dart';
 import '../../../domain/entities/move_info.dart';
 import '../../../domain/entities/position.dart';
@@ -30,6 +31,8 @@ class GameInProgress extends GameBlocState {
   final bool isAIThinking;
   final double evaluationScore;
   final bool canRedo;
+  final ChessMove? hintMove;
+  final bool isHintLoading;
 
   const GameInProgress({
     required this.gameState,
@@ -41,6 +44,8 @@ class GameInProgress extends GameBlocState {
     this.isAIThinking = false,
     this.evaluationScore = 0.0,
     this.canRedo = false,
+    this.hintMove,
+    this.isHintLoading = false,
   });
 
   Board get board => gameState.board;
@@ -55,7 +60,10 @@ class GameInProgress extends GameBlocState {
     bool? isAIThinking,
     double? evaluationScore,
     bool? canRedo,
+    ChessMove? hintMove,
+    bool? isHintLoading,
     bool clearSelection = false,
+    bool clearHint = false,
   }) {
     return GameInProgress(
       gameState: gameState ?? this.gameState,
@@ -67,11 +75,13 @@ class GameInProgress extends GameBlocState {
       isAIThinking: isAIThinking ?? this.isAIThinking,
       evaluationScore: evaluationScore ?? this.evaluationScore,
       canRedo: canRedo ?? this.canRedo,
+      hintMove: clearHint ? null : (hintMove ?? this.hintMove),
+      isHintLoading: isHintLoading ?? this.isHintLoading,
     );
   }
 
   @override
-  List<Object?> get props => [gameState, selectedSquare, legalMoves, endangeredSquares, movablePiecesInCheck, flipped, isAIThinking, evaluationScore, canRedo];
+  List<Object?> get props => [gameState, selectedSquare, legalMoves, endangeredSquares, movablePiecesInCheck, flipped, isAIThinking, evaluationScore, canRedo, hintMove, isHintLoading];
 }
 
 class GameOver extends GameBlocState {

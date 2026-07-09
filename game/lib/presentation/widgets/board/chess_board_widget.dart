@@ -14,6 +14,8 @@ class ChessBoardWidget extends StatefulWidget {
   final Set<Position> endangeredSquares;
   final Set<Position> movablePiecesInCheck;
   final Position? selectedSquare;
+  final Position? hintFrom;
+  final Position? hintTo;
   final String pieceStyle;
   final Color lightSquareColor;
   final Color darkSquareColor;
@@ -28,6 +30,8 @@ class ChessBoardWidget extends StatefulWidget {
     this.endangeredSquares = const {},
     this.movablePiecesInCheck = const {},
     this.selectedSquare,
+    this.hintFrom,
+    this.hintTo,
     this.pieceStyle = 'cburnett',
     this.lightSquareColor = const Color(0xFFF0D9B5),
     this.darkSquareColor = const Color(0xFFB58863),
@@ -71,6 +75,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
             final moveType = widget.legalMoves?[position];
             final isEndangered = widget.endangeredSquares.contains(position);
             final isMovableInCheck = widget.movablePiecesInCheck.contains(position);
+            final isHintSquare = widget.hintFrom == position || widget.hintTo == position;
 
             return DragTarget<Position>(
               onWillAccept: (from) => from != null && from != position,
@@ -88,6 +93,9 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                     height: squareSize,
                     decoration: BoxDecoration(
                       color: _getSquareColor(isLight, isSelected, moveType, isEndangered, isMovableInCheck),
+                      border: isHintSquare
+                          ? Border.all(color: const Color(0xFF29B6F6), width: 3)
+                          : null,
                     ),
                     child: moveType != null
                         ? _buildMoveIndicator(squareSize, moveType)

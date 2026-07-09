@@ -7,7 +7,6 @@ import 'core/config/injection.dart';
 import 'core/utils/logger.dart';
 import 'presentation/app/app.dart';
 import 'services/audio/audio_service.dart';
-import 'services/engine/chess_engine_service.dart';
 import 'services/storage/cache_service.dart';
 
 void main() {
@@ -53,16 +52,6 @@ Future<void> _initializeApp() async {
     AppLogger.info('Initializing King\'s Gambit AI...');
 
     setupDependencies();
-
-    // Initialize engine service (non-critical - app can run without it)
-    try {
-      final engineService = getIt<ChessEngineService>();
-      await engineService.initialize('models/best_model_traced.pt');
-      AppLogger.info('Chess engine initialized');
-    } catch (e, stackTrace) {
-      AppLogger.error('Chess engine initialization failed (non-critical)', e, stackTrace);
-      // Continue without engine - will use fallback
-    }
 
     // Initialize audio service (non-critical)
     try {

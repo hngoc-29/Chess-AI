@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/constants/strings.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/config/injection.dart';
+import '../../../services/audio/audio_service.dart';
 import '../game/game_screen.dart';
 import '../../app/routes.dart';
 
@@ -256,7 +258,10 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        getIt<AudioService>().playSound(SoundEffect.button);
+        onTap();
+      },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -372,7 +377,10 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        getIt<AudioService>().playSound(SoundEffect.button);
+        onTap();
+      },
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),

@@ -80,3 +80,7 @@ class SetFenPosition extends GameEvent {
   @override
   List<Object?> get props => [fen];
 }
+
+class RequestHint extends GameEvent {
+  const RequestHint();
+}

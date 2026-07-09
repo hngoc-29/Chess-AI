@@ -5,6 +5,7 @@ import '../../../core/config/injection.dart';
 import '../../../core/constants/strings.dart';
 import '../../../domain/entities/settings.dart';
 import '../../../domain/repositories/i_settings_repository.dart';
+import '../../../services/audio/audio_service.dart';
 import '../../app/routes.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/settings/settings_event.dart';
@@ -89,21 +90,30 @@ class _SettingsView extends StatelessWidget {
                   title: const Text(AppStrings.theme),
                   subtitle: Text(_getThemeLabel(settings.theme)),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showThemePicker(context, settings.theme),
+                  onTap: () {
+                    getIt<AudioService>().playSound(SoundEffect.button);
+                    _showThemePicker(context, settings.theme);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.grid_on),
                   title: const Text(AppStrings.boardStyle),
                   subtitle: Text(_getBoardStyleLabel(settings.boardStyle)),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showBoardStylePicker(context, settings.boardStyle),
+                  onTap: () {
+                    getIt<AudioService>().playSound(SoundEffect.button);
+                    _showBoardStylePicker(context, settings.boardStyle);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.star),
                   title: const Text(AppStrings.pieceStyle),
                   subtitle: Text(_getPieceStyleLabel(settings.pieceStyle)),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showPieceStylePicker(context, settings.pieceStyle),
+                  onTap: () {
+                    getIt<AudioService>().playSound(SoundEffect.button);
+                    _showPieceStylePicker(context, settings.pieceStyle);
+                  },
                 ),
                 const Divider(),
                 ListTile(
@@ -111,14 +121,20 @@ class _SettingsView extends StatelessWidget {
                   title: const Text(AppStrings.animationSpeed),
                   subtitle: Text(_getAnimationSpeedLabel(settings.animationSpeed)),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showAnimationSpeedPicker(context, settings.animationSpeed),
+                  onTap: () {
+                    getIt<AudioService>().playSound(SoundEffect.button);
+                    _showAnimationSpeedPicker(context, settings.animationSpeed);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.psychology),
                   title: const Text(AppStrings.aiDifficulty),
                   subtitle: Text(_getAIDifficultyLabel(settings.aiDifficulty)),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showAIDifficultyPicker(context, settings.aiDifficulty),
+                  onTap: () {
+                    getIt<AudioService>().playSound(SoundEffect.button);
+                    _showAIDifficultyPicker(context, settings.aiDifficulty);
+                  },
                 ),
                 const Divider(),
                 ListTile(
@@ -127,6 +143,7 @@ class _SettingsView extends StatelessWidget {
                   subtitle: const Text('Xem và export logs để debug'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
+                    getIt<AudioService>().playSound(SoundEffect.button);
                     Navigator.pushNamed(context, AppRoutes.debugLogs);
                   },
                 ),

@@ -7,6 +7,8 @@ import '../../../core/constants/strings.dart';
 import '../../../core/utils/fen_utils.dart';
 import '../../../core/constants/colors.dart';
 import '../../../domain/entities/settings.dart' show BoardStyle;
+import '../../../domain/entities/board.dart';
+import '../../../domain/entities/player.dart';
 import '../replay/replay_screen.dart';
 import '../../../domain/entities/game_state.dart';
 import '../../../domain/entities/move_info.dart';
@@ -158,34 +160,35 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.input),
-            tooltip: 'Load FEN',
-            onPressed: () async {
-              final controller = TextEditingController();
-              try {
-                final result = await showDialog<String?>(
-                  context: context,
-                  builder: (dialogCtx) => AlertDialog(
-                    title: const Text('Load FEN'),
-                    content: TextField(
-                      controller: controller,
-                      decoration: const InputDecoration(hintText: 'Enter FEN string'),
+          if (!widget.vsAI)
+            IconButton(
+              icon: const Icon(Icons.input),
+              tooltip: 'Load FEN',
+              onPressed: () async {
+                final controller = TextEditingController();
+                try {
+                  final result = await showDialog<String?>(
+                    context: context,
+                    builder: (dialogCtx) => AlertDialog(
+                      title: const Text('Load FEN'),
+                      content: TextField(
+                        controller: controller,
+                        decoration: const InputDecoration(hintText: 'Enter FEN string'),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.of(dialogCtx).pop(controller.text.trim()), child: const Text('Load')),
+                      ],
                     ),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
-                      TextButton(onPressed: () => Navigator.of(dialogCtx).pop(controller.text.trim()), child: const Text('Load')),
-                    ],
-                  ),
-                );
-                if (result != null && result.isNotEmpty) {
-                  context.read<GameBloc>().add(SetFenPosition(result));
+                  );
+                  if (result != null && result.isNotEmpty) {
+                    context.read<GameBloc>().add(SetFenPosition(result));
+                  }
+                } finally {
+                  controller.dispose();
                 }
-              } finally {
-                controller.dispose();
-              }
-            },
-          ),
+              },
+            ),
           BlocBuilder<GameBloc, GameBlocState>(
             builder: (context, state) {
               return IconButton(
@@ -243,6 +246,7 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
             final legalMoves = state is GameInProgress ? state.legalMoves : <Position, MoveType>{};
             final endangered = state is GameInProgress ? state.endangeredSquares : <Position>{};
             final movableInCheck = state is GameInProgress ? state.movablePiecesInCheck : <Position>{};
+            final hintMove = state is GameInProgress ? state.hintMove : null;
             final flipped = state is GameInProgress ? state.flipped : false;
             final isAIThinking = state is GameInProgress ? state.isAIThinking : false;
             final evaluationScore = state is GameInProgress ? state.evaluationScore : 0.0;
@@ -288,6 +292,8 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
                                 legalMoves: legalMoves,
                                 endangeredSquares: endangered,
                                 movablePiecesInCheck: movableInCheck,
+                                hintFrom: hintMove?.from,
+                                hintTo: hintMove?.to,
                                 pieceStyle: pieceStyle,
                                 lightSquareColor: boardColors.lightSquare,
                                 darkSquareColor: boardColors.darkSquare,
@@ -506,6 +512,154 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
     context.read<GameBloc>().add(MakeMove(from: from, to: to));
   }
 
+  void _showAnalysisSheet(BuildContext context, GameInProgress state) {
+    final gameBloc = context.read<GameBloc>();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) {
+        return BlocProvider.value(
+          value: gameBloc,
+          child: BlocBuilder<GameBloc, GameBlocState>(
+            builder: (context, liveBlocState) {
+              final liveState = liveBlocState is GameInProgress ? liveBlocState : state;
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 20, right: 20, top: 20,
+                  bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Phân tích vị trí',
+                      style: TextStyle(color: AppColors.textPrimaryDark, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildEvalBar(liveState.evaluationScore),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        _formatEvalText(liveState.evaluationScore),
+                        style: TextStyle(color: AppColors.textPrimaryDark, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Quân số', style: TextStyle(color: AppColors.textSecondaryDark, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    _buildMaterialRow(liveState.board),
+                    const SizedBox(height: 20),
+                    Text('Nước đi tốt nhất', style: TextStyle(color: AppColors.textSecondaryDark, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    if (liveState.isHintLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (liveState.hintMove != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${liveState.hintMove!.from.toAlgebraic()} → ${liveState.hintMove!.to.toAlgebraic()}',
+                          style: TextStyle(color: AppColors.primary, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: liveState.gameState.currentPlayer.type == PlayerType.human
+                              ? () => gameBloc.add(const RequestHint())
+                              : null,
+                          child: const Text('Xem nước đi tốt nhất'),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEvalBar(double score) {
+    // Clamp to a readable range; beyond ±8 pawns the exact number matters
+    // less than "one side is completely winning".
+    final clamped = score.clamp(-8.0, 8.0);
+    final whiteFraction = (clamped + 8.0) / 16.0;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: SizedBox(
+        height: 20,
+        child: Row(
+          children: [
+            Expanded(
+              flex: (whiteFraction * 1000).round().clamp(1, 999),
+              child: Container(color: const Color(0xFFF0F0F0)),
+            ),
+            Expanded(
+              flex: (1000 - (whiteFraction * 1000).round()).clamp(1, 999),
+              child: Container(color: const Color(0xFF2A2A3A)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatEvalText(double score) {
+    if (score.abs() < 0.15) return 'Cân bằng';
+    final side = score > 0 ? 'Trắng' : 'Đen';
+    return '$side hơn ${score.abs().toStringAsFixed(1)} điểm';
+  }
+
+  Widget _buildMaterialRow(Board board) {
+    const values = {
+      PieceType.pawn: 1,
+      PieceType.knight: 3,
+      PieceType.bishop: 3,
+      PieceType.rook: 5,
+      PieceType.queen: 9,
+      PieceType.king: 0,
+    };
+    int whiteTotal = 0;
+    int blackTotal = 0;
+    for (int rank = 0; rank < 8; rank++) {
+      for (int file = 0; file < 8; file++) {
+        final piece = board.pieceAt(Position(file: file, rank: rank));
+        if (piece == null) continue;
+        final value = values[piece.type] ?? 0;
+        if (piece.color == PieceColor.white) {
+          whiteTotal += value;
+        } else {
+          blackTotal += value;
+        }
+      }
+    }
+    final diff = whiteTotal - blackTotal;
+    return Row(
+      children: [
+        Text('Trắng: $whiteTotal', style: TextStyle(color: AppColors.textPrimaryDark)),
+        const SizedBox(width: 16),
+        Text('Đen: $blackTotal', style: TextStyle(color: AppColors.textPrimaryDark)),
+        const Spacer(),
+        if (diff != 0)
+          Text(
+            diff > 0 ? '+$diff Trắng' : '+${-diff} Đen',
+            style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.w600),
+          ),
+      ],
+    );
+  }
+
   void _showGameOverDialog(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -566,22 +720,10 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
           if (!isHumanVsHuman)
             _buildActionButton(
               context,
-              icon: Icons.lightbulb_outline,
+              icon: state.isHintLoading ? Icons.hourglass_top : Icons.lightbulb_outline,
               label: 'Gợi ý',
-              onTap: state.legalMoves.isNotEmpty
-                  ? () {
-                      // Show hint: highlight a random legal move
-                      final moves = state.legalMoves.keys.toList();
-                      if (moves.isNotEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Gợi ý: Hãy thử nước đi tới ${moves.first.toString()}'),
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: AppColors.primary,
-                          ),
-                        );
-                      }
-                    }
+              onTap: (!state.isAIThinking && !state.isHintLoading)
+                  ? () => context.read<GameBloc>().add(const RequestHint())
                   : null,
             ),
           // Only show Analysis button for AI games
@@ -590,16 +732,7 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
               context,
               icon: Icons.search,
               label: 'Phân tích',
-              onTap: () {
-                // Show analysis info
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Tính năng phân tích đang được phát triển'),
-                    duration: const Duration(seconds: 2),
-                    backgroundColor: AppColors.info,
-                  ),
-                );
-              },
+              onTap: () => _showAnalysisSheet(context, state),
             ),
           _buildActionButton(
             context,
@@ -661,7 +794,12 @@ class _GameViewState extends State<_GameView> with WidgetsBindingObserver {
   }) {
     final isEnabled = onTap != null;
     return InkWell(
-      onTap: onTap,
+      onTap: isEnabled
+          ? () {
+              getIt<AudioService>().playSound(SoundEffect.button);
+              onTap();
+            }
+          : null,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
