@@ -6,6 +6,7 @@ import '../../../core/utils/fen_utils.dart';
 import '../../../domain/entities/board.dart';
 import '../../../domain/entities/piece.dart';
 import '../../../domain/entities/position.dart';
+import '../../../domain/entities/settings.dart';
 import '../../../services/ai/chess_ai_engine.dart';
 
 /// A standalone position analyzer: paste any FEN and get a material count,

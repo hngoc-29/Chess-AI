@@ -9,8 +9,8 @@ class SaveGameUseCase {
 
   SaveGameUseCase(this.repository);
 
-  Future<Either<Failure, void>> call(int gameId) async {
-    return await repository.saveGame(gameId);
+  Future<Either<Failure, void>> call(GameState gameState) async {
+    return await repository.saveGameState(gameState);
   }
 
   Future<Either<Failure, void>> saveState(GameState gameState) async {
