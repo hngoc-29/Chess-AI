@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../../../core/config/backend_config.dart';
 import '../../../core/utils/logger.dart';
-import '../../models/online/online_game_room.dart';
-import '../../models/online/move_record.dart';
-import '../../models/online/chat_models.dart';
+import '../../data/models/online/online_game_room.dart';
+import '../../data/models/online/move_record.dart';
+import '../../data/models/online/chat_models.dart';
 
 /// Socket connection states
 enum SocketState {

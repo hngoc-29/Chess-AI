@@ -189,7 +189,7 @@ class _OnlineChessBoardState extends State<OnlineChessBoard> {
   }
 
   String _getPieceUnicode(chess_lib.Piece piece) {
-    const whitePieces = {
+    final whitePieces = {
       chess_lib.PieceType.KING: '♔',
       chess_lib.PieceType.QUEEN: '♕',
       chess_lib.PieceType.ROOK: '♖',
@@ -198,7 +198,7 @@ class _OnlineChessBoardState extends State<OnlineChessBoard> {
       chess_lib.PieceType.PAWN: '♙',
     };
     
-    const blackPieces = {
+    final blackPieces = {
       chess_lib.PieceType.KING: '♚',
       chess_lib.PieceType.QUEEN: '♛',
       chess_lib.PieceType.ROOK: '♜',
@@ -256,8 +256,8 @@ class _OnlineChessBoardState extends State<OnlineChessBoard> {
     // Check if it's a pawn promotion
     final piece = _chess.get(from);
     final isPromotion = piece?.type == chess_lib.PieceType.PAWN &&
-        ((piece.color == chess_lib.Color.WHITE && to[1] == '8') ||
-         (piece.color == chess_lib.Color.BLACK && to[1] == '1'));
+        ((piece?.color == chess_lib.Color.WHITE && to[1] == '8') ||
+         (piece?.color == chess_lib.Color.BLACK && to[1] == '1'));
 
     if (isPromotion) {
       _showPromotionDialog(from, to);
