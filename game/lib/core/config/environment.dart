@@ -36,9 +36,9 @@ class EnvironmentConfig {
   /// Development environment - local/test backend
   static const development = EnvironmentConfig(
     environment: Environment.development,
-    backendUrl: 'http://localhost:8080',
-    supabaseUrl: 'YOUR_DEV_SUPABASE_URL',
-    supabaseAnonKey: 'YOUR_DEV_SUPABASE_ANON_KEY',
+    backendUrl: 'https://chess-ai-backend-c0au.onrender.com',
+    supabaseUrl: 'https://opeaercrntiuokdsvotc.supabase.co',
+    supabaseAnonKey: 'sb_publishable_Cou5V3Wf_M8o0toJ7PST0Q_GJZRnX9R',
     enableLogging: true,
     enableDebugMode: true,
   );
