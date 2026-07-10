@@ -11,6 +11,9 @@ import '../screens/splash/splash_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/training/training_screen.dart';
+import '../screens/online/online_auth_screen.dart';
+import '../screens/online/matchmaking_screen.dart';
+import '../screens/online/online_game_screen.dart';
 import '../../domain/entities/game_state.dart';
 
 class AppRoutes {
@@ -27,6 +30,9 @@ class AppRoutes {
   static const String analysis = '/analysis';
   static const String training = '/training';
   static const String debugLogs = '/debug-logs';
+  static const String onlineAuth = '/online-auth';
+  static const String onlineMatchmaking = '/online-matchmaking';
+  static const String onlineGame = '/online-game';
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -57,6 +63,12 @@ class AppRoutes {
       case analysis:
         return MaterialPageRoute(builder: (_) => const AnalysisScreen());
       case training:
+      case onlineAuth:
+        return MaterialPageRoute(builder: (_) => const OnlineAuthScreen());
+      case onlineMatchmaking:
+        return MaterialPageRoute(builder: (_) => const MatchmakingScreen());
+      case onlineGame:
+        return MaterialPageRoute(builder: (_) => const OnlineGameScreen());
         return MaterialPageRoute(builder: (_) => const TrainingScreen());
       case debugLogs:
         return MaterialPageRoute(builder: (_) => const DebugLogsScreen());

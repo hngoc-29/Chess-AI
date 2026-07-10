@@ -16,6 +16,12 @@ import '../../services/audio/audio_service.dart';
 import '../../services/game/chess_rules_service.dart';
 import '../../services/storage/cache_service.dart';
 import '../../services/storage/storage_service.dart';
+import '../../services/online/supabase_auth_service.dart';
+import '../../services/online/socket_io_service.dart';
+import '../../services/online/api_client_service.dart';
+import '../../presentation/blocs/online/auth_bloc.dart';
+import '../../presentation/blocs/online/matchmaking_bloc.dart';
+import '../../presentation/blocs/online/online_game_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -24,6 +30,7 @@ void setupDependencies() {
   _setupDataSources();
   _setupRepositories();
   _setupUseCases();
+  _setupBlocs();
 }
 
 void _setupServices() {
@@ -38,6 +45,11 @@ void _setupServices() {
   );
   getIt.registerSingleton<StorageService>(StorageService());
   getIt.registerSingleton<CacheService>(CacheService());
+  
+  // Online services
+  getIt.registerSingleton<SupabaseAuthService>(SupabaseAuthService());
+  getIt.registerSingleton<SocketIOService>(SocketIOService());
+  getIt.registerSingleton<ApiClientService>(ApiClientService());
 }
 
 void _setupDataSources() {
@@ -69,5 +81,21 @@ void _setupRepositories() {
 
 void _setupUseCases() {
   getIt.registerFactory(() => SaveGameUseCase(getIt<IGameRepository>()));
-  getIt.registerFactory(() => LoadGameUseCase(getIt<IGameRepository>()));
+ 
+
+void _setupBlocs() {
+  getIt.registerFactory(
+    () => AuthBloc(
+      authService: getIt<SupabaseAuthService>(),
+      socketService: getIt<SocketIOService>(),
+      apiService: getIt<ApiClientService>(),
+    ),
+  );
+  getIt.registerFactory(
+    () => MatchmakingBloc(socketService: getIt<SocketIOService>()),
+  );
+  getIt.registerFactory(
+    () => OnlineGameBloc(socketService: getIt<SocketIOService>()),
+  );
+} getIt.registerFactory(() => LoadGameUseCase(getIt<IGameRepository>()));
 }

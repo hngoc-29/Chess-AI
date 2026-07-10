@@ -44,6 +44,12 @@ dependencies:
   # for why this replaced an earlier lc0-based approach.
   flutter_onnxruntime: ^1.7.0
 
+  # Online Multiplayer
+  socket_io_client: ^2.0.3+1
+  supabase_flutter: ^2.5.0
+  http: ^1.2.0
+  chess: ^0.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

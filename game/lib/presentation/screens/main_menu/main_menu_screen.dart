@@ -114,6 +114,17 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     const SizedBox(height: 16),
                     _buildMenuItem(
                       context,
+                      title: 'Play Online',
+                      subtitle: 'Ranked multiplayer matches',
+                      icon: Icons.wifi,
+                      iconColor: Colors.amber,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.onlineAuth);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMenuItem(
+                      context,
                       title: 'Training',
                       subtitle: 'Load FEN and practice positions',
                       icon: Icons.school,
