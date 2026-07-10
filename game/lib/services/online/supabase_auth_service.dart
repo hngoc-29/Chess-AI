@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/backend_config.dart';
 import '../../../core/utils/logger.dart';
-import '../../models/online/user_profile.dart';
+import '../../../data/models/online/user_profile.dart';
 
 /// Result wrapper for auth operations
 class AuthResult {

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../core/config/backend_config.dart';
 import '../../../core/utils/logger.dart';
-import '../../models/online/user_profile.dart';
+import '../../../data/models/online/user_profile.dart';
 
 /// Result wrapper for API operations
 class ApiResult<T> {

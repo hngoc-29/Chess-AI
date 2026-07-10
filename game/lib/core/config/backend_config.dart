@@ -1,21 +1,24 @@
+import 'environment.dart';
+
 /// Backend API configuration
+/// Uses EnvironmentConfig to automatically select correct URLs based on build environment
 class BackendConfig {
-  // Backend URL - change this to your deployed backend URL
-  static const String backendUrl = 'http://localhost:8080';
+  // Backend URL - automatically set based on environment (dev/staging/prod)
+  static String get backendUrl => EnvironmentConfig.current.backendUrl;
   
-  // Supabase configuration - replace with your actual Supabase credentials
-  static const String supabaseUrl = 'https://xxxxx.supabase.co';
-  static const String supabaseAnonKey = 'your_supabase_anon_key';
+  // Supabase configuration - automatically set based on environment
+  static String get supabaseUrl => EnvironmentConfig.current.supabaseUrl;
+  static String get supabaseAnonKey => EnvironmentConfig.current.supabaseAnonKey;
   
-  // API endpoints
-  static const String apiBase = '$backendUrl/api';
-  static const String authEndpoint = '$apiBase/auth';
-  static const String matchesEndpoint = '$apiBase/matches';
-  static const String campaignEndpoint = '$apiBase/campaign';
-  static const String healthEndpoint = '$backendUrl/health';
+  // API endpoints - dynamically built from backendUrl
+  static String get apiBase => '$backendUrl/api';
+  static String get authEndpoint => '$apiBase/auth';
+  static String get matchesEndpoint => '$apiBase/matches';
+  static String get campaignEndpoint => '$apiBase/campaign';
+  static String get healthEndpoint => '$backendUrl/health';
   
   // Socket.IO configuration
-  static const String socketUrl = backendUrl;
+  static String get socketUrl => backendUrl;
   static const Duration connectionTimeout = Duration(seconds: 10);
   static const Duration reconnectDelay = Duration(seconds: 2);
   static const int maxReconnectAttempts = 5;
