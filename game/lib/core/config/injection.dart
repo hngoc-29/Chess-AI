@@ -81,7 +81,8 @@ void _setupRepositories() {
 
 void _setupUseCases() {
   getIt.registerFactory(() => SaveGameUseCase(getIt<IGameRepository>()));
- 
+  getIt.registerFactory(() => LoadGameUseCase(getIt<IGameRepository>()));
+}
 
 void _setupBlocs() {
   getIt.registerFactory(
@@ -97,5 +98,4 @@ void _setupBlocs() {
   getIt.registerFactory(
     () => OnlineGameBloc(socketService: getIt<SocketIOService>()),
   );
-} getIt.registerFactory(() => LoadGameUseCase(getIt<IGameRepository>()));
 }
