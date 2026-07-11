@@ -40,7 +40,7 @@ class EnvironmentConfig {
   /// Staging environment - test deployment
   static const staging = EnvironmentConfig(
     environment: Environment.staging,
-    backendUrl: 'https://your-staging-backend.railway.app',
+    backendUrl: 'https://chess-ai-backend-c0au.onrender.com',
     enableLogging: true,
     enableDebugMode: false,
   );
@@ -48,7 +48,7 @@ class EnvironmentConfig {
   /// Production environment - live deployment
   static const production = EnvironmentConfig(
     environment: Environment.production,
-    backendUrl: 'https://your-production-backend.railway.app',
+    backendUrl: 'https://chess-ai-backend-c0au.onrender.com',
     enableLogging: false,
     enableDebugMode: false,
   );
