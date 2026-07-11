@@ -6,10 +6,6 @@ class BackendConfig {
   // Backend URL - automatically set based on environment (dev/staging/prod)
   static String get backendUrl => EnvironmentConfig.current.backendUrl;
   
-  // Supabase configuration - automatically set based on environment
-  static String get supabaseUrl => EnvironmentConfig.current.supabaseUrl;
-  static String get supabaseAnonKey => EnvironmentConfig.current.supabaseAnonKey;
-  
   // API endpoints - dynamically built from backendUrl
   static String get apiBase => '$backendUrl/api';
   static String get authEndpoint => '$apiBase/auth';

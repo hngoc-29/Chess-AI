@@ -16,7 +16,7 @@ import '../../services/audio/audio_service.dart';
 import '../../services/game/chess_rules_service.dart';
 import '../../services/storage/cache_service.dart';
 import '../../services/storage/storage_service.dart';
-import '../../services/online/supabase_auth_service.dart';
+import '../../services/online/backend_auth_service.dart';
 import '../../services/online/socket_io_service.dart';
 import '../../services/online/api_client_service.dart';
 import '../../presentation/blocs/online/auth_bloc.dart';
@@ -47,7 +47,7 @@ void _setupServices() {
   getIt.registerSingleton<CacheService>(CacheService());
   
   // Online services
-  getIt.registerSingleton<SupabaseAuthService>(SupabaseAuthService());
+  getIt.registerSingleton<BackendAuthService>(BackendAuthService());
   getIt.registerSingleton<SocketIOService>(SocketIOService());
   getIt.registerSingleton<ApiClientService>(ApiClientService());
 }
@@ -87,7 +87,7 @@ void _setupUseCases() {
 void _setupBlocs() {
   getIt.registerFactory(
     () => AuthBloc(
-      authService: getIt<SupabaseAuthService>(),
+      authService: getIt<BackendAuthService>(),
       socketService: getIt<SocketIOService>(),
       apiService: getIt<ApiClientService>(),
     ),

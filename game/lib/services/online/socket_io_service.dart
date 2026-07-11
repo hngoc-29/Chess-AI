@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import '../../../core/config/backend_config.dart';
-import '../../../core/utils/logger.dart';
+import '../../core/config/backend_config.dart';
+import '../../core/utils/logger.dart';
 import '../../data/models/online/online_game_room.dart';
 import '../../data/models/online/move_record.dart';
 import '../../data/models/online/chat_models.dart';

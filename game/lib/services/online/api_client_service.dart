@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../core/config/backend_config.dart';
-import '../../../core/utils/logger.dart';
-import '../../../data/models/online/user_profile.dart';
+import '../../core/config/backend_config.dart';
+import '../../core/utils/logger.dart';
+import '../../data/models/online/user_profile.dart';
 
 /// Result wrapper for API operations
 class ApiResult<T> {
@@ -59,17 +59,23 @@ class ApiClientService {
     }
   }
 
-  /// Get user profile
+  /// Get the current user's own profile.
+  ///
+  /// [userId] is accepted for source compatibility with existing call
+  /// sites (all of which already pass the caller's own id right after
+  /// auth) but is otherwise unused: the backend has no
+  /// `/api/auth/profile/:id` route, only `GET /api/auth/me`, which
+  /// identifies the user from the bearer token rather than a URL param.
   Future<ApiResult<OnlineUserProfile>> getUserProfile(String userId) async {
     try {
       final response = await _client.get(
-        Uri.parse('${BackendConfig.authEndpoint}/profile/$userId'),
+        Uri.parse('${BackendConfig.authEndpoint}/me'),
         headers: _headers,
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        final profile = OnlineUserProfile.fromJson(data);
+        final profile = OnlineUserProfile.fromJson(data['user'] as Map<String, dynamic>);
         return ApiResult.success(profile);
       } else {
         return ApiResult.failure('Failed to get profile: ${response.statusCode}');

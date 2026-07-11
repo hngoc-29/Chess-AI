@@ -46,7 +46,6 @@ dependencies:
 
   # Online Multiplayer
   socket_io_client: ^2.0.3+1
-  supabase_flutter: ^2.5.0
   http: ^1.2.0
   chess: ^0.8.1
 

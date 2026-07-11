@@ -63,13 +63,13 @@ class AppRoutes {
       case analysis:
         return MaterialPageRoute(builder: (_) => const AnalysisScreen());
       case training:
+        return MaterialPageRoute(builder: (_) => const TrainingScreen());
       case onlineAuth:
         return MaterialPageRoute(builder: (_) => const OnlineAuthScreen());
       case onlineMatchmaking:
         return MaterialPageRoute(builder: (_) => const MatchmakingScreen());
       case onlineGame:
         return MaterialPageRoute(builder: (_) => const OnlineGameScreen());
-        return MaterialPageRoute(builder: (_) => const TrainingScreen());
       case debugLogs:
         return MaterialPageRoute(builder: (_) => const DebugLogsScreen());
       default:

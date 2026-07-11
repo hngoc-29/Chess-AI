@@ -19,16 +19,12 @@ enum Environment {
 class EnvironmentConfig {
   final Environment environment;
   final String backendUrl;
-  final String supabaseUrl;
-  final String supabaseAnonKey;
   final bool enableLogging;
   final bool enableDebugMode;
 
   const EnvironmentConfig({
     required this.environment,
     required this.backendUrl,
-    required this.supabaseUrl,
-    required this.supabaseAnonKey,
     required this.enableLogging,
     required this.enableDebugMode,
   });
@@ -37,8 +33,6 @@ class EnvironmentConfig {
   static const development = EnvironmentConfig(
     environment: Environment.development,
     backendUrl: 'https://chess-ai-backend-c0au.onrender.com',
-    supabaseUrl: 'https://opeaercrntiuokdsvotc.supabase.co',
-    supabaseAnonKey: 'sb_publishable_Cou5V3Wf_M8o0toJ7PST0Q_GJZRnX9R',
     enableLogging: true,
     enableDebugMode: true,
   );
@@ -47,8 +41,6 @@ class EnvironmentConfig {
   static const staging = EnvironmentConfig(
     environment: Environment.staging,
     backendUrl: 'https://your-staging-backend.railway.app',
-    supabaseUrl: 'YOUR_STAGING_SUPABASE_URL',
-    supabaseAnonKey: 'YOUR_STAGING_SUPABASE_ANON_KEY',
     enableLogging: true,
     enableDebugMode: false,
   );
@@ -57,8 +49,6 @@ class EnvironmentConfig {
   static const production = EnvironmentConfig(
     environment: Environment.production,
     backendUrl: 'https://your-production-backend.railway.app',
-    supabaseUrl: 'YOUR_PROD_SUPABASE_URL',
-    supabaseAnonKey: 'YOUR_PROD_SUPABASE_ANON_KEY',
     enableLogging: false,
     enableDebugMode: false,
   );

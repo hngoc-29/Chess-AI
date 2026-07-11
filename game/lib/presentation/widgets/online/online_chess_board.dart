@@ -24,6 +24,12 @@ class _OnlineChessBoardState extends State<OnlineChessBoard> {
   String? _selectedSquare;
   List<String> _legalMoves = [];
 
+  // Guards against a second promotion dialog being pushed on top of one
+  // that's already awaiting a response - e.g. two rapid taps on the
+  // destination square before the first dialog has appeared. Mirrors the
+  // same fix already applied in game_screen.dart for offline games.
+  bool _isShowingPromotionDialog = false;
+
   @override
   void initState() {
     super.initState();
@@ -271,22 +277,42 @@ class _OnlineChessBoardState extends State<OnlineChessBoard> {
   }
 
   void _showPromotionDialog(String from, String to) {
+    // Without this guard, two rapid taps that both resolve to a promotion
+    // move (e.g. a fast double-tap on the target square) each call
+    // _showPromotionDialog before the first dialog has actually appeared,
+    // stacking two AlertDialogs. Picking a piece then only pops the top
+    // one, leaving the first dialog stuck on screen forever - since
+    // barrierDismissible is false, this reads as the whole board freezing.
+    if (_isShowingPromotionDialog) return;
+    _isShowingPromotionDialog = true;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Promote Pawn'),
-        content: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildPromotionOption(ctx, from, to, 'q', '♕'),
-            _buildPromotionOption(ctx, from, to, 'r', '♖'),
-            _buildPromotionOption(ctx, from, to, 'b', '♗'),
-            _buildPromotionOption(ctx, from, to, 'n', '♘'),
-          ],
+      builder: (ctx) => PopScope(
+        // barrierDismissible only blocks tapping outside the dialog - it
+        // does NOT block the Android system/gesture back button. Without
+        // this PopScope, back dismisses the dialog with no piece chosen:
+        // no move is ever sent to the server, but _selectedSquare/
+        // _legalMoves are never cleared either, so the board is left
+        // waiting on a move that will never come (another freeze path).
+        canPop: false,
+        child: AlertDialog(
+          title: const Text('Promote Pawn'),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildPromotionOption(ctx, from, to, 'q', '♕'),
+              _buildPromotionOption(ctx, from, to, 'r', '♖'),
+              _buildPromotionOption(ctx, from, to, 'b', '♗'),
+              _buildPromotionOption(ctx, from, to, 'n', '♘'),
+            ],
+          ),
         ),
       ),
-    );
+    ).then((_) {
+      _isShowingPromotionDialog = false;
+    });
   }
 
   Widget _buildPromotionOption(BuildContext ctx, String from, String to, String piece, String unicode) {

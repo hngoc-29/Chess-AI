@@ -66,6 +66,16 @@ const Map<AIDifficulty, Duration> _kMinThinkingTime = {
   AIDifficulty.expert: Duration(milliseconds: 300),
 };
 
+/// Hard ceiling on session load / inference, as a safety net against a
+/// hang rather than an exception. Normal inference finishes in well under
+/// 1s (see above); this only exists in case the ONNX Runtime plugin's
+/// platform channel ever gets stuck on a particular device instead of
+/// throwing. Without it, an `await` that never resolves would leave
+/// `isAIThinking` stuck true forever with no way for the player to
+/// recover the game. Timing out routes into the same, already-handled
+/// fallback path as any other inference failure (see catch block below).
+const Duration _kInferenceTimeout = Duration(seconds: 8);
+
 /// Drop-in replacement for [ChessAIEngine] that plays using the Maia
 /// human-like neural networks, run directly via ONNX Runtime (no external
 /// engine process, no UCI, no native subprocess).
@@ -140,7 +150,7 @@ class MaiaOnnxEngine extends ChessAIEngine {
       }
 
       final assetPath = _kMaiaAsset[difficulty] ?? _kMaiaAsset[AIDifficulty.medium]!;
-      final session = await _sessionFor(assetPath);
+      final session = await _sessionFor(assetPath).timeout(_kInferenceTimeout);
       final moveIndex = await _ensureMoveIndex();
 
       final inputData = MaiaBoardEncoder.encode(effectiveHistory);
@@ -149,7 +159,7 @@ class MaiaOnnxEngine extends ChessAIEngine {
         [1, MaiaBoardEncoder.planeCount, MaiaBoardEncoder.boardSize, MaiaBoardEncoder.boardSize],
       );
 
-      final outputs = await session.run({'/input/planes': inputTensor});
+      final outputs = await session.run({'/input/planes': inputTensor}).timeout(_kInferenceTimeout);
       await inputTensor.dispose();
 
       final policyFlat = (await outputs['/output/policy']!.asFlattenedList()).cast<num>();
