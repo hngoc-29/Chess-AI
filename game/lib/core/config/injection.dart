@@ -19,6 +19,7 @@ import '../../services/storage/storage_service.dart';
 import '../../services/online/backend_auth_service.dart';
 import '../../services/online/socket_io_service.dart';
 import '../../services/online/api_client_service.dart';
+import '../../services/online/offline_sync_service.dart';
 import '../../presentation/blocs/online/auth_bloc.dart';
 import '../../presentation/blocs/online/matchmaking_bloc.dart';
 import '../../presentation/blocs/online/online_game_bloc.dart';
@@ -50,6 +51,7 @@ void _setupServices() {
   getIt.registerSingleton<BackendAuthService>(BackendAuthService());
   getIt.registerSingleton<SocketIOService>(SocketIOService());
   getIt.registerSingleton<ApiClientService>(ApiClientService());
+  getIt.registerSingleton<OfflineSyncService>(OfflineSyncService(getIt<ApiClientService>()));
 }
 
 void _setupDataSources() {
@@ -90,6 +92,7 @@ void _setupBlocs() {
       authService: getIt<BackendAuthService>(),
       socketService: getIt<SocketIOService>(),
       apiService: getIt<ApiClientService>(),
+      syncService: getIt<OfflineSyncService>(),
     ),
   );
   getIt.registerFactory(

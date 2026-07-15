@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/durations.dart';
 import '../../app/routes.dart';
+import '../../blocs/online/auth_bloc.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,17 +43,33 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   Future<void> _navigateToMainMenu() async {
     await Future.delayed(AppDurations.splash);
+    if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
     final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    if (!mounted) return;
 
-    if (mounted) {
-      if (hasSeenOnboarding) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.mainMenu);
-      } else {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
-      }
+    if (!hasSeenOnboarding) {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+      return;
     }
+
+    // AuthBloc's CheckAuthStatus was dispatched the moment the app started
+    // (see KingsGambitAIApp), running in parallel with this screen's own
+    // delay/animation above - by now it has very likely already resolved.
+    // If it somehow hasn't (slow network on the profile fetch), wait for
+    // it rather than guessing, so a returning player is never dropped
+    // onto the auth screen just because this raced ahead of it.
+    final authBloc = context.read<AuthBloc>();
+    var state = authBloc.state;
+    if (state is AuthInitial || state is AuthLoading) {
+      state = await authBloc.stream.firstWhere((s) => s is! AuthInitial && s is! AuthLoading);
+    }
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacementNamed(
+      state is AuthAuthenticated ? AppRoutes.mainMenu : AppRoutes.onlineAuth,
+    );
   }
 
   @override

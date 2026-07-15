@@ -4,19 +4,31 @@ import '../../core/config/backend_config.dart';
 import '../../core/utils/logger.dart';
 import '../../data/models/online/user_profile.dart';
 
-/// Result wrapper for API operations
+/// Result wrapper for API operations.
+///
+/// [statusCode] is null specifically when the request never got a response
+/// at all (no connectivity, DNS failure, timeout) - as opposed to the
+/// server responding with a real error status. Callers that decide whether
+/// to log a user out (e.g. AuthBloc) need this distinction: a 401 means
+/// "you are genuinely not authenticated", but a null statusCode just means
+/// "we couldn't ask the server right now" and should fall back to cached
+/// data instead of signing the user out.
 class ApiResult<T> {
   final bool success;
   final T? data;
   final String? error;
+  final int? statusCode;
 
   const ApiResult.success(this.data)
       : success = true,
-        error = null;
+        error = null,
+        statusCode = 200;
 
-  const ApiResult.failure(this.error)
+  const ApiResult.failure(this.error, {this.statusCode})
       : success = false,
         data = null;
+
+  bool get isNetworkError => !success && statusCode == null;
 }
 
 /// HTTP API client service for REST endpoints
@@ -78,11 +90,45 @@ class ApiClientService {
         final profile = OnlineUserProfile.fromJson(data['user'] as Map<String, dynamic>);
         return ApiResult.success(profile);
       } else {
-        return ApiResult.failure('Failed to get profile: ${response.statusCode}');
+        return ApiResult.failure('Failed to get profile: ${response.statusCode}', statusCode: response.statusCode);
       }
     } catch (e, stackTrace) {
       AppLogger.error('Get profile error', e, stackTrace);
+      // No statusCode - request never reached the server (no connectivity,
+      // timeout, DNS failure, ...). Deliberately distinct from a 401/403.
       return ApiResult.failure('Get profile error: $e');
+    }
+  }
+
+  /// Update the signed-in user's own profile (display name / avatar /
+  /// settings). This is the endpoint OfflineSyncService replays once
+  /// connectivity returns for edits made while offline.
+  Future<ApiResult<OnlineUserProfile>> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+    Map<String, dynamic>? settings,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (displayName != null) body['displayName'] = displayName;
+      if (avatarUrl != null) body['avatarUrl'] = avatarUrl;
+      if (settings != null) body['settings'] = settings;
+
+      final response = await _client.patch(
+        Uri.parse('${BackendConfig.authEndpoint}/me'),
+        headers: _headers,
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final profile = OnlineUserProfile.fromJson(data['user'] as Map<String, dynamic>, camelCase: true);
+        return ApiResult.success(profile);
+      }
+      return ApiResult.failure('Failed to update profile: ${response.statusCode}', statusCode: response.statusCode);
+    } catch (e, stackTrace) {
+      AppLogger.error('Update profile error', e, stackTrace);
+      return ApiResult.failure('Update profile error: $e');
     }
   }
 

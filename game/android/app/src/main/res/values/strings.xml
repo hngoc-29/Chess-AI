@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">King's Gambit AI</string>
+
+    <!--
+      TODO: replace with real values from developers.facebook.com -> your
+      app -> Settings > Basic. facebook_client_token is under Settings >
+      Advanced > Client Token. fb_login_protocol_scheme is literally the
+      string "fb" + your App ID (e.g. an App ID of 123456789 becomes
+      "fb123456789") - Facebook's login redirect uses it as a custom URL
+      scheme back into this app.
+
+      Facebook sign-in returns a clean, user-visible error until these are
+      filled in - everything else (Google, guest, email) works regardless.
+    -->
+    <string name="facebook_app_id">REPLACE_WITH_FACEBOOK_APP_ID</string>
+    <string name="facebook_client_token">REPLACE_WITH_FACEBOOK_CLIENT_TOKEN</string>
+    <string name="fb_login_protocol_scheme">fbREPLACE_WITH_FACEBOOK_APP_ID</string>
+</resources>

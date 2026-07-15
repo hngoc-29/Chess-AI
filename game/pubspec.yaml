@@ -49,6 +49,14 @@ dependencies:
   http: ^1.2.0
   chess: ^0.8.1
 
+  # Auth providers (guest is server-side only, no package needed)
+  google_sign_in: ^6.2.1
+  flutter_facebook_auth: ^7.1.1
+
+  # Offline-first: detect connectivity changes to flush the pending-edits
+  # queue in offline_sync_service.dart once the device is back online.
+  connectivity_plus: ^6.0.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

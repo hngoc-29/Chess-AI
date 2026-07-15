@@ -53,9 +53,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _onFinish() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_onboarding', true);
-    
+
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.mainMenu);
+      // A first-time user (this is the only way to reach _onFinish) has
+      // no existing session yet, so this always goes to the auth gate
+      // rather than re-running SplashScreen's AuthBloc-state check here
+      // too.
+      Navigator.of(context).pushReplacementNamed(AppRoutes.onlineAuth);
     }
   }
 
