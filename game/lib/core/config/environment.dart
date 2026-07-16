@@ -9,6 +9,12 @@
 /// 
 /// 3. Staging build:
 ///    flutter build apk --release --dart-define=ENVIRONMENT=staging
+///
+/// 4. Point at any backend without touching source (e.g. a local server
+///    while testing, or a temporary staging URL) - takes priority over
+///    whichever of the three presets above ENVIRONMENT would otherwise
+///    select:
+///    flutter run --dart-define=BACKEND_URL_OVERRIDE=http://192.168.1.23:8080
 
 enum Environment {
   development,
@@ -53,22 +59,36 @@ class EnvironmentConfig {
     enableDebugMode: false,
   );
 
-  /// Get current environment from dart-define or default to development
+  /// Get current environment from dart-define or default to development.
+  /// BACKEND_URL_OVERRIDE, if set, wins regardless of ENVIRONMENT - see
+  /// the usage note above.
   static EnvironmentConfig get current {
     const envString = String.fromEnvironment('ENVIRONMENT', defaultValue: 'development');
-    
+    const urlOverride = String.fromEnvironment('BACKEND_URL_OVERRIDE', defaultValue: '');
+
+    final EnvironmentConfig base;
     switch (envString.toLowerCase()) {
       case 'production':
       case 'prod':
-        return production;
+        base = production;
+        break;
       case 'staging':
       case 'stage':
-        return staging;
+        base = staging;
+        break;
       case 'development':
       case 'dev':
       default:
-        return development;
+        base = development;
     }
+
+    if (urlOverride.isEmpty) return base;
+    return EnvironmentConfig(
+      environment: base.environment,
+      backendUrl: urlOverride,
+      enableLogging: base.enableLogging,
+      enableDebugMode: base.enableDebugMode,
+    );
   }
 
   bool get isDevelopment => environment == Environment.development;
