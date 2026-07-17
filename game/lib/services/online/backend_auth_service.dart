@@ -135,7 +135,14 @@ class AuthResult {
 /// blank/loading profile screen.
 class BackendAuthService {
   final http.Client _client = http.Client();
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+    // Web client ID, not Android/iOS - see BackendConfig.googleServerClientId.
+    // Without this, the ID token's audience won't match what the backend
+    // checks against and verification will fail even for a real, valid
+    // sign-in.
+    serverClientId: BackendConfig.googleServerClientId.isNotEmpty ? BackendConfig.googleServerClientId : null,
+  );
 
   BackendUser? _currentUser;
   String? _currentAccessToken;

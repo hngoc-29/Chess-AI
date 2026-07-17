@@ -11,23 +11,31 @@ the codebase. Guest mode works with zero setup.
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com) → APIs &
    Services → Credentials → Create Credentials → OAuth client ID.
-2. Create **two** client IDs under the same project:
-   - **Android**: needs the app's package name (`android/app/build.gradle`
-     → `applicationId`) and the SHA-1 fingerprint of your signing key
-     (`cd android && ./gradlew signingReport`, use the `debug` variant's
-     SHA1 while testing, add the release one before publishing).
-   - **iOS**: needs the app's Bundle ID (`ios/Runner.xcodeproj`).
-3. Also create a **Web application** client ID - this is the one that goes
-   in the *backend's* `GOOGLE_OAUTH_CLIENT_ID` env var (`google_sign_in`
-   uses it as the OAuth "audience" even on mobile; the Android/iOS client
-   IDs above only authorize the native sign-in flow itself).
-4. iOS only: open `ios/Runner/Info.plist` and add a `CFBundleURLTypes`
+2. Create **three** client IDs under the same project - all three need to
+   exist, but they're used in different places:
+
+   | Client ID type | What it needs | Where it's used |
+   |---|---|---|
+   | **Web application** | nothing extra to fill in | `GOOGLE_SERVER_CLIENT_ID` (Flutter build) **and** `GOOGLE_OAUTH_CLIENT_ID` (backend) - same value in both places |
+   | **Android** | package name + SHA-1 fingerprint (`cd android && ./gradlew signingReport`, debug variant while testing) | not referenced anywhere in code - Google matches it automatically at sign-in time based on the signed APK |
+   | **iOS** | Bundle ID | same as Android: not referenced in Dart code, but `Info.plist` needs a matching URL scheme, see step 4 |
+
+   This trips a lot of people up because it's not obvious: the ID that
+   actually goes into your code/env vars is the **Web** one, even though
+   the app is mobile-only. The Android/iOS ones just need to *exist* so
+   Google recognizes the app itself is allowed to run the native sign-in
+   flow at all - see [Google's own docs on this](https://developers.google.com/identity/sign-in/android/backend-auth).
+3. iOS only: open `ios/Runner/Info.plist` and add a `CFBundleURLTypes`
    entry with your iOS client ID's reversed form (looks like
    `com.googleusercontent.apps.XXXX`) - see the `google_sign_in` package's
    own README for the exact snippet, since this project has no existing
    Info.plist URL scheme to pattern-match against.
 
-Set on the **backend**: `GOOGLE_OAUTH_CLIENT_ID=<web client id>`
+Set on the **Flutter app** (build/run time, not a file to edit):
+```
+flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=<web client id>.apps.googleusercontent.com
+```
+Set on the **backend**: `GOOGLE_OAUTH_CLIENT_ID=<same web client id>`
 
 ## 2. Facebook Login
 
